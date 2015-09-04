@@ -31,7 +31,10 @@ public abstract class Exporter<K, V> extends AbstractObserver {
   private Class<V> valType;
   SimpleSerializer serializer;
 
-  protected Exporter(String queueId, Class<K> keyType, Class<V> valType, SimpleSerializer serializer) {
+  // @formatter:off
+  protected Exporter(String queueId, Class<K> keyType, Class<V> valType,
+                     SimpleSerializer serializer) {
+    // @formatter:on
     this.queueId = queueId;
     this.keyType = keyType;
     this.valType = valType;

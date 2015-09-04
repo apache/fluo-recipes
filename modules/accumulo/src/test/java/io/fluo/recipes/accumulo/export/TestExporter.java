@@ -14,9 +14,11 @@
 
 package io.fluo.recipes.accumulo.export;
 
-import org.apache.accumulo.core.data.Mutation;
+import java.util.Collections;
+import java.util.List;
 
 import io.fluo.recipes.serialization.KryoSimplerSerializer;
+import org.apache.accumulo.core.data.Mutation;
 
 public class TestExporter extends AccumuloExporter<String, String> {
 
@@ -27,9 +29,9 @@ public class TestExporter extends AccumuloExporter<String, String> {
   }
 
   @Override
-  protected Mutation convert(String key, long seq, String value) {
+  protected List<Mutation> convert(String key, long seq, String value) {
     Mutation m = new Mutation(key);
     m.put("cf", "cq", seq, value);
-    return m;
+    return Collections.singletonList(m);
   }
 }

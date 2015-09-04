@@ -15,6 +15,7 @@
 package io.fluo.recipes.accumulo.export;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.accumulo.core.data.Mutation;
 import org.apache.commons.configuration.Configuration;
@@ -59,7 +60,7 @@ public abstract class AccumuloExporter<K, V> extends Exporter<K, V> {
     appConf.setProperty("recipes.accumuloExporter." + queueId + ".table", ti.table);
   }
 
-  protected abstract Mutation convert(K key, long seq, V value);
+  protected abstract List<Mutation> convert(K key, long seq, V value);
 
   @Override
   protected void startingToProcessBatch() {
@@ -69,10 +70,11 @@ public abstract class AccumuloExporter<K, V> extends Exporter<K, V> {
 
   @Override
   public void processExport(K key, long sequenceNumber, V value) {
-    Mutation m = convert(key, sequenceNumber, value);
-    buffer.add(m);
-    bufferSize += m.estimatedMemoryUsed();
-
+    List<Mutation> mutationList = convert(key, sequenceNumber, value);
+    for (Mutation m : mutationList) {
+      buffer.add(m);
+      bufferSize += m.estimatedMemoryUsed();
+    }
     if (bufferSize > 1 << 20) {
       finishedProcessingBatch();
     }

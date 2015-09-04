@@ -21,7 +21,7 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 
-//TODO maybe put in own module so that fluo-recipes does not depend on Kryo
+// TODO maybe put in own module so that fluo-recipes does not depend on Kryo
 public class KryoSimplerSerializer implements SimpleSerializer {
   @Override
   public <T> byte[] serialize(T obj) {
