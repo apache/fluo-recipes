@@ -31,6 +31,11 @@
 
   <dependencies>
     <dependency>
+      <groupId>com.esotericsoftware</groupId>
+      <artifactId>kryo</artifactId>
+      <version>3.0.3</version>
+    </dependency>
+    <dependency>
       <groupId>io.fluo</groupId>
       <artifactId>fluo-api</artifactId>
     </dependency>
@@ -39,12 +44,12 @@
       <artifactId>fluo-core</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- Test Dependencies -->
     <dependency>
       <groupId>io.fluo</groupId>
       <artifactId>fluo-mini</artifactId>
       <scope>test</scope>
     </dependency>
-    <!-- Test Dependencies -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>

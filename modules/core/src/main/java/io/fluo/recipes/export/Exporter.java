@@ -27,36 +27,34 @@ import io.fluo.recipes.serialization.SimpleSerializer;
 public abstract class Exporter<K, V> extends AbstractObserver {
 
   private String queueId;
-  private SimpleSerializer<K> keySerializer;
-  private SimpleSerializer<V> valueSerializer;
+  private Class<K> keyType;
+  private Class<V> valType;
+  SimpleSerializer serializer;
 
-  protected Exporter(String queueId, SimpleSerializer<K> keySerializer,
-      SimpleSerializer<V> valueSerializer) {
+  protected Exporter(String queueId, Class<K> keyType, Class<V> valType, SimpleSerializer serializer) {
     this.queueId = queueId;
-    this.keySerializer = keySerializer;
-    this.valueSerializer = valueSerializer;
+    this.keyType = keyType;
+    this.valType = valType;
+    this.serializer = serializer;
   }
 
   protected String getQueueId() {
     return queueId;
   }
 
-  SimpleSerializer<K> getKeySerializer() {
-    return keySerializer;
-  }
-
-  SimpleSerializer<V> getValueSerializer() {
-    return valueSerializer;
+  SimpleSerializer getSerializer() {
+    return serializer;
   }
 
   @Override
   public ObservedColumn getObservedColumn() {
-    return new ObservedColumn(Bucket.newNotificationColumn(getQueueId()), NotificationType.WEAK);
+    return new ObservedColumn(ExportBucket.newNotificationColumn(getQueueId()),
+        NotificationType.WEAK);
   }
 
   @Override
   public void process(TransactionBase tx, Bytes row, Column column) throws Exception {
-    Bucket bucket = new Bucket(tx, row);
+    ExportBucket bucket = new ExportBucket(tx, row);
 
     Iterator<ExportEntry> exportIterator = bucket.getExportIterator();
 
@@ -64,8 +62,8 @@ public abstract class Exporter<K, V> extends AbstractObserver {
 
     while (exportIterator.hasNext()) {
       ExportEntry ee = exportIterator.next();
-      processExport(keySerializer.deserialize(ee.key), ee.seq,
-          valueSerializer.deserialize(ee.value));
+      processExport(serializer.deserialize(ee.key, keyType), ee.seq,
+          serializer.deserialize(ee.value, valType));
       exportIterator.remove();
     }
 

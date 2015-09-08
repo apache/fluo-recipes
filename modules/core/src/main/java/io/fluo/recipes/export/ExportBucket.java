@@ -34,7 +34,7 @@ import io.fluo.api.types.TypedTransactionBase;
 /**
  * This class encapsulates a buckets serialization code.
  */
-class Bucket {
+class ExportBucket {
   private static final String DATA_CF_PREFIX = "data:";
   private static final String META_CF = "meta";
   private static final String NOTIFICATION_CF = "fluoRecipes";
@@ -49,16 +49,17 @@ class Bucket {
   private final String qid;
   private final Bytes bucketRow;
 
-  Bucket(TransactionBase tx, String qid, int bucket) {
+  ExportBucket(TransactionBase tx, String qid, int bucket) {
     this.ttx = new TypeLayer(new StringEncoder()).wrap(tx);
     this.qid = qid;
     bucketRow = Bytes.of(qid + ":" + Integer.toString(bucket, 16));
   }
 
-  Bucket(TransactionBase tx, Bytes bucketRow) {
+  ExportBucket(TransactionBase tx, Bytes bucketRow) {
     this.ttx = new TypeLayer(new StringEncoder()).wrap(tx);
     this.qid = null;
-    // TODO encode in a more robust way... this method doe snot work when queue id has a :
+    // TODO encode in a more robust way... this method doe snot work when
+    // queue id has a :
     this.bucketRow = bucketRow;
   }
 
@@ -80,7 +81,7 @@ class Bucket {
   }
 
   public void add(long seq, byte[] key, byte[] value) {
-    byte[] family = new byte[5 + key.length];
+    byte[] family = new byte[DATA_CF_PREFIX.length() + key.length];
     byte[] prefix = DATA_CF_PREFIX.getBytes();
     System.arraycopy(prefix, 0, family, 0, prefix.length);
     System.arraycopy(key, 0, family, prefix.length, key.length);

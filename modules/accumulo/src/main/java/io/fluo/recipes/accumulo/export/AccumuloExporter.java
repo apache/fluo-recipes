@@ -22,17 +22,15 @@ import org.apache.commons.configuration.Configuration;
 import io.fluo.recipes.export.Exporter;
 import io.fluo.recipes.serialization.SimpleSerializer;
 
-// TODO ideally this would eventually be in seperate recipe sub module... would not want fluo
-// recipes to depend on Accumulo
 public abstract class AccumuloExporter<K, V> extends Exporter<K, V> {
 
   private SharedBatchWriter sbw;
   private ArrayList<Mutation> buffer = new ArrayList<>();
   private long bufferSize = 0;
 
-  protected AccumuloExporter(String queueId, SimpleSerializer<K> keySerializer,
-      SimpleSerializer<V> valueSerializer) {
-    super(queueId, keySerializer, valueSerializer);
+  protected AccumuloExporter(String queueId, Class<K> keyType, Class<V> valType,
+      SimpleSerializer serializer) {
+    super(queueId, keyType, valType, serializer);
   }
 
   @Override

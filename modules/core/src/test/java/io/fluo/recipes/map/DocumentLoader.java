@@ -12,19 +12,23 @@
  * the License.
  */
 
-package io.fluo.recipes.serialization;
+package io.fluo.recipes.map;
 
-import com.google.common.base.Charsets;
+import io.fluo.api.types.TypedLoader;
+import io.fluo.api.types.TypedTransactionBase;
 
-public class StringSerializer implements SimpleSerializer<String> {
+public class DocumentLoader extends TypedLoader {
 
-  @Override
-  public String deserialize(byte[] b) {
-    return new String(b, Charsets.UTF_8);
+  String docid;
+  String doc;
+
+  DocumentLoader(String docid, String doc) {
+    this.docid = docid;
+    this.doc = doc;
   }
 
   @Override
-  public byte[] serialize(String e) {
-    return e.getBytes(Charsets.UTF_8);
+  public void load(TypedTransactionBase tx, Context context) throws Exception {
+    tx.mutate().row("d:" + docid).fam("content").qual("new").set(doc);
   }
 }

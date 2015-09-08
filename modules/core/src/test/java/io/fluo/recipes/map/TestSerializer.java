@@ -12,31 +12,29 @@
  * the License.
  */
 
-package io.fluo.recipes.export;
+package io.fluo.recipes.map;
 
-import java.util.Set;
+import io.fluo.recipes.serialization.SimpleSerializer;
 
-public class RefUpdates {
-  private Set<String> addedRefs;
-  private Set<String> deletedRefs;
-
-  public RefUpdates() {}
-
-  public RefUpdates(Set<String> addedRefs, Set<String> deletedRefs) {
-    this.addedRefs = addedRefs;
-    this.deletedRefs = deletedRefs;
-  }
-
-  public Set<String> getAddedRefs() {
-    return addedRefs;
-  }
-
-  public Set<String> getDeletedRefs() {
-    return deletedRefs;
-  }
+public class TestSerializer implements SimpleSerializer {
 
   @Override
-  public String toString() {
-    return "added:" + addedRefs + " deleted:" + deletedRefs;
+  public <T> byte[] serialize(T obj) {
+    return obj.toString().getBytes();
   }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public <T> T deserialize(byte[] serObj, Class<T> clazz) {
+    if (clazz.equals(Long.class)) {
+      return (T) Long.valueOf(new String(serObj));
+    }
+
+    if (clazz.equals(String.class)) {
+      return (T) new String(serObj);
+    }
+
+    throw new IllegalArgumentException();
+  }
+
 }

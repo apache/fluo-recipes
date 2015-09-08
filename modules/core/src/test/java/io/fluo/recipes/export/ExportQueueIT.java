@@ -44,9 +44,7 @@ import io.fluo.api.data.Span;
 import io.fluo.api.iterator.ColumnIterator;
 import io.fluo.api.iterator.RowIterator;
 import io.fluo.api.mini.MiniFluo;
-import io.fluo.recipes.export.ExportQueueOptions;
-import io.fluo.recipes.export.Exporter;
-import io.fluo.recipes.serialization.StringSerializer;
+import io.fluo.recipes.serialization.KryoSimplerSerializer;
 
 public class ExportQueueIT {
 
@@ -91,7 +89,7 @@ public class ExportQueueIT {
     public static final String QUEUE_ID = "req";
 
     public RefExporter() {
-      super(QUEUE_ID, new StringSerializer(), RefUpdates.newSerializer());
+      super(QUEUE_ID, String.class, RefUpdates.class, new KryoSimplerSerializer());
     }
 
     @Override
@@ -103,7 +101,8 @@ public class ExportQueueIT {
 
     @Override
     protected void processExport(String key, long seq, RefUpdates ru) {
-      // buffer exports instead of doing work here to test that starting and finish methods are
+      // buffer exports instead of doing work here to test that starting
+      // and finish methods are
       // called
       keys.add(key);
       seqs.add(seq);

@@ -16,15 +16,14 @@ package io.fluo.recipes.accumulo.export;
 
 import org.apache.accumulo.core.data.Mutation;
 
-import io.fluo.recipes.accumulo.export.AccumuloExporter;
-import io.fluo.recipes.serialization.StringSerializer;
+import io.fluo.recipes.serialization.KryoSimplerSerializer;
 
 public class TestExporter extends AccumuloExporter<String, String> {
 
   public static final String QUEUE_ID = "aeqt";
 
   public TestExporter() {
-    super(QUEUE_ID, new StringSerializer(), new StringSerializer());
+    super(QUEUE_ID, String.class, String.class, new KryoSimplerSerializer());
   }
 
   @Override
