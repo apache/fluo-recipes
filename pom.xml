@@ -68,7 +68,7 @@
   <properties>
     <accumulo.version>1.6.1</accumulo.version>
     <eclipseFormatterStyle>${project.parent.basedir}/contrib/fluo-eclipse-style.xml</eclipseFormatterStyle>
-    <fluo.version>1.0.0-beta-1</fluo.version>
+    <fluo.version>1.0.0-beta-2-SNAPSHOT</fluo.version>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
   </properties>
@@ -119,6 +119,11 @@
         <groupId>org.apache.zookeeper</groupId>
         <artifactId>zookeeper</artifactId>
         <version>3.4.6</version>
+      </dependency>
+      <dependency>
+        <groupId>org.easymock</groupId>
+        <artifactId>easymock</artifactId>
+        <version>3.4</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
