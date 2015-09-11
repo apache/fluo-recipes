@@ -14,15 +14,26 @@
 
 package io.fluo.recipes.transaction;
 
+import java.util.function.Predicate;
+
 import io.fluo.api.client.Transaction;
 import io.fluo.api.exceptions.CommitException;
 
+/**
+ * An implementation of {@link Transaction} that logs all transactions operations (GET, SET, or
+ * DELETE) in a {@link TxLog} that can be used for exports
+ */
 public class RecordingTransaction extends RecordingTransactionBase implements Transaction {
 
   private final Transaction tx;
 
   private RecordingTransaction(Transaction tx) {
     super(tx);
+    this.tx = tx;
+  }
+
+  private RecordingTransaction(Transaction tx, Predicate<LogEntry> filter) {
+    super(tx, filter);
     this.tx = tx;
   }
 
@@ -36,7 +47,17 @@ public class RecordingTransaction extends RecordingTransactionBase implements Tr
     tx.close();
   }
 
+  /**
+   * Creates a RecordingTransaction by wrapping an existing Transaction
+   */
   public static RecordingTransaction wrap(Transaction tx) {
     return new RecordingTransaction(tx);
+  }
+
+  /**
+   * Creates a RecordingTransaction using the provided LogEntry filter and existing Transaction
+   */
+  public static RecordingTransaction wrap(Transaction tx, Predicate<LogEntry> filter) {
+    return new RecordingTransaction(tx, filter);
   }
 }
