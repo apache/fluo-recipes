@@ -26,15 +26,15 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 
-import org.apache.commons.configuration.Configuration;
-
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.hash.Hashing;
-
+import io.fluo.api.client.SnapshotBase;
 import io.fluo.api.client.TransactionBase;
+import io.fluo.api.config.FluoConfiguration;
 import io.fluo.api.config.ObserverConfiguration;
 import io.fluo.api.config.ScannerConfiguration;
 import io.fluo.api.data.Bytes;
@@ -42,9 +42,11 @@ import io.fluo.api.data.Column;
 import io.fluo.api.data.Span;
 import io.fluo.api.iterator.ColumnIterator;
 import io.fluo.api.iterator.RowIterator;
+import io.fluo.recipes.serialization.KryoSimplerSerializer;
 import io.fluo.recipes.serialization.SimpleSerializer;
+import org.apache.commons.configuration.Configuration;
 
-public abstract class CollisionFreeMap<K, V, U> {
+public class CollisionFreeMap<K, V, U> {
 
   private String mapId;
 
@@ -52,20 +54,40 @@ public abstract class CollisionFreeMap<K, V, U> {
   private Class<V> valType;
   private Class<U> updateType;
   private SimpleSerializer serializer;
+  private Combiner<K, V, U> combiner;
+  UpdateObserver<K, V> updateObserver;
 
-  private V defaultValue;
-
-  static final String UPDATE_CF_PREFIX = "upd:";
+  static final Bytes UPDATE_CF_PREFIX = Bytes.of("upd:");
   private int numBuckets = -1;
 
-  protected CollisionFreeMap(String mapId, Class<K> keyType, Class<V> valType, Class<U> updateType,
-      SimpleSerializer serializer, V defaultValue) {
-    this.mapId = mapId;
-    this.keyType = keyType;
-    this.valType = valType;
-    this.updateType = updateType;
-    this.defaultValue = defaultValue;
-    this.serializer = serializer;
+
+  @SuppressWarnings("unchecked")
+  CollisionFreeMap(Options opts) throws Exception {
+
+    this.mapId = opts.mapId;
+    // TODO defer loading classes
+    // TODO centralize class loading
+    // TODO try to check type params
+    this.numBuckets = opts.numBuckets;
+    this.keyType = (Class<K>) getClass().getClassLoader().loadClass(opts.keyType);
+    this.valType = (Class<V>) getClass().getClassLoader().loadClass(opts.valueType);
+    this.updateType = (Class<U>) getClass().getClassLoader().loadClass(opts.updateType);
+    this.combiner =
+        (Combiner<K, V, U>) getClass().getClassLoader().loadClass(opts.combinerType).newInstance();
+    if (opts.serializer != null) {
+      this.serializer =
+          getClass().getClassLoader().loadClass(opts.serializer).asSubclass(SimpleSerializer.class)
+              .newInstance();
+    } else {
+      this.serializer = new KryoSimplerSerializer();
+    }
+    if (opts.updateObserverType != null) {
+      this.updateObserver =
+          getClass().getClassLoader().loadClass(opts.updateObserverType)
+              .asSubclass(UpdateObserver.class).newInstance();
+    } else {
+      this.updateObserver = new NullUpdateObserver<>();
+    }
   }
 
   void process(TransactionBase tx, Bytes ntfyRow, Column col) throws Exception {
@@ -80,6 +102,7 @@ public abstract class CollisionFreeMap<K, V, U> {
       while (cols.hasNext()) {
         // TODO processing too many at once increases chance of
         // collisions... may want to process a max # and notify self
+        // when stopping could set a continue key
 
         // TODO if there is too much in memory, then stop and processes
         // whats there and notify self.. need to ensure entire keys are
@@ -102,9 +125,15 @@ public abstract class CollisionFreeMap<K, V, U> {
       }
     }
 
-    Map<Bytes, Map<Column, Bytes>> currentVals = getCurrentValues(tx, ntfyRow, updates.keySet());
+    byte[] dataPrefix = ntfyRow.toArray();
+    // TODO this is awful... no sanity check... hard to read
+    dataPrefix[Bytes.of(mapId).length() + 1] = 'd';
 
-    Prefix prefix = new Prefix(ntfyRow);
+    Prefix prefix = new Prefix(dataPrefix);
+
+    Map<Bytes, Map<Column, Bytes>> currentVals = getCurrentValues(tx, prefix, updates.keySet());
+
+    ArrayList<Update<K, V>> updatesToReport = new ArrayList<>(updates.size());
 
     for (Entry<Bytes, List<Bytes>> entry : updates.entrySet()) {
       Bytes currentValueRow = prefix.append(entry.getKey());
@@ -113,11 +142,11 @@ public abstract class CollisionFreeMap<K, V, U> {
       if (cols != null) {
         currentVal = cols.get(DATA_COLUMN);
       }
-      V cvd = defaultValue;
+      Optional<V> cvd;
       if (currentVal == null) {
-        cvd = defaultValue;
+        cvd = Optional.absent();
       } else {
-        cvd = serializer.deserialize(currentVal.toArray(), valType);
+        cvd = Optional.of(serializer.deserialize(currentVal.toArray(), valType));
       }
 
       Iterator<U> ui = Iterators.transform(entry.getValue().iterator(), new Function<Bytes, U>() {
@@ -128,16 +157,20 @@ public abstract class CollisionFreeMap<K, V, U> {
       });
 
       K kd = serializer.deserialize(entry.getKey().toArray(), keyType);
-      V nv = combine(kd, cvd, ui);
+      V nv = combiner.combine(kd, cvd, ui);
 
       Bytes newValBytes = Bytes.of(serializer.serialize(nv));
       if (currentVal == null || !currentVal.equals(newValBytes)) {
-        // TODO passing null may be confusing.. could call another method
-        // instead like setting value
-        updatingValue(tx, kd, currentVal == null ? null : cvd, nv);
         tx.set(currentValueRow, DATA_COLUMN, newValBytes);
+        updatesToReport.add(new Update<K, V>(kd, cvd.orNull(), nv));
       }
     }
+
+    // TODO could clear these as converted to objects to avoid double memory usage
+    updates.clear();
+    currentVals.clear();
+
+    updateObserver.updatingValues(tx, updatesToReport.iterator());
   }
 
   private static final Column DATA_COLUMN = new Column("data", "current");
@@ -145,6 +178,13 @@ public abstract class CollisionFreeMap<K, V, U> {
   private static class Prefix {
     byte[] tmp;
     int prefixLen;
+
+    Prefix(byte[] p) {
+      tmp = new byte[p.length + 32];
+      System.arraycopy(p, 0, tmp, 0, p.length);
+      tmp[p.length] = ':';
+      prefixLen = p.length + 1;
+    }
 
     Prefix(Bytes p) {
       tmp = new byte[p.length() + 32];
@@ -154,25 +194,27 @@ public abstract class CollisionFreeMap<K, V, U> {
     }
 
     Bytes append(Bytes s) {
-      if (tmp.length < prefixLen + s.length()) {
-        byte[] newTmp = new byte[prefixLen + s.length() * 2];
+      return append(s.toArray());
+    }
+
+    public Bytes append(byte[] s) {
+      if (tmp.length < prefixLen + s.length) {
+        byte[] newTmp = new byte[prefixLen + s.length * 2];
         System.arraycopy(tmp, 0, newTmp, 0, prefixLen);
         tmp = newTmp;
       }
 
-      System.arraycopy(s.toArray(), 0, tmp, prefixLen, s.length());
-      return Bytes.of(tmp, 0, prefixLen + s.length());
+      System.arraycopy(s, 0, tmp, prefixLen, s.length);
+      return Bytes.of(tmp, 0, prefixLen + s.length);
     }
   }
 
-  private Map<Bytes, Map<Column, Bytes>> getCurrentValues(TransactionBase tx, Bytes ntfyRow,
+  private Map<Bytes, Map<Column, Bytes>> getCurrentValues(TransactionBase tx, Prefix prefix,
       Set<Bytes> keySet) {
     if (keySet.size() == 0) {
       // TODO fluo should be able to handle this... it gets when passed an empty set of rows
       return Collections.emptyMap();
     }
-
-    Prefix prefix = new Prefix(ntfyRow);
 
     Set<Bytes> rows = new HashSet<>();
 
@@ -188,14 +230,58 @@ public abstract class CollisionFreeMap<K, V, U> {
     }
   }
 
-  // TODO want to support deleting data
-  protected abstract V combine(K key, V currentValue, Iterator<U> updates);
+  public V get(SnapshotBase tx, K key) {
 
-  protected void updatingValue(TransactionBase tx, K key, V oldValue, V currentValue) {}
+    byte[] k = serializer.serialize(key);
 
-  public V get(TransactionBase tx, K key) {
-    // TODO implement (should combine current value and updates)
-    throw new UnsupportedOperationException();
+    int hash = Hashing.murmur3_32().hashBytes(k).asInt();
+    int bucketId = Math.abs(hash % numBuckets);
+
+    Bytes updatesRow = createUpdateRow(mapId, bucketId);
+
+    Prefix cfPrefix = new Prefix(UPDATE_CF_PREFIX.subSequence(0, UPDATE_CF_PREFIX.length() - 1));
+
+    ScannerConfiguration sc = new ScannerConfiguration();
+    sc.setSpan(Span.exact(updatesRow, new Column(cfPrefix.append(k))));
+
+    List<Bytes> updateList = new ArrayList<>();
+    RowIterator iter = tx.get(sc);
+
+    if (iter.hasNext()) {
+      ColumnIterator cols = iter.next().getValue();
+      while (cols.hasNext()) {
+        Entry<Column, Bytes> colVal = cols.next();
+        updateList.add(colVal.getValue());
+      }
+    }
+
+    Bytes dataRow = new Prefix(Bytes.of(mapId + ":d:" + bucketId)).append(k);
+
+    Bytes cv = tx.get(dataRow, DATA_COLUMN);
+
+    if (updateList.size() == 0) {
+      if (cv == null) {
+        return null;
+      } else {
+        return serializer.deserialize(cv.toArray(), valType);
+      }
+    }
+
+    Optional<V> cvd;
+    if (cv == null) {
+      cvd = Optional.absent();
+    } else {
+      cvd = Optional.of(serializer.deserialize(cv.toArray(), valType));
+    }
+
+    Iterator<U> ui = Iterators.transform(updateList.iterator(), new Function<Bytes, U>() {
+      @Override
+      public U apply(Bytes b) {
+        return serializer.deserialize(b.toArray(), updateType);
+      }
+    });
+
+    return combiner.combine(key, cvd, ui);
   }
 
   String getId() {
@@ -206,6 +292,7 @@ public abstract class CollisionFreeMap<K, V, U> {
     Preconditions.checkState(numBuckets > 0, "Not initialized");
 
     UUID uuid = UUID.randomUUID();
+    Prefix cfPrefix = new Prefix(UPDATE_CF_PREFIX.subSequence(0, UPDATE_CF_PREFIX.length() - 1));
     Bytes cq = createCq(uuid);
 
     Set<Integer> buckets = new HashSet<>();
@@ -215,8 +302,8 @@ public abstract class CollisionFreeMap<K, V, U> {
       int hash = Hashing.murmur3_32().hashBytes(k).asInt();
       int bucketId = Math.abs(hash % numBuckets);
 
-      Bytes row = createRow(mapId, bucketId);
-      Bytes cf = createCf(k);
+      Bytes row = createUpdateRow(mapId, bucketId);
+      Bytes cf = cfPrefix.append(k);
       Bytes val = Bytes.of(serializer.serialize(entry.getValue()));
 
       // TODO set if not exists would be comforting here.... but
@@ -227,49 +314,122 @@ public abstract class CollisionFreeMap<K, V, U> {
     }
 
     for (Integer bucketId : buckets) {
-      Bytes row = createRow(mapId, bucketId);
+      Bytes row = createUpdateRow(mapId, bucketId);
       // TODO is ok to call set weak notification multiple times for the
       // same row col???
-      tx.setWeakNotification(row, new Column("fluoRecipes", "hc:" + mapId));
+      tx.setWeakNotification(row, new Column("fluoRecipes", "cfm:" + mapId));
+    }
+  }
+
+
+  public static <K2, V2, U2> CollisionFreeMap<K2, V2, U2> getInstance(String mapId,
+      Configuration appConfig) {
+    Options opts = new Options(mapId, appConfig);
+    try {
+      return new CollisionFreeMap<K2, V2, U2>(opts);
+    } catch (Exception e) {
+      // TODO
+      throw new RuntimeException(e);
     }
   }
 
   public static class Options {
-    private int numBuckets;
+    int numBuckets;
 
-    public Options(int numBuckets) {
-      Preconditions.checkArgument(numBuckets > 0);
-      this.numBuckets = numBuckets;
+    String serializer;
+    String keyType;
+    String valueType;
+    String updateType;
+    String combinerType;
+    String updateObserverType;
+    String mapId;
+
+    private static final String PREFIX = "recipes.cfm.";
+
+    Options(String mapId, Configuration appConfig) {
+      this.mapId = mapId;
+
+      this.numBuckets = appConfig.getInt(PREFIX + mapId + ".buckets");
+      this.combinerType = appConfig.getString(PREFIX + mapId + ".combiner");
+      this.keyType = appConfig.getString(PREFIX + mapId + ".key");
+      this.valueType = appConfig.getString(PREFIX + mapId + ".val");
+      this.updateType = appConfig.getString(PREFIX + mapId + ".update");
+      this.serializer = appConfig.getString(PREFIX + mapId + ".serializer", null);
+      this.updateObserverType = appConfig.getString(PREFIX + mapId + ".updateObserver", null);
     }
 
-    public int getNumBuckets() {
-      return numBuckets;
+    public Options(String mapId, String combinerType, String keyType, String valueType,
+        String updateType, int buckets) {
+      Preconditions.checkArgument(buckets > 0);
+
+      this.mapId = mapId;
+      this.numBuckets = buckets;
+      this.combinerType = combinerType;
+      this.updateObserverType = null;
+      this.keyType = keyType;
+      this.valueType = valueType;
+      this.updateType = updateType;
+    }
+
+    public Options(String mapId, String combinerType, String updateObserverType, String keyType,
+        String valueType, String updateType, int buckets) {
+      Preconditions.checkArgument(buckets > 0);
+
+      this.mapId = mapId;
+      this.numBuckets = buckets;
+      this.combinerType = combinerType;
+      this.updateObserverType = updateObserverType;
+      this.keyType = keyType;
+      this.valueType = valueType;
+      this.updateType = updateType;
+    }
+
+    public <K, V, U> Options(String mapId, Class<? extends Combiner<K, V, U>> combiner,
+        Class<K> keyType, Class<V> valueType, Class<U> updateType, int buckets) {
+      this(mapId, combiner.getName(), keyType.getName(), valueType.getName(), updateType.getName(),
+          buckets);
+    }
+
+    public <K, V, U> Options(String mapId, Class<? extends Combiner<K, V, U>> combiner,
+        Class<? extends UpdateObserver<K, V>> updateObserver, Class<K> keyType, Class<V> valueType,
+        Class<U> updateType, int buckets) {
+      this(mapId, combiner.getName(), updateObserver.getName(), keyType.getName(), valueType
+          .getName(), updateType.getName(), buckets);
+    }
+
+    public Options setSerializer(Class<? extends SimpleSerializer> serializerType) {
+      setSerializer(serializerType.getName());
+      return this;
+    }
+
+    public Options setSerializer(String serializerType) {
+      this.serializer = serializerType;
+      return this;
+    }
+
+    void save(Configuration appConfig) {
+      appConfig.setProperty(PREFIX + mapId + ".buckets", numBuckets + "");
+      appConfig.setProperty(PREFIX + mapId + ".combiner", combinerType + "");
+      appConfig.setProperty(PREFIX + mapId + ".key", keyType);
+      appConfig.setProperty(PREFIX + mapId + ".val", valueType);
+      appConfig.setProperty(PREFIX + mapId + ".update", updateType);
+      if (serializer != null) {
+        appConfig.setProperty(PREFIX + mapId + ".serializer", serializer + "");
+      }
+      if (updateObserverType != null) {
+        appConfig.setProperty(PREFIX + mapId + ".updateObserver", updateObserverType + "");
+      }
     }
   }
 
-  public ObserverConfiguration getObserverConfiguration() {
-    return new ObserverConfiguration(CollisionFreeMapObserver.class.getName())
-        .setParameters(ImmutableMap.of("cfmClass", this.getClass().getName()));
+  public static void configure(FluoConfiguration fluoConfig, Options opts) {
+    opts.save(fluoConfig.getAppConfiguration());
+    fluoConfig.addObserver(new ObserverConfiguration(CollisionFreeMapObserver.class.getName())
+        .setParameters(ImmutableMap.of("mapId", opts.mapId)));
   }
 
-  public void setAppConfiguration(Configuration appConfig, Options cfmo) {
-    appConfig.setProperty("recipes.cfm." + getId() + ".buckets", cfmo.getNumBuckets() + "");
-  }
-
-  public void init(Configuration appConfig) {
-    this.numBuckets = appConfig.getInt("recipes.cfm." + getId() + ".buckets");
-  }
-
-  private Bytes createRow(String mapId, int bucketId) {
-    return Bytes.of(mapId + ":" + bucketId);
-  }
-
-  private Bytes createCf(byte[] k) {
-    byte[] family = new byte[UPDATE_CF_PREFIX.length() + k.length];
-    byte[] prefix = UPDATE_CF_PREFIX.getBytes();
-    System.arraycopy(prefix, 0, family, 0, prefix.length);
-    System.arraycopy(k, 0, family, prefix.length, k.length);
-    return Bytes.of(family);
+  private Bytes createUpdateRow(String mapId, int bucketId) {
+    return Bytes.of(mapId + ":u:" + bucketId);
   }
 
   private Bytes createCq(UUID uuid) {

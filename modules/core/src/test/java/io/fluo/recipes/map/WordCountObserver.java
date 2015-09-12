@@ -16,35 +16,32 @@ package io.fluo.recipes.map;
 
 import java.util.Iterator;
 
+import com.google.common.base.Optional;
 import io.fluo.api.client.TransactionBase;
 import io.fluo.api.data.Bytes;
 import io.fluo.api.data.Column;
 
-public class WordCountMap extends CollisionFreeMap<String, Long, Long> {
-
-  protected WordCountMap() {
-    super("wc", String.class, Long.class, Long.class, new TestSerializer(), 0l);
-  }
+public class WordCountObserver extends UpdateObserver<String, Long> {
 
   @Override
-  protected Long combine(String key, Long currentValue, Iterator<Long> updates) {
-    long sum = currentValue;
+  public void updatingValues(TransactionBase tx, Iterator<Update<String, Long>> updates) {
+
     while (updates.hasNext()) {
-      sum += updates.next();
-    }
+      Update<String, Long> update = updates.next();
 
-    return sum;
+      Optional<Long> oldVal = update.getOldValue();
+      Optional<Long> newVal = update.getNewValue();
+
+      if (oldVal.isPresent()) {
+        String oldRow = String.format("iwc:%09d:%s", oldVal.get(), update.getKey());
+        tx.delete(Bytes.of(oldRow), new Column(Bytes.EMPTY, Bytes.EMPTY));
+      }
+
+      if (newVal.isPresent()) {
+        String newRow = String.format("iwc:%09d:%s", newVal.get(), update.getKey());
+        tx.set(Bytes.of(newRow), new Column(Bytes.EMPTY, Bytes.EMPTY), Bytes.EMPTY);
+      }
+    }
   }
 
-  @Override
-  protected void updatingValue(TransactionBase tx, String word, Long oldValue, Long newValue) {
-    // update an inverted word count index
-    if (oldValue != null) {
-      String oldRow = String.format("iwc:%09d:%s", oldValue, word);
-      tx.delete(Bytes.of(oldRow), new Column(Bytes.EMPTY, Bytes.EMPTY));
-    }
-
-    String newRow = String.format("iwc:%09d:%s", newValue, word);
-    tx.set(Bytes.of(newRow), new Column(Bytes.EMPTY, Bytes.EMPTY), Bytes.EMPTY);
-  }
 }

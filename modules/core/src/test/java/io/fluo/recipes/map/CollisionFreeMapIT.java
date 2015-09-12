@@ -15,22 +15,17 @@
 package io.fluo.recipes.map;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 
-import org.apache.commons.io.FileUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
+import com.google.common.collect.ImmutableMap;
 import io.fluo.api.client.FluoClient;
 import io.fluo.api.client.FluoFactory;
 import io.fluo.api.client.LoaderExecutor;
 import io.fluo.api.client.Snapshot;
+import io.fluo.api.client.Transaction;
 import io.fluo.api.config.FluoConfiguration;
 import io.fluo.api.config.ObserverConfiguration;
 import io.fluo.api.config.ScannerConfiguration;
@@ -40,10 +35,19 @@ import io.fluo.api.data.Span;
 import io.fluo.api.iterator.ColumnIterator;
 import io.fluo.api.iterator.RowIterator;
 import io.fluo.api.mini.MiniFluo;
+import org.apache.commons.io.FileUtils;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 public class CollisionFreeMapIT {
 
   private MiniFluo miniFluo;
+
+  private CollisionFreeMap<String, Long, Long> wcMap;
+
+  static final String MAP_ID = "wcm";
 
   @Before
   public void setUpFluo() throws Exception {
@@ -54,17 +58,15 @@ public class CollisionFreeMapIT {
     props.setWorkerThreads(20);
     props.setMiniDataDir("target/mini");
 
-    ArrayList<ObserverConfiguration> observers = new ArrayList<>();
+    props.addObserver(new ObserverConfiguration(DocumentObserver.class.getName()));
 
-    WordCountMap wcm = new WordCountMap();
-    observers.add(wcm.getObserverConfiguration());
-    wcm.setAppConfiguration(props.getAppConfiguration(), new CollisionFreeMap.Options(17));
-
-    observers.add(new ObserverConfiguration(DocumentObserver.class.getName()));
-
-    props.setObservers(observers);
+    CollisionFreeMap.configure(props, new CollisionFreeMap.Options(MAP_ID, WordCountCombiner.class,
+        WordCountObserver.class, String.class, Long.class, Long.class, 17)
+        .setSerializer(TestSerializer.class));
 
     miniFluo = FluoFactory.newMiniFluo(props);
+
+    wcMap = CollisionFreeMap.getInstance(MAP_ID, props.getAppConfiguration());
   }
 
   @After
@@ -118,20 +120,82 @@ public class CollisionFreeMapIT {
               continue;
             }
 
-            Long count = counts.get(word);
-            if (count == null) {
-              count = 0l;
-            }
-
-            count += 1;
-
-            counts.put(word, count);
+            counts.merge(word, 1L, Long::sum);
           }
         }
       }
     }
 
     return counts;
+  }
+
+  @Test
+  public void testGet() {
+    try (FluoClient fc = FluoFactory.newClient(miniFluo.getClientConfiguration())) {
+      try (Transaction tx = fc.newTransaction()) {
+        wcMap.update(tx, ImmutableMap.of("cat", 2L, "dog", 5L));
+        tx.commit();
+      }
+
+      try (Transaction tx = fc.newTransaction()) {
+        wcMap.update(tx, ImmutableMap.of("cat", 1L, "dog", 1L));
+        tx.commit();
+      }
+
+      try (Transaction tx = fc.newTransaction()) {
+        wcMap.update(tx, ImmutableMap.of("cat", 1L, "dog", 1L, "fish", 2L));
+        tx.commit();
+      }
+
+      // try reading possibly before observer combines... will either see outstanding updates or a
+      // current value
+      try (Snapshot snap = fc.newSnapshot()) {
+        Assert.assertEquals((Long) 4L, wcMap.get(snap, "cat"));
+        Assert.assertEquals((Long) 7L, wcMap.get(snap, "dog"));
+        Assert.assertEquals((Long) 2L, wcMap.get(snap, "fish"));
+      }
+
+      miniFluo.waitForObservers();
+
+      // in this case there should be no updates, only a current value
+      try (Snapshot snap = fc.newSnapshot()) {
+        Assert.assertEquals((Long) 4L, wcMap.get(snap, "cat"));
+        Assert.assertEquals((Long) 7L, wcMap.get(snap, "dog"));
+        Assert.assertEquals((Long) 2L, wcMap.get(snap, "fish"));
+      }
+
+      Map<String, Long> expectedCounts = new HashMap<>();
+      expectedCounts.put("cat", 4L);
+      expectedCounts.put("dog", 7L);
+      expectedCounts.put("fish", 2L);
+
+      Assert.assertEquals(expectedCounts, getComputedWordCounts(fc));
+
+      try (Transaction tx = fc.newTransaction()) {
+        wcMap.update(tx, ImmutableMap.of("cat", 1L, "dog", 1L));
+        tx.commit();
+      }
+
+      // there may be outstanding update and a current value for the key in this case
+      try (Snapshot snap = fc.newSnapshot()) {
+        Assert.assertEquals((Long) 5L, wcMap.get(snap, "cat"));
+        Assert.assertEquals((Long) 8L, wcMap.get(snap, "dog"));
+        Assert.assertEquals((Long) 2L, wcMap.get(snap, "fish"));
+      }
+
+      miniFluo.waitForObservers();
+
+      try (Snapshot snap = fc.newSnapshot()) {
+        Assert.assertEquals((Long) 5L, wcMap.get(snap, "cat"));
+        Assert.assertEquals((Long) 8L, wcMap.get(snap, "dog"));
+        Assert.assertEquals((Long) 2L, wcMap.get(snap, "fish"));
+      }
+
+      expectedCounts.put("cat", 5L);
+      expectedCounts.put("dog", 8L);
+
+      Assert.assertEquals(expectedCounts, getComputedWordCounts(fc));
+    }
   }
 
   @Test
@@ -146,15 +210,20 @@ public class CollisionFreeMapIT {
 
       miniFluo.waitForObservers();
 
+      try (Snapshot snap = fc.newSnapshot()) {
+        Assert.assertEquals((Long) 4L, wcMap.get(snap, "cat"));
+        Assert.assertEquals((Long) 1L, wcMap.get(snap, "milk"));
+      }
+
       Map<String, Long> expectedCounts = new HashMap<>();
-      expectedCounts.put("dog", 1l);
-      expectedCounts.put("cat", 4l);
-      expectedCounts.put("hamster", 1l);
-      expectedCounts.put("milk", 1l);
-      expectedCounts.put("bread", 1l);
-      expectedCounts.put("food", 1l);
-      expectedCounts.put("zoo", 1l);
-      expectedCounts.put("big", 1l);
+      expectedCounts.put("dog", 1L);
+      expectedCounts.put("cat", 4L);
+      expectedCounts.put("hamster", 1L);
+      expectedCounts.put("milk", 1L);
+      expectedCounts.put("bread", 1L);
+      expectedCounts.put("food", 1L);
+      expectedCounts.put("zoo", 1L);
+      expectedCounts.put("big", 1L);
 
       Assert.assertEquals(expectedCounts, getComputedWordCounts(fc));
 
@@ -164,8 +233,8 @@ public class CollisionFreeMapIT {
 
       miniFluo.waitForObservers();
 
-      expectedCounts.put("cat", 3l);
-      expectedCounts.put("feline", 1l);
+      expectedCounts.put("cat", 3L);
+      expectedCounts.put("feline", 1L);
 
       Assert.assertEquals(expectedCounts, getComputedWordCounts(fc));
 
@@ -185,11 +254,34 @@ public class CollisionFreeMapIT {
 
       miniFluo.waitForObservers();
 
-      expectedCounts.put("zoo", 2l);
-      expectedCounts.put("big", 2l);
+      expectedCounts.put("zoo", 2L);
+      expectedCounts.put("big", 2L);
       expectedCounts.remove("milk");
       expectedCounts.remove("bread");
       expectedCounts.remove("food");
+
+      Assert.assertEquals(expectedCounts, getComputedWordCounts(fc));
+
+      try (LoaderExecutor loader = fc.newLoaderExecutor()) {
+        loader.execute(new DocumentLoader("0002", "cat cat hamster hamster"));
+      }
+
+      miniFluo.waitForObservers();
+
+      expectedCounts.put("cat", 4L);
+      expectedCounts.put("hamster", 2L);
+
+      Assert.assertEquals(expectedCounts, getComputedWordCounts(fc));
+
+      try (LoaderExecutor loader = fc.newLoaderExecutor()) {
+        loader.execute(new DocumentLoader("0002", "dog hamster"));
+      }
+
+      miniFluo.waitForObservers();
+
+      expectedCounts.put("cat", 2L);
+      expectedCounts.put("hamster", 1L);
+      expectedCounts.put("dog", 2L);
 
       Assert.assertEquals(expectedCounts, getComputedWordCounts(fc));
     }
@@ -244,7 +336,7 @@ public class CollisionFreeMapIT {
       }
 
       miniFluo.waitForObservers();
-      Assert.assertEquals(computeWordCounts(fc), getComputedWordCounts(fc));
+      assertWordCountsEqual(fc);
 
       try (LoaderExecutor loader = fc.newLoaderExecutor()) {
         for (int i = 0; i < 100; i++) {
@@ -253,7 +345,16 @@ public class CollisionFreeMapIT {
       }
 
       miniFluo.waitForObservers();
-      Assert.assertEquals(computeWordCounts(fc), getComputedWordCounts(fc));
+      assertWordCountsEqual(fc);
+    }
+  }
+
+  private void assertWordCountsEqual(FluoClient fc) {
+    Map<String, Long> expected = computeWordCounts(fc);
+    Map<String, Long> actual = getComputedWordCounts(fc);
+    if (!expected.equals(actual)) {
+      diff(expected, actual);
+      Assert.fail();
     }
   }
 }

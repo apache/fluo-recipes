@@ -19,7 +19,6 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 
 import com.google.common.base.Preconditions;
-
 import io.fluo.api.client.TransactionBase;
 import io.fluo.api.config.ScannerConfiguration;
 import io.fluo.api.data.Bytes;
@@ -36,10 +35,8 @@ import io.fluo.api.types.TypedTransactionBase;
  */
 class ExportBucket {
   private static final String DATA_CF_PREFIX = "data:";
-  private static final String META_CF = "meta";
   private static final String NOTIFICATION_CF = "fluoRecipes";
   private static final String NOTIFICATION_CQ_PREFIX = "eq:";
-  private static final String SEQ_CQ_PREFIX = "seq:";
 
   static Column newNotificationColumn(String queueId) {
     return new Column(NOTIFICATION_CF, NOTIFICATION_CQ_PREFIX + queueId);
@@ -63,11 +60,6 @@ class ExportBucket {
     this.bucketRow = bucketRow;
   }
 
-  public long getSequenceNumber(int counter) {
-    return ttx.get().row(bucketRow).fam(META_CF)
-        .qual(SEQ_CQ_PREFIX + Integer.toString(counter, 16)).toLong(0);
-  }
-
   // this method is 10x faster than String.format("%016x",seq)
   private static byte[] encSeq(long l) {
     byte[] encodedSeq =
@@ -88,12 +80,7 @@ class ExportBucket {
     ttx.mutate().row(bucketRow).fam(family).qual(encSeq(seq)).set(value);
   }
 
-  public void setSequenceNumber(int counter, long seq) {
-    ttx.mutate().row(bucketRow).fam(META_CF).qual(SEQ_CQ_PREFIX + Integer.toString(counter, 16))
-        .set(seq);
-  }
-
-  public void notifyExportObserver(byte[] key) {
+  public void notifyExportObserver() {
     Preconditions.checkNotNull(qid);
     ttx.mutate().row(bucketRow).col(newNotificationColumn(qid)).weaklyNotify();
   }

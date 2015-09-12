@@ -22,7 +22,7 @@ import io.fluo.api.data.Bytes;
 import io.fluo.api.data.Column;
 import io.fluo.api.types.TypedObserver;
 import io.fluo.api.types.TypedTransactionBase;
-import io.fluo.recipes.export.ExportQueue;
+import io.fluo.recipes.export.ExportQueueIT.RefExporter;
 
 public class DocumentObserver extends TypedObserver {
 
@@ -30,7 +30,7 @@ public class DocumentObserver extends TypedObserver {
 
   @Override
   public void init(Context context) throws Exception {
-    refExportQueue = new ExportQueueIT.RefExporter().getExportQueue(context.getAppConfiguration());
+    refExportQueue = ExportQueue.getInstance(RefExporter.QUEUE_ID, context.getAppConfiguration());
   }
 
   @Override

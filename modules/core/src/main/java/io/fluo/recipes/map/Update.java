@@ -12,21 +12,31 @@
  * the License.
  */
 
-package io.fluo.recipes.export;
+package io.fluo.recipes.map;
 
-import java.util.Iterator;
+import com.google.common.base.Optional;
 
-import io.fluo.api.observer.Observer.Context;
+public class Update<K, V> {
 
-public abstract class Exporter<K, V> {
+  private final K key;
+  private final V oldValue;
+  private final V newValue;
 
-  public void init(String queueId, Context observerContext) throws Exception {}
+  Update(K key, V oldValue, V newValue) {
+    this.key = key;
+    this.oldValue = oldValue;
+    this.newValue = newValue;
+  }
 
-  /**
-   * Must be able to handle same key being exported multiple times and key being exported out of
-   * order. The sequence number is meant to help with this.
-   */
-  protected abstract void processExports(Iterator<SequencedExport<K, V>> exports);
+  public K getKey() {
+    return key;
+  }
 
-  // TODO add close
+  public Optional<V> getNewValue() {
+    return Optional.fromNullable(newValue);
+  }
+
+  public Optional<V> getOldValue() {
+    return Optional.fromNullable(oldValue);
+  }
 }

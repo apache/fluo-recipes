@@ -17,17 +17,9 @@ package io.fluo.recipes.accumulo.export;
 import java.util.Collections;
 import java.util.List;
 
-import io.fluo.recipes.serialization.KryoSimplerSerializer;
 import org.apache.accumulo.core.data.Mutation;
 
 public class TestExporter extends AccumuloExporter<String, String> {
-
-  public static final String QUEUE_ID = "aeqt";
-
-  public TestExporter() {
-    super(QUEUE_ID, String.class, String.class, new KryoSimplerSerializer());
-  }
-
   @Override
   protected List<Mutation> convert(String key, long seq, String value) {
     Mutation m = new Mutation(key);

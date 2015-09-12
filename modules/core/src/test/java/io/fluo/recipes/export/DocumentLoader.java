@@ -14,10 +14,9 @@
 
 package io.fluo.recipes.export;
 
-import org.apache.commons.lang.StringUtils;
-
 import io.fluo.api.types.TypedLoader;
 import io.fluo.api.types.TypedTransactionBase;
+import org.apache.commons.lang.StringUtils;
 
 public class DocumentLoader extends TypedLoader {
 
