@@ -24,7 +24,6 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <groupId>io.fluo</groupId>
   <artifactId>fluo-recipes-core</artifactId>
 
   <name>Fluo Recipes</name>
