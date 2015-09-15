@@ -14,13 +14,19 @@
 
 package io.fluo.recipes.accumulo.export;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import io.fluo.api.client.FluoAdmin.InitOpts;
+import io.fluo.api.client.FluoClient;
+import io.fluo.api.client.FluoFactory;
+import io.fluo.api.client.Transaction;
+import io.fluo.api.config.FluoConfiguration;
+import io.fluo.api.mini.MiniFluo;
+import io.fluo.recipes.export.ExportQueue;
 import org.apache.accumulo.core.client.Scanner;
 import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.data.Key;
@@ -36,18 +42,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import io.fluo.api.client.FluoAdmin.InitOpts;
-import io.fluo.api.client.FluoClient;
-import io.fluo.api.client.FluoFactory;
-import io.fluo.api.client.Transaction;
-import io.fluo.api.config.FluoConfiguration;
-import io.fluo.api.config.ObserverConfiguration;
-import io.fluo.api.mini.MiniFluo;
-import io.fluo.recipes.accumulo.export.AccumuloExporter;
-import io.fluo.recipes.accumulo.export.TableInfo;
-import io.fluo.recipes.export.ExportQueue;
-import io.fluo.recipes.export.ExportQueueOptions;
-
 public class AccumuloExporterIT {
   public static TemporaryFolder folder = new TemporaryFolder();
   public static MiniAccumuloCluster cluster;
@@ -56,6 +50,8 @@ public class AccumuloExporterIT {
   private static final PasswordToken password = new PasswordToken("secret");
   private static AtomicInteger tableCounter = new AtomicInteger(1);
   private String et;
+
+  public static final String QUEUE_ID = "aeqt";
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -84,15 +80,15 @@ public class AccumuloExporterIT {
     props.setAccumuloZookeepers(cluster.getZooKeepers());
     props.setAccumuloTable("data" + tableCounter.getAndIncrement());
     props.setWorkerThreads(5);
-    props.setObservers(Arrays.asList(new ObserverConfiguration(TestExporter.class.getName())));
 
-    new TestExporter().setConfiguration(props.getAppConfiguration(), new ExportQueueOptions(5, 5));
+    ExportQueue.configure(props, new ExportQueue.Options(QUEUE_ID, TestExporter.class,
+        String.class, String.class, 5));
 
     // create and configure export table
     et = "export" + tableCounter.getAndIncrement();
     cluster.getConnector("root", "secret").tableOperations().create(et);
-    AccumuloExporter.setExportTableInfo(props.getAppConfiguration(), TestExporter.QUEUE_ID,
-        new TableInfo(cluster.getInstanceName(), cluster.getZooKeepers(), "root", "secret", et));
+    AccumuloExporter.setExportTableInfo(props.getAppConfiguration(), QUEUE_ID, new TableInfo(
+        cluster.getInstanceName(), cluster.getZooKeepers(), "root", "secret", et));
 
     FluoFactory.newAdmin(props).initialize(
         new InitOpts().setClearTable(true).setClearZookeeper(true));
@@ -104,7 +100,7 @@ public class AccumuloExporterIT {
   public void testAccumuloExport() throws Exception {
 
     ExportQueue<String, String> teq =
-        new TestExporter().getExportQueue(props.getAppConfiguration());
+        ExportQueue.getInstance(QUEUE_ID, props.getAppConfiguration());
 
     try (FluoClient fc = FluoFactory.newClient(miniFluo.getClientConfiguration())) {
 

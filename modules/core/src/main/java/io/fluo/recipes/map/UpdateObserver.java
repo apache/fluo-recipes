@@ -12,21 +12,18 @@
  * the License.
  */
 
-package io.fluo.recipes.export;
+package io.fluo.recipes.map;
 
 import java.util.Iterator;
 
+import io.fluo.api.client.TransactionBase;
 import io.fluo.api.observer.Observer.Context;
 
-public abstract class Exporter<K, V> {
+public abstract class UpdateObserver<K, V> {
+  public void init(String mapId, Context observerContext) throws Exception {}
 
-  public void init(String queueId, Context observerContext) throws Exception {}
-
-  /**
-   * Must be able to handle same key being exported multiple times and key being exported out of
-   * order. The sequence number is meant to help with this.
-   */
-  protected abstract void processExports(Iterator<SequencedExport<K, V>> exports);
+  // TODO change to Iterator
+  public abstract void updatingValues(TransactionBase tx, Iterator<Update<K, V>> updates);
 
   // TODO add close
 }

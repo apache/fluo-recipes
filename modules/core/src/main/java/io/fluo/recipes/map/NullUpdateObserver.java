@@ -12,19 +12,13 @@
  * the License.
  */
 
-package io.fluo.recipes.export;
+package io.fluo.recipes.map;
 
-import com.google.common.base.Preconditions;
+import java.util.Iterator;
 
-public class ExportQueueOptions {
-  int numBuckets;
-  int numCounters;
+import io.fluo.api.client.TransactionBase;
 
-  public ExportQueueOptions(int buckets, int counters) {
-    Preconditions.checkArgument(buckets > 0);
-    Preconditions.checkArgument(counters > 0);
-
-    this.numBuckets = buckets;
-    this.numCounters = counters;
-  }
+class NullUpdateObserver<K, V> extends UpdateObserver<K, V> {
+  @Override
+  public void updatingValues(TransactionBase tx, Iterator<Update<K, V>> updates) {}
 }

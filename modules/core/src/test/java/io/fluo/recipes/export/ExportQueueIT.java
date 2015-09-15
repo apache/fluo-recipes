@@ -20,17 +20,13 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 
-import org.apache.commons.io.FileUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
+import com.google.common.collect.Iterators;
 import io.fluo.api.client.FluoClient;
 import io.fluo.api.client.FluoFactory;
 import io.fluo.api.client.LoaderExecutor;
@@ -44,16 +40,20 @@ import io.fluo.api.data.Span;
 import io.fluo.api.iterator.ColumnIterator;
 import io.fluo.api.iterator.RowIterator;
 import io.fluo.api.mini.MiniFluo;
-import io.fluo.recipes.serialization.KryoSimplerSerializer;
+import org.apache.commons.io.FileUtils;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 public class ExportQueueIT {
 
-  private static Map<String, Map<String, RefInfo>> exports = new HashMap<>();
+  private static Map<String, Map<String, RefInfo>> globalExports = new HashMap<>();
 
   private static Set<String> getExportedReferees(String node) {
     Set<String> ret = new HashSet<>();
 
-    Map<String, RefInfo> referees = exports.get(node);
+    Map<String, RefInfo> referees = globalExports.get(node);
 
     if (referees == null) {
       return ret;
@@ -70,7 +70,7 @@ public class ExportQueueIT {
   private static Map<String, Set<String>> getExportedReferees() {
     Map<String, Set<String>> ret = new HashMap<>();
 
-    for (String k : exports.keySet()) {
+    for (String k : globalExports.keySet()) {
       Set<String> referees = getExportedReferees(k);
       if (referees.size() > 0) {
         ret.put(k, referees);
@@ -82,59 +82,29 @@ public class ExportQueueIT {
 
   public static class RefExporter extends Exporter<String, RefUpdates> {
 
-    ArrayList<String> keys = new ArrayList<>();
-    ArrayList<Long> seqs = new ArrayList<>();
-    ArrayList<RefUpdates> updates = new ArrayList<>();
-
     public static final String QUEUE_ID = "req";
 
-    public RefExporter() {
-      super(QUEUE_ID, String.class, RefUpdates.class, new KryoSimplerSerializer());
+    private void updateExports(String key, long seq, String addedRef, boolean deleted) {
+      Map<String, RefInfo> referees = globalExports.computeIfAbsent(addedRef, k -> new HashMap<>());
+      referees.compute(key, (k, v) -> (v == null || v.seq < seq) ? new RefInfo(seq, deleted) : v);
     }
 
     @Override
-    protected void startingToProcessBatch() {
-      keys.clear();
-      seqs.clear();
-      updates.clear();
-    }
+    protected void processExports(Iterator<SequencedExport<String, RefUpdates>> exportIterator) {
+      ArrayList<SequencedExport<String, RefUpdates>> exportList = new ArrayList<>();
+      Iterators.addAll(exportList, exportIterator);
 
-    @Override
-    protected void processExport(String key, long seq, RefUpdates ru) {
-      // buffer exports instead of doing work here to test that starting
-      // and finish methods are
-      // called
-      keys.add(key);
-      seqs.add(seq);
-      updates.add(ru);
-    }
-
-    @Override
-    protected void finishedProcessingBatch() {
-      if (!(keys.size() == seqs.size()) || !(keys.size() == updates.size())) {
-        throw new IllegalStateException();
-      }
-
-      synchronized (exports) {
-        for (int i = 0; i < keys.size(); i++) {
-          String key = keys.get(i);
-          long seq = seqs.get(i);
-          RefUpdates ru = updates.get(i);
-
-          for (String addedRef : ru.getAddedRefs()) {
-            updateExports(key, seq, addedRef, false);
+      synchronized (ExportQueueIT.globalExports) {
+        for (SequencedExport<String, RefUpdates> se : exportList) {
+          for (String addedRef : se.getValue().getAddedRefs()) {
+            updateExports(se.getKey(), se.getSequence(), addedRef, false);
           }
 
-          for (String deletedRef : ru.getDeletedRefs()) {
-            updateExports(key, seq, deletedRef, true);
+          for (String deletedRef : se.getValue().getDeletedRefs()) {
+            updateExports(se.getKey(), se.getSequence(), deletedRef, true);
           }
         }
       }
-    }
-
-    private void updateExports(String key, long seq, String addedRef, boolean deleted) {
-      Map<String, RefInfo> referees = exports.computeIfAbsent(addedRef, k -> new HashMap<>());
-      referees.compute(key, (k, v) -> (v == null || v.seq < seq) ? new RefInfo(seq, deleted) : v);
     }
   }
 
@@ -149,12 +119,13 @@ public class ExportQueueIT {
     props.setWorkerThreads(20);
     props.setMiniDataDir("target/mini");
 
-    new RefExporter().setConfiguration(props.getAppConfiguration(), new ExportQueueOptions(13, 17));
-
     ObserverConfiguration doc = new ObserverConfiguration(DocumentObserver.class.getName());
-    ObserverConfiguration rex = new ObserverConfiguration(RefExporter.class.getName());
+    props.addObserver(doc);
 
-    props.setObservers(Arrays.asList(doc, rex));
+    ExportQueue.Options exportQueueOpts =
+        new ExportQueue.Options(RefExporter.QUEUE_ID, RefExporter.class, String.class,
+            RefUpdates.class, 13);
+    ExportQueue.configure(props, exportQueueOpts);
 
     miniFluo = FluoFactory.newMiniFluo(props);
   }
@@ -172,7 +143,7 @@ public class ExportQueueIT {
 
   @Test
   public void testExport() {
-    exports.clear();
+    globalExports.clear();
 
     try (FluoClient fc = FluoFactory.newClient(miniFluo.getClientConfiguration())) {
       try (LoaderExecutor loader = fc.newLoaderExecutor()) {
@@ -183,8 +154,6 @@ public class ExportQueueIT {
       }
 
       miniFluo.waitForObservers();
-
-      dump(fc);
 
       Assert.assertEquals(ns("0002", "0005", "0042"), getExportedReferees("0999"));
       Assert.assertEquals(ns("0999"), getExportedReferees("0002"));
@@ -226,6 +195,19 @@ public class ExportQueueIT {
     }
   }
 
+  public void assertEquals(Map<String, Set<String>> expected, Map<String, Set<String>> actual,
+      FluoClient fc) {
+    if (!expected.equals(actual)) {
+      System.out.println("*** diff ***");
+      diff(expected, actual);
+      System.out.println("*** fluo dump ***");
+      dump(fc);
+      System.out.println("*** map dump ***");
+
+      Assert.fail();
+    }
+  }
+
   @Test
   public void exportStressTest() {
     FluoConfiguration config = new FluoConfiguration(miniFluo.getClientConfiguration());
@@ -240,27 +222,25 @@ public class ExportQueueIT {
 
       diff(getFluoReferees(fc), getExportedReferees());
 
-      Assert.assertEquals(getFluoReferees(fc), getExportedReferees());
+      assertEquals(getFluoReferees(fc), getExportedReferees(), fc);
 
       loadRandom(fc, 1000, 500);
 
       miniFluo.waitForObservers();
 
-      Assert.assertEquals(getFluoReferees(fc), getExportedReferees());
+      assertEquals(getFluoReferees(fc), getExportedReferees(), fc);
 
       loadRandom(fc, 1000, 10000);
 
       miniFluo.waitForObservers();
 
-      Assert.assertEquals(getFluoReferees(fc), getExportedReferees());
+      assertEquals(getFluoReferees(fc), getExportedReferees(), fc);
 
       loadRandom(fc, 1000, 10000);
 
       miniFluo.waitForObservers();
 
-      Assert.assertEquals(getFluoReferees(fc), getExportedReferees());
-
-      // dump(fc);
+      assertEquals(getFluoReferees(fc), getExportedReferees(), fc);
     }
   }
 
@@ -332,7 +312,7 @@ public class ExportQueueIT {
     return fluoReferees;
   }
 
-  private void dump(FluoClient fc) {
+  public static void dump(FluoClient fc) {
     try (Snapshot snap = fc.newSnapshot()) {
       RowIterator scanner = snap.get(new ScannerConfiguration());
       while (scanner.hasNext()) {

@@ -16,14 +16,11 @@ package io.fluo.recipes.transaction;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import io.fluo.api.client.Transaction;
 import io.fluo.api.config.ScannerConfiguration;
 import io.fluo.api.data.Bytes;
 import io.fluo.api.data.Column;
-import io.fluo.api.iterator.ColumnIterator;
-import io.fluo.api.iterator.RowIterator;
 import io.fluo.api.types.StringEncoder;
 import io.fluo.api.types.TypeLayer;
 import io.fluo.api.types.TypedTransaction;
@@ -122,7 +119,8 @@ public class RecordingTransactionTest {
   public void testGetRows() {
     expect(tx.get(Collections.EMPTY_LIST, Collections.EMPTY_SET)).andReturn(Collections.EMPTY_MAP);
     replay(tx);
-    Assert.assertEquals(Collections.EMPTY_MAP, rtx.get(Collections.EMPTY_LIST, Collections.EMPTY_SET));
+    Assert.assertEquals(Collections.EMPTY_MAP,
+        rtx.get(Collections.EMPTY_LIST, Collections.EMPTY_SET));
     verify(tx);
   }
 
@@ -132,6 +130,14 @@ public class RecordingTransactionTest {
     expect(tx.get(scanConfig)).andReturn(null);
     replay(tx);
     Assert.assertNull(rtx.get(scanConfig));
+    verify(tx);
+  }
+
+  @Test
+  public void testGetTimestamp() {
+    expect(tx.getStartTimestamp()).andReturn(5L);
+    replay(tx);
+    Assert.assertEquals(5L, rtx.getStartTimestamp());
     verify(tx);
   }
 }

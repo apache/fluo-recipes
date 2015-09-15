@@ -23,15 +23,15 @@ public class CollisionFreeMapObserver extends AbstractObserver {
 
   @SuppressWarnings("rawtypes")
   private CollisionFreeMap cfm;
+  private String mapId;
 
   public CollisionFreeMapObserver() {}
 
   @Override
   public void init(Context context) throws Exception {
-    String clazz = context.getParameters().get("cfmClass");
-    this.cfm =
-        this.getClass().getClassLoader().loadClass(clazz).asSubclass(CollisionFreeMap.class)
-            .newInstance();
+    this.mapId = context.getParameters().get("mapId");
+    cfm = CollisionFreeMap.getInstance(mapId, context.getAppConfiguration());
+    cfm.updateObserver.init(mapId, context);
   }
 
   @Override
@@ -42,6 +42,6 @@ public class CollisionFreeMapObserver extends AbstractObserver {
   @Override
   public ObservedColumn getObservedColumn() {
     // TODO constants
-    return new ObservedColumn(new Column("fluoRecipes", "hc:" + cfm.getId()), NotificationType.WEAK);
+    return new ObservedColumn(new Column("fluoRecipes", "cfm:" + mapId), NotificationType.WEAK);
   }
 }

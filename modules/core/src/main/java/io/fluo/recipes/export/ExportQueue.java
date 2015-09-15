@@ -14,58 +14,151 @@
 
 package io.fluo.recipes.export;
 
-import org.apache.commons.configuration.Configuration;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 
+import com.google.common.base.Preconditions;
 import com.google.common.hash.Hashing;
-
 import io.fluo.api.client.TransactionBase;
+import io.fluo.api.config.FluoConfiguration;
+import io.fluo.api.config.ObserverConfiguration;
+import io.fluo.recipes.serialization.KryoSimplerSerializer;
+import io.fluo.recipes.serialization.SimpleSerializer;
+import org.apache.commons.configuration.Configuration;
 
 public class ExportQueue<K, V> {
 
   private int numBuckets;
-  private int numCounters;
-  private Exporter<K, V> exporter;
+  private SimpleSerializer serializer;
+  private String queueId;
 
   // usage hint : could be created once in an observers init method
   // usage hint : maybe have a queue for each type of data being exported???
   // maybe less queues are
   // more efficient though because more batching at export time??
-  ExportQueue(Configuration appConfig, Exporter<K, V> exporter) {
-    this.numBuckets = appConfig.getInt("recipes.exportQueue." + exporter.getQueueId() + ".buckets");
-    if (numBuckets <= 0) {
-      throw new IllegalArgumentException("buckets is not positive");
+  ExportQueue(Options opts) throws Exception {
+    // TODO sanity check key type based on type params
+    // TODO defer creating classes until needed.. so that its not done during Fluo init
+    this.queueId = opts.queueId;
+    this.numBuckets = opts.numBuckets;
+    if (opts.serializer != null) {
+      this.serializer =
+          getClass().getClassLoader().loadClass(opts.serializer).asSubclass(SimpleSerializer.class)
+              .newInstance();
+    } else {
+      this.serializer = new KryoSimplerSerializer();
     }
-
-    this.numCounters =
-        appConfig.getInt("recipes.exportQueue." + exporter.getQueueId() + ".counters");
-
-    if (numCounters <= 0) {
-      throw new IllegalArgumentException("counters is not positive");
-    }
-
-    this.exporter = exporter;
   }
 
   public void add(TransactionBase tx, K key, V value) {
+    addAll(tx, Collections.singleton(new Export<K, V>(key, value)).iterator());
+  }
 
-    byte[] k = exporter.getSerializer().serialize(key);
-    byte[] v = exporter.getSerializer().serialize(value);
+  public void addAll(TransactionBase tx, Iterator<Export<K, V>> exports) {
 
-    int hash = Hashing.murmur3_32().hashBytes(k).asInt();
-    int bucketId = Math.abs(hash % numBuckets);
-    // hash the hash for the case where numBuckets == numCounters... w/o
-    // hashing the hash there
-    // would only be 1 counter per bucket in this case
-    int counter = Math.abs(Hashing.murmur3_32().hashInt(hash).asInt() % numCounters);
+    Set<Integer> bucketsNotified = new HashSet<>();
+    while (exports.hasNext()) {
+      Export<K, V> export = exports.next();
 
-    ExportBucket bucket = new ExportBucket(tx, exporter.getQueueId(), bucketId);
+      byte[] k = serializer.serialize(export.getKey());
+      byte[] v = serializer.serialize(export.getValue());
 
-    long seq = bucket.getSequenceNumber(counter);
+      int hash = Hashing.murmur3_32().hashBytes(k).asInt();
+      int bucketId = Math.abs(hash % numBuckets);
 
-    bucket.add(seq, k, v);
+      ExportBucket bucket = new ExportBucket(tx, queueId, bucketId);
+      bucket.add(tx.getStartTimestamp(), k, v);
 
-    bucket.setSequenceNumber(counter, seq + 1);
+      if (!bucketsNotified.contains(bucketId)) {
+        bucket.notifyExportObserver();
+        bucketsNotified.add(bucketId);
+      }
+    }
+  }
 
-    bucket.notifyExportObserver(k);
+  public static <K2, V2> ExportQueue<K2, V2> getInstance(String exportQueueId,
+      Configuration appConfig) {
+    Options opts = new Options(exportQueueId, appConfig);
+    try {
+      return new ExportQueue<K2, V2>(opts);
+    } catch (Exception e) {
+      // TODO
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Call this method before initializing Fluo.
+   *
+   * @param fluoConfig The configuration that will be used to initialize fluo.
+   */
+  public static void configure(FluoConfiguration fluoConfig, Options opts) {
+    Configuration appConfig = fluoConfig.getAppConfiguration();
+    opts.save(appConfig);
+
+    fluoConfig.addObserver(new ObserverConfiguration(ExportObserver.class.getName())
+        .setParameters(Collections.singletonMap("queueId", opts.queueId)));
+  }
+
+  public static class Options {
+
+    private static final String PREFIX = "recipes.exportQueue.";
+
+    int numBuckets;
+
+    String serializer;
+    String keyType;
+    String valueType;
+    String exporterType;
+    String queueId;
+
+    Options(String queueId, Configuration appConfig) {
+      this.queueId = queueId;
+
+      this.numBuckets = appConfig.getInt(PREFIX + queueId + ".buckets");
+      this.exporterType = appConfig.getString(PREFIX + queueId + ".exporter");
+      this.keyType = appConfig.getString(PREFIX + queueId + ".key");
+      this.valueType = appConfig.getString(PREFIX + queueId + ".val");
+      this.serializer = appConfig.getString(PREFIX + queueId + ".serializer", null);
+    }
+
+    public Options(String queueId, String exporterType, String keyType, String valueType,
+        int buckets) {
+      Preconditions.checkArgument(buckets > 0);
+
+      this.queueId = queueId;
+      this.numBuckets = buckets;
+      this.exporterType = exporterType;
+      this.keyType = keyType;
+      this.valueType = valueType;
+    }
+
+
+    public <K, V> Options(String queueId, Class<? extends Exporter<K, V>> exporter,
+        Class<K> keyType, Class<V> valueType, int buckets) {
+      this(queueId, exporter.getName(), keyType.getName(), valueType.getName(), buckets);
+    }
+
+    public Options setSerializer(Class<? extends SimpleSerializer> serializerType) {
+      setSerializer(serializerType.getName());
+      return this;
+    }
+
+    public Options setSerializer(String serializerType) {
+      this.serializer = serializerType;
+      return this;
+    }
+
+    void save(Configuration appConfig) {
+      appConfig.setProperty(PREFIX + queueId + ".buckets", numBuckets + "");
+      appConfig.setProperty(PREFIX + queueId + ".exporter", exporterType + "");
+      appConfig.setProperty(PREFIX + queueId + ".key", keyType);
+      appConfig.setProperty(PREFIX + queueId + ".val", valueType);
+      if (serializer != null) {
+        appConfig.setProperty(PREFIX + queueId + ".serializer", serializer + "");
+      }
+    }
   }
 }

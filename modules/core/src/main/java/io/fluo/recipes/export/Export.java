@@ -14,19 +14,24 @@
 
 package io.fluo.recipes.export;
 
-import java.util.Iterator;
+import com.google.common.base.Preconditions;
 
-import io.fluo.api.observer.Observer.Context;
+public class Export<K, V> {
+  private final K key;
+  private final V value;
 
-public abstract class Exporter<K, V> {
+  public Export(K key, V val) {
+    Preconditions.checkNotNull(key);
+    Preconditions.checkNotNull(val);
+    this.key = key;
+    this.value = val;
+  }
 
-  public void init(String queueId, Context observerContext) throws Exception {}
+  public K getKey() {
+    return key;
+  }
 
-  /**
-   * Must be able to handle same key being exported multiple times and key being exported out of
-   * order. The sequence number is meant to help with this.
-   */
-  protected abstract void processExports(Iterator<SequencedExport<K, V>> exports);
-
-  // TODO add close
+  public V getValue() {
+    return value;
+  }
 }

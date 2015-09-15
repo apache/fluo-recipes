@@ -12,21 +12,22 @@
  * the License.
  */
 
-package io.fluo.recipes.export;
+package io.fluo.recipes.map;
 
 import java.util.Iterator;
 
-import io.fluo.api.observer.Observer.Context;
+import com.google.common.base.Optional;
 
-public abstract class Exporter<K, V> {
+public class WordCountCombiner implements Combiner<String, Long, Long> {
+  @Override
+  public Long combine(String key, Optional<Long> currentValue, Iterator<Long> updates) {
+    long sum = currentValue.or(0L);
 
-  public void init(String queueId, Context observerContext) throws Exception {}
+    while (updates.hasNext()) {
+      sum += updates.next();
+    }
 
-  /**
-   * Must be able to handle same key being exported multiple times and key being exported out of
-   * order. The sequence number is meant to help with this.
-   */
-  protected abstract void processExports(Iterator<SequencedExport<K, V>> exports);
+    return sum;
+  }
 
-  // TODO add close
 }

@@ -12,21 +12,13 @@
  * the License.
  */
 
-package io.fluo.recipes.export;
+package io.fluo.recipes.map;
 
 import java.util.Iterator;
 
-import io.fluo.api.observer.Observer.Context;
+import com.google.common.base.Optional;
 
-public abstract class Exporter<K, V> {
-
-  public void init(String queueId, Context observerContext) throws Exception {}
-
-  /**
-   * Must be able to handle same key being exported multiple times and key being exported out of
-   * order. The sequence number is meant to help with this.
-   */
-  protected abstract void processExports(Iterator<SequencedExport<K, V>> exports);
-
-  // TODO add close
+public interface Combiner<K, V, U> {
+  // TODO want to support deleting data
+  V combine(K key, Optional<V> currentValue, Iterator<U> updates);
 }

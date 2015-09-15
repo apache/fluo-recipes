@@ -14,11 +14,9 @@
 
 package io.fluo.recipes.map;
 
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
+import java.util.Map.Entry;
 
 import io.fluo.api.data.Bytes;
 import io.fluo.api.data.Column;
@@ -27,12 +25,11 @@ import io.fluo.api.types.TypedTransactionBase;
 
 public class DocumentObserver extends TypedObserver {
 
-  WordCountMap wcm;
+  CollisionFreeMap<String, Long, Long> wcm;
 
   @Override
   public void init(Context context) throws Exception {
-    wcm = new WordCountMap();
-    wcm.init(context.getAppConfiguration());
+    wcm = CollisionFreeMap.getInstance(CollisionFreeMapIT.MAP_ID, context.getAppConfiguration());
   }
 
   @Override
@@ -40,28 +37,41 @@ public class DocumentObserver extends TypedObserver {
     return new ObservedColumn(new Column("content", "new"), NotificationType.STRONG);
   }
 
+  static Map<String, Long> getWordCounts(String doc) {
+    Map<String, Long> wordCounts = new HashMap<>();
+    String[] words = doc.split(" ");
+    for (String word : words) {
+      if (word.isEmpty()) {
+        continue;
+      }
+      wordCounts.merge(word, 1L, Long::sum);
+    }
+
+    return wordCounts;
+  }
+
   @Override
   public void process(TypedTransactionBase tx, Bytes row, Column col) {
     String newContent = tx.get().row(row).col(col).toString();
-    Set<String> newWords = new HashSet<>(Arrays.asList(newContent.split(" ")));
-    Set<String> currentWords =
-        new HashSet<>(Arrays.asList(tx.get().row(row).fam("content").qual("current").toString("")
-            .split(" ")));
+    String currentContent = tx.get().row(row).fam("content").qual("current").toString("");
 
-    // TODO inefficient
-    newWords.remove("");
-    currentWords.remove("");
+    Map<String, Long> newWordCounts = getWordCounts(newContent);
+    Map<String, Long> currentWordCounts = getWordCounts(currentContent);
 
     Map<String, Long> changes = new HashMap<>();
-    for (String word : newWords) {
-      if (!currentWords.contains(word)) {
-        changes.put(word, 1l);
-      }
+
+    for (Entry<String, Long> entry : newWordCounts.entrySet()) {
+      String word = entry.getKey();
+      long newCount = entry.getValue();
+      long currentCount = currentWordCounts.getOrDefault(word, 0L);
+      changes.put(word, newCount - currentCount);
     }
 
-    for (String word : currentWords) {
-      if (!newWords.contains(word)) {
-        changes.put(word, -1l);
+    for (Entry<String, Long> entry : currentWordCounts.entrySet()) {
+      String word = entry.getKey();
+      long currentCount = entry.getValue();
+      if (!newWordCounts.containsKey(word)) {
+        changes.put(word, -1 * currentCount);
       }
     }
 

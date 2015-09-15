@@ -78,4 +78,9 @@ public class RecordingTransactionBase implements TransactionBase {
   public static RecordingTransactionBase wrap(TransactionBase txb) {
     return new RecordingTransactionBase(txb);
   }
+
+  @Override
+  public long getStartTimestamp() {
+    return txb.getStartTimestamp();
+  }
 }
