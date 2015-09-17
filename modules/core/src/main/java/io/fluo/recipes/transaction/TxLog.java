@@ -16,83 +16,63 @@ package io.fluo.recipes.transaction;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Predicate;
 
-import com.google.common.base.Preconditions;
 import io.fluo.api.data.Bytes;
-import io.fluo.api.data.Column;
+import io.fluo.api.data.RowColumn;
 
+/**
+ * Contains list of operations (GET, SET, DELETE) performed during a {@link RecordingTransaction}
+ */
 public class TxLog {
 
-  private List<LogEntry> logEntries = new ArrayList<LogEntry>();
-
-  public enum TxType {
-    SET, DELETE
-  }
+  private List<LogEntry> logEntries = new ArrayList<>();
 
   public TxLog() {}
 
-  public static class LogEntry {
+  /**
+   * Adds LogEntry to TxLog
+   */
+  public void add(LogEntry entry) {
+    logEntries.add(entry);
+  }
 
-    private TxType type;
-    private Bytes row;
-    private Column col;
-    private Bytes value;
-
-    private LogEntry() {}
-
-    public LogEntry(TxType type, Bytes row, Column col, Bytes value) {
-      Preconditions.checkNotNull(type);
-      Preconditions.checkNotNull(row);
-      Preconditions.checkNotNull(col);
-      Preconditions.checkNotNull(value);
-      this.type = type;
-      this.row = row;
-      this.col = col;
-      this.value = value;
-    }
-
-    public TxType getType() {
-      return type;
-    }
-
-    public Bytes getRow() {
-      return row;
-    }
-
-    public Column getColumn() {
-      return col;
-    }
-
-    public Bytes getValue() {
-      return value;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (o instanceof LogEntry) {
-        LogEntry other = (LogEntry) o;
-        return ((type == other.type) && row.equals(other.row) && col.equals(other.col) && value
-            .equals(other.value));
-      }
-      return false;
-    }
-
-    @Override
-    public String toString() {
-      return "LogEntry{type=" + type + ", row=" + row + ", col=" + col + ", value=" + value + '}';
+  /**
+   * Adds LogEntry to TxLog if it passes filter
+   */
+  public void filteredAdd(LogEntry entry, Predicate<LogEntry> filter) {
+    if (filter.test(entry)) {
+      add(entry);
     }
   }
 
-  public void addSet(Bytes row, Column col, Bytes value) {
-    logEntries.add(new LogEntry(TxType.SET, row, col, value));
-  }
-
-  public void addDelete(Bytes row, Column col) {
-    logEntries.add(new LogEntry(TxType.DELETE, row, col, Bytes.EMPTY));
-  }
-
+  /**
+   * Returns all LogEntry in TxLog
+   */
   public List<LogEntry> getLogEntries() {
     return Collections.unmodifiableList(logEntries);
+  }
+
+  /**
+   * Returns true if TxLog is empty
+   */
+  public boolean isEmpty() {
+    return logEntries.isEmpty();
+  }
+
+  /**
+   * Returns a map of RowColumn changes given an operation
+   */
+  public Map<RowColumn, Bytes> getOperationMap(LogEntry.Operation op) {
+    Map<RowColumn, Bytes> opMap = new HashMap<>();
+    for (LogEntry entry : logEntries) {
+      if (entry.getOp().equals(op)) {
+        opMap.put(new RowColumn(entry.getRow(), entry.getColumn()), entry.getValue());
+      }
+    }
+    return opMap;
   }
 }
