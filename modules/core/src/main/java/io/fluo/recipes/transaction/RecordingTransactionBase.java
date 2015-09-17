@@ -65,7 +65,7 @@ public class RecordingTransactionBase implements TransactionBase {
   }
 
   /**
-   * Logs GETs for returned Row/Columns.  Requests that return no data will not be logged.
+   * Logs GETs for returned Row/Columns. Requests that return no data will not be logged.
    */
   @Override
   public Bytes get(Bytes row, Column col) {
@@ -77,7 +77,7 @@ public class RecordingTransactionBase implements TransactionBase {
   }
 
   /**
-   * Logs GETs for returned Row/Columns.  Requests that return no data will not be logged.
+   * Logs GETs for returned Row/Columns. Requests that return no data will not be logged.
    */
   @Override
   public Map<Column, Bytes> get(Bytes row, Set<Column> columns) {
@@ -89,7 +89,7 @@ public class RecordingTransactionBase implements TransactionBase {
   }
 
   /**
-   * Logs GETs for returned Row/Columns.  Requests that return no data will not be logged.
+   * Logs GETs for returned Row/Columns. Requests that return no data will not be logged.
    */
   @Override
   public Map<Bytes, Map<Column, Bytes>> get(Collection<Bytes> rows, Set<Column> columns) {
@@ -104,7 +104,7 @@ public class RecordingTransactionBase implements TransactionBase {
   }
 
   /**
-   * Logs GETs for Row/Columns returned by iterators.  Requests that return no data will not be
+   * Logs GETs for Row/Columns returned by iterators. Requests that return no data will not be
    * logged.
    */
   @Override
@@ -123,9 +123,8 @@ public class RecordingTransactionBase implements TransactionBase {
           final Map.Entry<Bytes, ColumnIterator> rowEntry = rowIter.next();
           if ((rowEntry != null) && (rowEntry.getValue() != null)) {
             final ColumnIterator colIter = rowEntry.getValue();
-            return
-                new AbstractMap.SimpleEntry<Bytes, ColumnIterator>(
-                    rowEntry.getKey(), new ColumnIterator() {
+            return new AbstractMap.SimpleEntry<Bytes, ColumnIterator>(rowEntry.getKey(),
+                new ColumnIterator() {
 
                   @Override
                   public boolean hasNext() {
@@ -137,7 +136,7 @@ public class RecordingTransactionBase implements TransactionBase {
                     Map.Entry<Column, Bytes> colEntry = colIter.next();
                     if (colEntry != null) {
                       txLog.filteredAdd(LogEntry.newGet(rowEntry.getKey(), colEntry.getKey(),
-                                                        colEntry.getValue()), filter);
+                          colEntry.getValue()), filter);
                     }
                     return colEntry;
                   }
