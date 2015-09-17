@@ -1,11 +1,11 @@
 /*
  * Copyright 2015 Fluo authors (see AUTHORS)
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
  * or implied. See the License for the specific language governing permissions and limitations under
@@ -109,18 +109,18 @@ public class RecordingTransactionTest {
 
   @Test
   public void testGetColumns() {
-    expect(tx.get(Bytes.of("r"), Collections.EMPTY_SET)).andReturn(Collections.EMPTY_MAP);
+    expect(tx.get(Bytes.of("r"), Collections.emptySet())).andReturn(Collections.emptyMap());
     replay(tx);
-    Assert.assertEquals(Collections.EMPTY_MAP, rtx.get(Bytes.of("r"), Collections.EMPTY_SET));
+    Assert.assertEquals(Collections.emptyMap(), rtx.get(Bytes.of("r"), Collections.emptySet()));
     verify(tx);
   }
 
   @Test
   public void testGetRows() {
-    expect(tx.get(Collections.EMPTY_LIST, Collections.EMPTY_SET)).andReturn(Collections.EMPTY_MAP);
+    expect(tx.get(Collections.emptyList(), Collections.emptySet())).andReturn(Collections.emptyMap());
     replay(tx);
-    Assert.assertEquals(Collections.EMPTY_MAP,
-        rtx.get(Collections.EMPTY_LIST, Collections.EMPTY_SET));
+    Assert.assertEquals(Collections.emptyMap(),
+        rtx.get(Collections.emptyList(), Collections.emptySet()));
     verify(tx);
   }
 
