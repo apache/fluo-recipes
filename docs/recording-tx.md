@@ -52,7 +52,7 @@ public class MyObserver extends AbstractObserver {
         RecordingTransactionBase rtx = RecordingTransactionBase.wrap(tx);
         
         // use rtx to create a typed transaction & perform operations
-        TypedTransactionBase ttx = TYPEL.wrap(tx);
+        TypedTransactionBase ttx = TYPEL.wrap(rtx);
         int count = ttx.get().row(row).fam("meta").qual("counter1").toInteger(0);
         ttx.mutate().row(row).fam("meta").qual("counter1").set(count+1);
         
@@ -61,6 +61,7 @@ public class MyObserver extends AbstractObserver {
 
         // add txLog to exportQueue if not empty
         if (!txLog.isEmpty()) {
+          //do not pass rtx to exportQueue.add()
           exportQueue.add(tx, row, txLog)
         }
     }
