@@ -20,6 +20,7 @@ import java.io.ByteArrayOutputStream;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
+import io.fluo.api.data.Bytes;
 
 // TODO maybe put in own module so that fluo-recipes does not depend on Kryo
 public class KryoSimplerSerializer implements SimpleSerializer {
@@ -39,6 +40,9 @@ public class KryoSimplerSerializer implements SimpleSerializer {
     Kryo kryo = new Kryo();
     ByteArrayInputStream bais = new ByteArrayInputStream(serObj);
     Input input = new Input(bais);
+    if (clazz.equals(Bytes.class)) {
+      return (T) kryo.readObject(input, Bytes.of("").getClass());
+    }
     return kryo.readObject(input, clazz);
   }
 

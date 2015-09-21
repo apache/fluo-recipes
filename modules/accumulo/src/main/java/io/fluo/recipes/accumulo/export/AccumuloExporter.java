@@ -15,8 +15,8 @@
 package io.fluo.recipes.accumulo.export;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
 
 import io.fluo.api.observer.Observer.Context;
 import io.fluo.recipes.export.Exporter;
@@ -51,7 +51,7 @@ public abstract class AccumuloExporter<K, V> extends Exporter<K, V> {
     appConf.setProperty("recipes.accumuloExporter." + queueId + ".table", ti.table);
   }
 
-  protected abstract List<Mutation> convert(K key, long seq, V value);
+  protected abstract Collection<Mutation> convert(K key, long seq, V value);
 
   @Override
   protected void processExports(Iterator<SequencedExport<K, V>> exports) {
@@ -60,7 +60,7 @@ public abstract class AccumuloExporter<K, V> extends Exporter<K, V> {
 
     while (exports.hasNext()) {
       SequencedExport<K, V> export = exports.next();
-      List<Mutation> mutationList =
+      Collection<Mutation> mutationList =
           convert(export.getKey(), export.getSequence(), export.getValue());
       for (Mutation m : mutationList) {
         buffer.add(m);
