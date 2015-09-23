@@ -14,12 +14,15 @@
 
 package io.fluo.recipes.accumulo.export;
 
+import java.io.File;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.fluo.api.client.FluoAdmin.InitOpts;
 import io.fluo.api.client.FluoFactory;
 import io.fluo.api.config.FluoConfiguration;
 import io.fluo.api.mini.MiniFluo;
+import io.fluo.recipes.accumulo.ops.TableOperations;
+import io.fluo.recipes.common.Pirtos;
 import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.minicluster.MiniAccumuloCluster;
 import org.apache.accumulo.minicluster.MiniAccumuloConfig;
@@ -30,7 +33,7 @@ import org.junit.BeforeClass;
 import org.junit.rules.TemporaryFolder;
 
 public abstract class AccumuloITBase {
-  public static TemporaryFolder folder = new TemporaryFolder();
+  public static TemporaryFolder folder = new TemporaryFolder(new File("target"));
   public static MiniAccumuloCluster cluster;
   static FluoConfiguration props;
   static MiniFluo miniFluo;
@@ -49,7 +52,7 @@ public abstract class AccumuloITBase {
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     cluster.stop();
-    folder.delete();
+    // folder.delete();
   }
 
   @Before
@@ -65,15 +68,17 @@ public abstract class AccumuloITBase {
     props.setAccumuloTable("data" + tableCounter.getAndIncrement());
     props.setWorkerThreads(5);
 
-    setupExporter();
+    Pirtos pirtos = setupExporter();
 
     FluoFactory.newAdmin(props).initialize(
         new InitOpts().setClearTable(true).setClearZookeeper(true));
 
+    TableOperations.optimizeTable(props, pirtos);
+
     miniFluo = FluoFactory.newMiniFluo(props);
   }
 
-  public abstract void setupExporter() throws Exception;
+  public abstract Pirtos setupExporter() throws Exception;
 
   @After
   public void tearDownFluo() throws Exception {

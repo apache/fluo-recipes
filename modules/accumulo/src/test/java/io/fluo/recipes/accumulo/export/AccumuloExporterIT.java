@@ -22,6 +22,7 @@ import java.util.Random;
 import io.fluo.api.client.FluoClient;
 import io.fluo.api.client.FluoFactory;
 import io.fluo.api.client.Transaction;
+import io.fluo.recipes.common.Pirtos;
 import io.fluo.recipes.export.ExportQueue;
 import org.apache.accumulo.core.client.Scanner;
 import org.apache.accumulo.core.data.Key;
@@ -36,15 +37,18 @@ public class AccumuloExporterIT extends AccumuloITBase {
   public static final String QUEUE_ID = "aeqt";
 
   @Override
-  public void setupExporter() throws Exception {
-    ExportQueue.configure(props, new ExportQueue.Options(QUEUE_ID, TestExporter.class,
-        String.class, String.class, 5));
+  public Pirtos setupExporter() throws Exception {
+    Pirtos pirtos =
+        ExportQueue.configure(props, new ExportQueue.Options(QUEUE_ID, TestExporter.class,
+            String.class, String.class, 5));
 
     // create and configure export table
     et = "export" + tableCounter.getAndIncrement();
     cluster.getConnector("root", "secret").tableOperations().create(et);
     AccumuloExporter.setExportTableInfo(props.getAppConfiguration(), QUEUE_ID, new TableInfo(
         cluster.getInstanceName(), cluster.getZooKeepers(), "root", "secret", et));
+
+    return pirtos;
   }
 
   @Test

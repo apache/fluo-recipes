@@ -14,9 +14,11 @@
 
 package io.fluo.recipes.export;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
@@ -24,6 +26,10 @@ import com.google.common.hash.Hashing;
 import io.fluo.api.client.TransactionBase;
 import io.fluo.api.config.FluoConfiguration;
 import io.fluo.api.config.ObserverConfiguration;
+import io.fluo.api.data.Bytes;
+import io.fluo.recipes.common.Pirtos;
+import io.fluo.recipes.common.RowRange;
+import io.fluo.recipes.common.TransientRegistry;
 import io.fluo.recipes.serialization.KryoSimplerSerializer;
 import io.fluo.recipes.serialization.SimpleSerializer;
 import org.apache.commons.configuration.Configuration;
@@ -94,12 +100,28 @@ public class ExportQueue<K, V> {
    *
    * @param fluoConfig The configuration that will be used to initialize fluo.
    */
-  public static void configure(FluoConfiguration fluoConfig, Options opts) {
+  public static Pirtos configure(FluoConfiguration fluoConfig, Options opts) {
     Configuration appConfig = fluoConfig.getAppConfiguration();
     opts.save(appConfig);
 
     fluoConfig.addObserver(new ObserverConfiguration(ExportObserver.class.getName())
         .setParameters(Collections.singletonMap("queueId", opts.queueId)));
+
+    List<Bytes> splits = new ArrayList<>();
+
+    Bytes exportRangeStart = Bytes.of(opts.queueId + ":");
+    Bytes exportRangeStop = Bytes.of(opts.queueId + ";");
+
+    splits.add(exportRangeStart);
+    splits.add(exportRangeStop);
+
+    new TransientRegistry(fluoConfig.getAppConfiguration()).addTransientRange("exportQueue."
+        + opts.queueId, new RowRange(exportRangeStart, exportRangeStop));
+
+    Pirtos pirtos = new Pirtos();
+    pirtos.setSplits(splits);
+
+    return pirtos;
   }
 
   public static class Options {

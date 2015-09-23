@@ -42,6 +42,9 @@ import io.fluo.api.data.Column;
 import io.fluo.api.data.Span;
 import io.fluo.api.iterator.ColumnIterator;
 import io.fluo.api.iterator.RowIterator;
+import io.fluo.recipes.common.Pirtos;
+import io.fluo.recipes.common.RowRange;
+import io.fluo.recipes.common.TransientRegistry;
 import io.fluo.recipes.serialization.KryoSimplerSerializer;
 import io.fluo.recipes.serialization.SimpleSerializer;
 import org.apache.commons.configuration.Configuration;
@@ -422,10 +425,27 @@ public class CollisionFreeMap<K, V, U> {
     }
   }
 
-  public static void configure(FluoConfiguration fluoConfig, Options opts) {
+  public static Pirtos configure(FluoConfiguration fluoConfig, Options opts) {
     opts.save(fluoConfig.getAppConfiguration());
     fluoConfig.addObserver(new ObserverConfiguration(CollisionFreeMapObserver.class.getName())
         .setParameters(ImmutableMap.of("mapId", opts.mapId)));
+
+    List<Bytes> splits = new ArrayList<>();
+
+    Bytes updateRangeStart = Bytes.of(opts.mapId + ":u");
+    Bytes updateRangeEnd = Bytes.of(opts.mapId + ":u;");
+
+    splits.add(Bytes.of(opts.mapId + ":"));
+    splits.add(updateRangeStart);
+    splits.add(updateRangeEnd);
+
+    new TransientRegistry(fluoConfig.getAppConfiguration()).addTransientRange("cfm." + opts.mapId,
+        new RowRange(updateRangeStart, updateRangeEnd));
+
+    Pirtos pirtos = new Pirtos();
+    pirtos.setSplits(splits);
+
+    return pirtos;
   }
 
   private Bytes createUpdateRow(String mapId, int bucketId) {

@@ -98,6 +98,17 @@ There are three requirements for using this recipe :
  * Transactions adding to an export queue must get an instance of the queue using its unique QID.
  * Must implement a class that extends [Exporter][1] in order to process exports.
 
+## Schema
+
+Each export queue stores its data in the Fluo table in a contiguous row range.
+This row range is defined by using the export queue id as a row prefix for all
+data in the export queue.  So the row range defined by the export queue id
+should not be used by anything else.
+
+All data stored in an export queue is [transient](transient.md). When an export
+queue is configured, it will recommend split points using the [table
+optimization process](table-optimization.md).
+
 ## Example Use
 
 This example will show how to build an inverted index in an external
