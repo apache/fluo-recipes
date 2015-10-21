@@ -10,5 +10,14 @@ Common code for Fluo application developers.
 * [RecordingTransaction][recording-tx] - A wrapper for a Fluo transaction that records all transaction
 operations to a log which can be used to export data from Fluo.
 
+### Common Functionality
+
+Recipes have common needs that are broken down into the following reusable components.
+
+* [Transient Ranges][transient] - Standardized process for dealing with transient data.
+* [Table optimization][optimization] - Standardized process for optimizing the Fluo table.
+
 [export-q]:docs/export-queue.md
 [recording-tx]: docs/recording-tx.md
+[transient]: docs/transient.md
+[optimization]: docs/table-optimization.md

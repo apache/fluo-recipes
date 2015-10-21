@@ -34,7 +34,6 @@ import org.apache.accumulo.core.client.ZooKeeperInstance;
 import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.data.Mutation;
 
-// TODO a shared batch writer like in phrasecount and fluo degree examples...
 public class SharedBatchWriter {
 
   private static class Mutations {
