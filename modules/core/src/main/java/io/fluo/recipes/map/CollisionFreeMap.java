@@ -45,7 +45,6 @@ import io.fluo.api.iterator.RowIterator;
 import io.fluo.recipes.common.Pirtos;
 import io.fluo.recipes.common.RowRange;
 import io.fluo.recipes.common.TransientRegistry;
-import io.fluo.recipes.serialization.KryoSimplerSerializer;
 import io.fluo.recipes.serialization.SimpleSerializer;
 import org.apache.commons.configuration.Configuration;
 
@@ -65,7 +64,7 @@ public class CollisionFreeMap<K, V, U> {
 
 
   @SuppressWarnings("unchecked")
-  CollisionFreeMap(Options opts) throws Exception {
+  CollisionFreeMap(Options opts, SimpleSerializer serializer) throws Exception {
 
     this.mapId = opts.mapId;
     // TODO defer loading classes
@@ -77,13 +76,7 @@ public class CollisionFreeMap<K, V, U> {
     this.updateType = (Class<U>) getClass().getClassLoader().loadClass(opts.updateType);
     this.combiner =
         (Combiner<K, V, U>) getClass().getClassLoader().loadClass(opts.combinerType).newInstance();
-    if (opts.serializer != null) {
-      this.serializer =
-          getClass().getClassLoader().loadClass(opts.serializer).asSubclass(SimpleSerializer.class)
-              .newInstance();
-    } else {
-      this.serializer = new KryoSimplerSerializer();
-    }
+    this.serializer = serializer;
     if (opts.updateObserverType != null) {
       this.updateObserver =
           getClass().getClassLoader().loadClass(opts.updateObserverType)
@@ -329,7 +322,7 @@ public class CollisionFreeMap<K, V, U> {
       Configuration appConfig) {
     Options opts = new Options(mapId, appConfig);
     try {
-      return new CollisionFreeMap<K2, V2, U2>(opts);
+      return new CollisionFreeMap<K2, V2, U2>(opts, SimpleSerializer.getInstance(appConfig));
     } catch (Exception e) {
       // TODO
       throw new RuntimeException(e);
@@ -339,7 +332,6 @@ public class CollisionFreeMap<K, V, U> {
   public static class Options {
     int numBuckets;
 
-    String serializer;
     String keyType;
     String valueType;
     String updateType;
@@ -357,7 +349,6 @@ public class CollisionFreeMap<K, V, U> {
       this.keyType = appConfig.getString(PREFIX + mapId + ".key");
       this.valueType = appConfig.getString(PREFIX + mapId + ".val");
       this.updateType = appConfig.getString(PREFIX + mapId + ".update");
-      this.serializer = appConfig.getString(PREFIX + mapId + ".serializer", null);
       this.updateObserverType = appConfig.getString(PREFIX + mapId + ".updateObserver", null);
     }
 
@@ -400,25 +391,12 @@ public class CollisionFreeMap<K, V, U> {
           .getName(), updateType.getName(), buckets);
     }
 
-    public Options setSerializer(Class<? extends SimpleSerializer> serializerType) {
-      setSerializer(serializerType.getName());
-      return this;
-    }
-
-    public Options setSerializer(String serializerType) {
-      this.serializer = serializerType;
-      return this;
-    }
-
     void save(Configuration appConfig) {
       appConfig.setProperty(PREFIX + mapId + ".buckets", numBuckets + "");
       appConfig.setProperty(PREFIX + mapId + ".combiner", combinerType + "");
       appConfig.setProperty(PREFIX + mapId + ".key", keyType);
       appConfig.setProperty(PREFIX + mapId + ".val", valueType);
       appConfig.setProperty(PREFIX + mapId + ".update", updateType);
-      if (serializer != null) {
-        appConfig.setProperty(PREFIX + mapId + ".serializer", serializer + "");
-      }
       if (updateObserverType != null) {
         appConfig.setProperty(PREFIX + mapId + ".updateObserver", updateObserverType + "");
       }
