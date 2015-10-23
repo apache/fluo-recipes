@@ -14,9 +14,41 @@
 
 package io.fluo.recipes.serialization;
 
+import io.fluo.api.config.FluoConfiguration;
+import org.apache.commons.configuration.Configuration;
+
 public interface SimpleSerializer {
+
+  /**
+   * Called immediately after construction and passed Fluo application configuration.
+   */
+  public void init(Configuration appConfig);
+
   // TODO refactor to support reuse of objects and byte arrays???
   public <T> byte[] serialize(T obj);
 
   public <T> T deserialize(byte[] serObj, Class<T> clazz);
+
+  public static void setSetserlializer(FluoConfiguration fluoConfig,
+      Class<? extends SimpleSerializer> serializerType) {
+    setSetserlializer(fluoConfig, serializerType.getName());
+  }
+
+  public static void setSetserlializer(FluoConfiguration fluoConfig, String serializerType) {
+    fluoConfig.getAppConfiguration().setProperty("recipes.serializer", serializerType);
+  }
+
+  public static SimpleSerializer getInstance(Configuration appConfig) {
+    String serType =
+        appConfig.getString("recipes.serializer", KryoSimplerSerializer.class.getName());
+    try {
+      SimpleSerializer simplerSer =
+          SimpleSerializer.class.getClassLoader().loadClass(serType)
+              .asSubclass(SimpleSerializer.class).newInstance();
+      simplerSer.init(appConfig);
+      return simplerSer;
+    } catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
+      throw new RuntimeException(e);
+    }
+  }
 }

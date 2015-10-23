@@ -16,34 +16,93 @@ package io.fluo.recipes.serialization;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
-import io.fluo.api.data.Bytes;
+import com.esotericsoftware.kryo.pool.KryoCallback;
+import com.esotericsoftware.kryo.pool.KryoFactory;
+import com.esotericsoftware.kryo.pool.KryoPool;
+import io.fluo.api.config.FluoConfiguration;
+import org.apache.commons.configuration.Configuration;
 
 // TODO maybe put in own module so that fluo-recipes does not depend on Kryo
 public class KryoSimplerSerializer implements SimpleSerializer {
+
+  private static final String KRYO_FACTORY_PROP = "recipes.serializer.kryo.factory";
+  private static Map<String, KryoPool> pools = new ConcurrentHashMap<>();
+  private String factoryType = DefaultFactory.class.getName();
+
+  private static KryoFactory getFactory(String factoryType) {
+    try {
+      return KryoSimplerSerializer.class.getClassLoader().loadClass(factoryType)
+          .asSubclass(KryoFactory.class).newInstance();
+    } catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private KryoPool getPool() {
+    return pools.computeIfAbsent(factoryType, ft -> new KryoPool.Builder(getFactory(ft))
+        .softReferences().build());
+  }
+
+  public static class DefaultFactory implements KryoFactory {
+    @Override
+    public Kryo create() {
+      Kryo kryo = new Kryo();
+      return kryo;
+    }
+  }
+
   @Override
   public <T> byte[] serialize(T obj) {
-    // TODO efficient object reuse (with thread safety)
-    Kryo kryo = new Kryo();
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    Output output = new Output(baos);
-    kryo.writeObject(output, obj);
-    output.close();
-    return baos.toByteArray();
+    return getPool().run(new KryoCallback<byte[]>() {
+      @Override
+      public byte[] execute(Kryo kryo) {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        Output output = new Output(baos);
+        kryo.writeClassAndObject(output, obj);
+        output.close();
+        return baos.toByteArray();
+      }
+    });
   }
 
   @Override
   public <T> T deserialize(byte[] serObj, Class<T> clazz) {
-    Kryo kryo = new Kryo();
-    ByteArrayInputStream bais = new ByteArrayInputStream(serObj);
-    Input input = new Input(bais);
-    if (clazz.equals(Bytes.class)) {
-      return (T) kryo.readObject(input, Bytes.of("").getClass());
-    }
-    return kryo.readObject(input, clazz);
+    return getPool().run(new KryoCallback<T>() {
+      @Override
+      public T execute(Kryo kryo) {
+        ByteArrayInputStream bais = new ByteArrayInputStream(serObj);
+        Input input = new Input(bais);
+        return clazz.cast(kryo.readClassAndObject(input));
+      }
+    });
   }
 
+  @Override
+  public void init(Configuration appConfig) {
+    factoryType = appConfig.getString(KRYO_FACTORY_PROP, DefaultFactory.class.getName());
+
+  }
+
+  /**
+   * Call this to configure a KryoFactory type before initializing Fluo.
+   */
+
+  public static void setKryoFactory(FluoConfiguration config, String factoryType) {
+    config.getAppConfiguration().setProperty(KRYO_FACTORY_PROP, factoryType);
+  }
+
+  /**
+   * Call this to configure a KryoFactory type before initializing Fluo.
+   */
+
+  public static void setKryoFactory(FluoConfiguration config,
+      Class<? extends KryoFactory> factoryType) {
+    config.getAppConfiguration().setProperty(KRYO_FACTORY_PROP, factoryType.getName());
+  }
 }

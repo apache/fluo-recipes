@@ -30,7 +30,6 @@ import io.fluo.api.data.Bytes;
 import io.fluo.recipes.common.Pirtos;
 import io.fluo.recipes.common.RowRange;
 import io.fluo.recipes.common.TransientRegistry;
-import io.fluo.recipes.serialization.KryoSimplerSerializer;
 import io.fluo.recipes.serialization.SimpleSerializer;
 import org.apache.commons.configuration.Configuration;
 
@@ -44,18 +43,12 @@ public class ExportQueue<K, V> {
   // usage hint : maybe have a queue for each type of data being exported???
   // maybe less queues are
   // more efficient though because more batching at export time??
-  ExportQueue(Options opts) throws Exception {
+  ExportQueue(Options opts, SimpleSerializer serializer) throws Exception {
     // TODO sanity check key type based on type params
     // TODO defer creating classes until needed.. so that its not done during Fluo init
     this.queueId = opts.queueId;
     this.numBuckets = opts.numBuckets;
-    if (opts.serializer != null) {
-      this.serializer =
-          getClass().getClassLoader().loadClass(opts.serializer).asSubclass(SimpleSerializer.class)
-              .newInstance();
-    } else {
-      this.serializer = new KryoSimplerSerializer();
-    }
+    this.serializer = serializer;
   }
 
   public void add(TransactionBase tx, K key, V value) {
@@ -88,7 +81,7 @@ public class ExportQueue<K, V> {
       Configuration appConfig) {
     Options opts = new Options(exportQueueId, appConfig);
     try {
-      return new ExportQueue<K2, V2>(opts);
+      return new ExportQueue<K2, V2>(opts, SimpleSerializer.getInstance(appConfig));
     } catch (Exception e) {
       // TODO
       throw new RuntimeException(e);
@@ -130,7 +123,6 @@ public class ExportQueue<K, V> {
 
     int numBuckets;
 
-    String serializer;
     String keyType;
     String valueType;
     String exporterType;
@@ -143,7 +135,6 @@ public class ExportQueue<K, V> {
       this.exporterType = appConfig.getString(PREFIX + queueId + ".exporter");
       this.keyType = appConfig.getString(PREFIX + queueId + ".key");
       this.valueType = appConfig.getString(PREFIX + queueId + ".val");
-      this.serializer = appConfig.getString(PREFIX + queueId + ".serializer", null);
     }
 
     public Options(String queueId, String exporterType, String keyType, String valueType,
@@ -163,24 +154,11 @@ public class ExportQueue<K, V> {
       this(queueId, exporter.getName(), keyType.getName(), valueType.getName(), buckets);
     }
 
-    public Options setSerializer(Class<? extends SimpleSerializer> serializerType) {
-      setSerializer(serializerType.getName());
-      return this;
-    }
-
-    public Options setSerializer(String serializerType) {
-      this.serializer = serializerType;
-      return this;
-    }
-
     void save(Configuration appConfig) {
       appConfig.setProperty(PREFIX + queueId + ".buckets", numBuckets + "");
       appConfig.setProperty(PREFIX + queueId + ".exporter", exporterType + "");
       appConfig.setProperty(PREFIX + queueId + ".key", keyType);
       appConfig.setProperty(PREFIX + queueId + ".val", valueType);
-      if (serializer != null) {
-        appConfig.setProperty(PREFIX + queueId + ".serializer", serializer + "");
-      }
     }
   }
 }

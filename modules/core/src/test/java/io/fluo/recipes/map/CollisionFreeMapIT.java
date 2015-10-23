@@ -35,6 +35,7 @@ import io.fluo.api.data.Span;
 import io.fluo.api.iterator.ColumnIterator;
 import io.fluo.api.iterator.RowIterator;
 import io.fluo.api.mini.MiniFluo;
+import io.fluo.recipes.serialization.SimpleSerializer;
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -60,9 +61,10 @@ public class CollisionFreeMapIT {
 
     props.addObserver(new ObserverConfiguration(DocumentObserver.class.getName()));
 
+    SimpleSerializer.setSetserlializer(props, TestSerializer.class);
+
     CollisionFreeMap.configure(props, new CollisionFreeMap.Options(MAP_ID, WordCountCombiner.class,
-        WordCountObserver.class, String.class, Long.class, Long.class, 17)
-        .setSerializer(TestSerializer.class));
+        WordCountObserver.class, String.class, Long.class, Long.class, 17));
 
     miniFluo = FluoFactory.newMiniFluo(props);
 

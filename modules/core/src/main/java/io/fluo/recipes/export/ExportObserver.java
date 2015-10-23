@@ -22,7 +22,6 @@ import io.fluo.api.client.TransactionBase;
 import io.fluo.api.data.Bytes;
 import io.fluo.api.data.Column;
 import io.fluo.api.observer.AbstractObserver;
-import io.fluo.recipes.serialization.KryoSimplerSerializer;
 import io.fluo.recipes.serialization.SimpleSerializer;
 
 public class ExportObserver<K, V> extends AbstractObserver {
@@ -54,13 +53,8 @@ public class ExportObserver<K, V> extends AbstractObserver {
     exporter =
         getClass().getClassLoader().loadClass(opts.exporterType).asSubclass(Exporter.class)
             .newInstance();
-    if (opts.serializer != null) {
-      serializer =
-          getClass().getClassLoader().loadClass(opts.serializer).asSubclass(SimpleSerializer.class)
-              .newInstance();
-    } else {
-      serializer = new KryoSimplerSerializer();
-    }
+
+    serializer = SimpleSerializer.getInstance(context.getAppConfiguration());
 
     exporter.init(queueId, context);
   }

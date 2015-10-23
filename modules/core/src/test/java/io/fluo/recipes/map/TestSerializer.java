@@ -15,6 +15,7 @@
 package io.fluo.recipes.map;
 
 import io.fluo.recipes.serialization.SimpleSerializer;
+import org.apache.commons.configuration.Configuration;
 
 public class TestSerializer implements SimpleSerializer {
 
@@ -36,5 +37,8 @@ public class TestSerializer implements SimpleSerializer {
 
     throw new IllegalArgumentException();
   }
+
+  @Override
+  public void init(Configuration appConfig) {}
 
 }
