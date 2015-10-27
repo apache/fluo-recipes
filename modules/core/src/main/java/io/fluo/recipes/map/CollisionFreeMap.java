@@ -14,6 +14,7 @@
 
 package io.fluo.recipes.map;
 
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,6 +40,7 @@ import io.fluo.api.config.ObserverConfiguration;
 import io.fluo.api.config.ScannerConfiguration;
 import io.fluo.api.data.Bytes;
 import io.fluo.api.data.Column;
+import io.fluo.api.data.RowColumnValue;
 import io.fluo.api.data.Span;
 import io.fluo.api.iterator.ColumnIterator;
 import io.fluo.api.iterator.RowIterator;
@@ -251,7 +253,7 @@ public class CollisionFreeMap<K, V, U> {
       }
     }
 
-    Bytes dataRow = new Prefix(Bytes.of(mapId + ":d:" + bucketId)).append(k);
+    Bytes dataRow = new Prefix(createDataRowPrefix(mapId, bucketId)).append(k);
 
     Bytes cv = tx.get(dataRow, DATA_COLUMN);
 
@@ -326,6 +328,50 @@ public class CollisionFreeMap<K, V, U> {
     } catch (Exception e) {
       // TODO
       throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * A @link {@link CollisionFreeMap} stores data in its own data format in the Fluo table. When
+   * initializing a Fluo table with something like Map Reduce or Spark, data will need to be written
+   * in this format. Thats the purpose of this method, it provide a simple class that can do this
+   * conversion.
+   *
+   */
+  public static <K2, V2> Initializer<K2, V2> getInitializer(String mapId, int numBuckets,
+      SimpleSerializer serializer) {
+    return new Initializer<K2, V2>(mapId, numBuckets, serializer);
+  }
+
+
+  /**
+   * @see CollisionFreeMap#getInitializer(String, int, SimpleSerializer)
+   */
+  public static class Initializer<K2, V2> implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    private String mapId;
+
+    private SimpleSerializer serializer;
+
+    private int numBuckets = -1;
+
+    private Initializer(String mapId, int numBuckets, SimpleSerializer serializer) {
+      this.mapId = mapId;
+      this.numBuckets = numBuckets;
+      this.serializer = serializer;
+    }
+
+    public RowColumnValue convert(K2 key, V2 val) {
+      byte[] k = serializer.serialize(key);
+      int hash = Hashing.murmur3_32().hashBytes(k).asInt();
+      int bucketId = Math.abs(hash % numBuckets);
+
+      Bytes row = new Prefix(createDataRowPrefix(mapId, bucketId)).append(k);
+      byte[] v = serializer.serialize(val);
+
+      return new RowColumnValue(row, DATA_COLUMN, Bytes.of(v));
     }
   }
 
@@ -428,6 +474,10 @@ public class CollisionFreeMap<K, V, U> {
 
   private Bytes createUpdateRow(String mapId, int bucketId) {
     return Bytes.of(mapId + ":u:" + bucketId);
+  }
+
+  private static Bytes createDataRowPrefix(String mapId, int bucketId) {
+    return Bytes.of(mapId + ":d:" + bucketId);
   }
 
   private Bytes createCq(UUID uuid) {

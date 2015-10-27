@@ -14,7 +14,7 @@
 
 package io.fluo.recipes.serialization;
 
-import io.fluo.accumulo.data.MutableBytes;
+import com.esotericsoftware.kryo.pool.KryoFactory;
 import io.fluo.api.data.Bytes;
 import io.fluo.api.data.Column;
 import org.junit.Assert;
@@ -22,9 +22,10 @@ import org.junit.Test;
 
 public class KryoSimpleSerializerTest {
 
-  @Test
+  private static final KryoFactory KRYO_FACTORY = new KryoSimplerSerializer.DefaultFactory();
+
   public void testColumn() {
-    SimpleSerializer serializer = new KryoSimplerSerializer();
+    SimpleSerializer serializer = new KryoSimplerSerializer(KRYO_FACTORY);
     Column before = new Column("a", "b");
     byte[] barray = serializer.serialize(before);
     Column after = serializer.deserialize(barray, Column.class);
@@ -33,7 +34,7 @@ public class KryoSimpleSerializerTest {
 
   @Test
   public void testBytes() {
-    SimpleSerializer serializer = new KryoSimplerSerializer();
+    SimpleSerializer serializer = new KryoSimplerSerializer(KRYO_FACTORY);
     Bytes before = Bytes.of("test");
     byte[] barray = serializer.serialize(before);
     Bytes after = serializer.deserialize(barray, Bytes.class);
