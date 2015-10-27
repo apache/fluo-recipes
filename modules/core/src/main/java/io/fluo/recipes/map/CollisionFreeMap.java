@@ -158,7 +158,12 @@ public class CollisionFreeMap<K, V, U> {
       Bytes newValBytes = Bytes.of(serializer.serialize(nv));
       if (currentVal == null || !currentVal.equals(newValBytes)) {
         tx.set(currentValueRow, DATA_COLUMN, newValBytes);
-        updatesToReport.add(new Update<K, V>(kd, cvd.orNull(), nv));
+        V cv = null;
+        if (currentVal != null) {
+          // deserialize again in case combiner mutated Object
+          cv = serializer.deserialize(currentVal.toArray(), valType);
+        }
+        updatesToReport.add(new Update<K, V>(kd, cv, nv));
       }
     }
 
