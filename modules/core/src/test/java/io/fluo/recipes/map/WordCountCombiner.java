@@ -20,14 +20,17 @@ import com.google.common.base.Optional;
 
 public class WordCountCombiner implements Combiner<String, Long, Long> {
   @Override
-  public Long combine(String key, Optional<Long> currentValue, Iterator<Long> updates) {
+  public Optional<Long> combine(String key, Optional<Long> currentValue, Iterator<Long> updates) {
     long sum = currentValue.or(0L);
 
     while (updates.hasNext()) {
       sum += updates.next();
     }
 
-    return sum;
+    if (sum == 0) {
+      return Optional.absent();
+    } else {
+      return Optional.of(sum);
+    }
   }
-
 }

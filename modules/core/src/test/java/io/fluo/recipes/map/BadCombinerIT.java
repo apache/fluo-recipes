@@ -63,7 +63,7 @@ public class BadCombinerIT {
   public static class BadCombiner implements Combiner<String, MutableLong, MutableLong> {
 
     @Override
-    public MutableLong combine(String key, Optional<MutableLong> currentValue,
+    public Optional<MutableLong> combine(String key, Optional<MutableLong> currentValue,
         Iterator<MutableLong> updates) {
       MutableLong cv = currentValue.or(new MutableLong(0));
 
@@ -75,7 +75,7 @@ public class BadCombinerIT {
         cv.l += u.l;
       }
 
-      return cv;
+      return Optional.of(cv);
     }
   }
 

@@ -92,9 +92,7 @@ public class CollisionFreeMapIT {
 
         Assert.assertFalse("Word seen twice in index " + word, counts.containsKey(word));
 
-        if (count != 0) {
-          counts.put(word, count);
-        }
+        counts.put(word, count);
       }
     }
 
@@ -174,14 +172,14 @@ public class CollisionFreeMapIT {
       Assert.assertEquals(expectedCounts, getComputedWordCounts(fc));
 
       try (Transaction tx = fc.newTransaction()) {
-        wcMap.update(tx, ImmutableMap.of("cat", 1L, "dog", 1L));
+        wcMap.update(tx, ImmutableMap.of("cat", 1L, "dog", -7L));
         tx.commit();
       }
 
       // there may be outstanding update and a current value for the key in this case
       try (Snapshot snap = fc.newSnapshot()) {
         Assert.assertEquals((Long) 5L, wcMap.get(snap, "cat"));
-        Assert.assertEquals((Long) 8L, wcMap.get(snap, "dog"));
+        Assert.assertNull(wcMap.get(snap, "dog"));
         Assert.assertEquals((Long) 2L, wcMap.get(snap, "fish"));
       }
 
@@ -189,12 +187,12 @@ public class CollisionFreeMapIT {
 
       try (Snapshot snap = fc.newSnapshot()) {
         Assert.assertEquals((Long) 5L, wcMap.get(snap, "cat"));
-        Assert.assertEquals((Long) 8L, wcMap.get(snap, "dog"));
+        Assert.assertNull(wcMap.get(snap, "dog"));
         Assert.assertEquals((Long) 2L, wcMap.get(snap, "fish"));
       }
 
       expectedCounts.put("cat", 5L);
-      expectedCounts.put("dog", 8L);
+      expectedCounts.remove("dog");
 
       Assert.assertEquals(expectedCounts, getComputedWordCounts(fc));
     }
