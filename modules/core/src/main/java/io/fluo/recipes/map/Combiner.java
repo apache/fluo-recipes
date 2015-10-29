@@ -19,6 +19,5 @@ import java.util.Iterator;
 import com.google.common.base.Optional;
 
 public interface Combiner<K, V, U> {
-  // TODO want to support deleting data
-  V combine(K key, Optional<V> currentValue, Iterator<U> updates);
+  Optional<V> combine(K key, Optional<V> currentValue, Iterator<U> updates);
 }

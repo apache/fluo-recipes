@@ -133,16 +133,16 @@ public class CollisionFreeMap<K, V, U> {
 
     for (Entry<Bytes, List<Bytes>> entry : updates.entrySet()) {
       Bytes currentValueRow = prefix.append(entry.getKey());
-      Bytes currentVal = null;
+      Bytes currVal = null;
       Map<Column, Bytes> cols = currentVals.get(currentValueRow);
       if (cols != null) {
-        currentVal = cols.get(DATA_COLUMN);
+        currVal = cols.get(DATA_COLUMN);
       }
       Optional<V> cvd;
-      if (currentVal == null) {
+      if (currVal == null) {
         cvd = Optional.absent();
       } else {
-        cvd = Optional.of(serializer.deserialize(currentVal.toArray(), valType));
+        cvd = Optional.of(serializer.deserialize(currVal.toArray(), valType));
       }
 
       Iterator<U> ui = Iterators.transform(entry.getValue().iterator(), new Function<Bytes, U>() {
@@ -153,17 +153,21 @@ public class CollisionFreeMap<K, V, U> {
       });
 
       K kd = serializer.deserialize(entry.getKey().toArray(), keyType);
-      V nv = combiner.combine(kd, cvd, ui);
+      Optional<V> nv = combiner.combine(kd, cvd, ui);
 
-      Bytes newValBytes = Bytes.of(serializer.serialize(nv));
-      if (currentVal == null || !currentVal.equals(newValBytes)) {
-        tx.set(currentValueRow, DATA_COLUMN, newValBytes);
-        V cv = null;
-        if (currentVal != null) {
-          // deserialize again in case combiner mutated Object
-          cv = serializer.deserialize(currentVal.toArray(), valType);
+      Bytes newVal = nv.isPresent() ? Bytes.of(serializer.serialize(nv.get())) : null;
+      if (newVal != null ^ currVal != null || (currVal != null && !currVal.equals(newVal))) {
+        if (newVal == null) {
+          tx.delete(currentValueRow, DATA_COLUMN);
+        } else {
+          tx.set(currentValueRow, DATA_COLUMN, newVal);
         }
-        updatesToReport.add(new Update<K, V>(kd, cv, nv));
+        V cv = null;
+        if (currVal != null) {
+          // deserialize again in case combiner mutated Object
+          cv = serializer.deserialize(currVal.toArray(), valType);
+        }
+        updatesToReport.add(new Update<K, V>(kd, cv, nv.orNull()));
       }
     }
 
@@ -282,7 +286,7 @@ public class CollisionFreeMap<K, V, U> {
       }
     });
 
-    return combiner.combine(key, cvd, ui);
+    return combiner.combine(key, cvd, ui).orNull();
   }
 
   String getId() {
