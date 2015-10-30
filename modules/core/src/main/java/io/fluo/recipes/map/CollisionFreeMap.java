@@ -48,6 +48,10 @@ import io.fluo.recipes.common.TransientRegistry;
 import io.fluo.recipes.serialization.SimpleSerializer;
 import org.apache.commons.configuration.Configuration;
 
+/**
+ * See the project level documentation for information about this recipe.
+ */
+
 public class CollisionFreeMap<K, V, U> {
 
   private String mapId;
@@ -235,6 +239,10 @@ public class CollisionFreeMap<K, V, U> {
     }
   }
 
+  /**
+   * This method will retrieve the current value for key and any outstanding updates and combine
+   * them using the configured {@link Combiner}. The result from the combiner is returned.
+   */
   public V get(SnapshotBase tx, K key) {
 
     byte[] k = serializer.serialize(key);
@@ -293,6 +301,15 @@ public class CollisionFreeMap<K, V, U> {
     return mapId;
   }
 
+  /**
+   * Queues updates for a collision free map. These updates will be made by an Observer executing
+   * another transaction. This method will not collide with other transaction queuing updates for
+   * the same keys.
+   *
+   * @param tx This transaction will be used to make the updates.
+   * @param updates The keys in the map should correspond to keys in the collision free map being
+   *        updated. The values in the map will be queued for updating.
+   */
   public void update(TransactionBase tx, Map<K, U> updates) {
     Preconditions.checkState(numBuckets > 0, "Not initialized");
 
@@ -412,6 +429,10 @@ public class CollisionFreeMap<K, V, U> {
     }
   }
 
+  /**
+   * This method configures a collision free map for use. It must be called before initializing
+   * Fluo.
+   */
   public static Pirtos configure(FluoConfiguration fluoConfig, Options opts) {
     opts.save(fluoConfig.getAppConfiguration());
     fluoConfig.addObserver(new ObserverConfiguration(CollisionFreeMapObserver.class.getName())
