@@ -16,6 +16,7 @@ package io.fluo.recipes.serialization;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.Serializable;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -25,15 +26,19 @@ import com.esotericsoftware.kryo.io.Output;
 import com.esotericsoftware.kryo.pool.KryoCallback;
 import com.esotericsoftware.kryo.pool.KryoFactory;
 import com.esotericsoftware.kryo.pool.KryoPool;
+import com.google.common.base.Preconditions;
 import io.fluo.api.config.FluoConfiguration;
 import org.apache.commons.configuration.Configuration;
 
 // TODO maybe put in own module so that fluo-recipes does not depend on Kryo
-public class KryoSimplerSerializer implements SimpleSerializer {
+public class KryoSimplerSerializer implements SimpleSerializer, Serializable {
+
+  private static final long serialVersionUID = 1L;
 
   private static final String KRYO_FACTORY_PROP = "recipes.serializer.kryo.factory";
   private static Map<String, KryoPool> pools = new ConcurrentHashMap<>();
-  private String factoryType = DefaultFactory.class.getName();
+  private String factoryType = null;
+  private KryoFactory factory = null;
 
   private static KryoFactory getFactory(String factoryType) {
     try {
@@ -45,8 +50,14 @@ public class KryoSimplerSerializer implements SimpleSerializer {
   }
 
   private KryoPool getPool() {
-    return pools.computeIfAbsent(factoryType, ft -> new KryoPool.Builder(getFactory(ft))
-        .softReferences().build());
+    Preconditions.checkState(factory != null || factoryType != null, "KryFactory not initialized");
+    if (factory == null) {
+      return pools.computeIfAbsent(factoryType, ft -> new KryoPool.Builder(getFactory(ft))
+          .softReferences().build());
+    } else {
+      return pools.computeIfAbsent(factory.getClass().getName(),
+          ft -> new KryoPool.Builder(factory).softReferences().build());
+    }
   }
 
   public static class DefaultFactory implements KryoFactory {
@@ -85,8 +96,18 @@ public class KryoSimplerSerializer implements SimpleSerializer {
 
   @Override
   public void init(Configuration appConfig) {
+    Preconditions.checkArgument(factory == null && factoryType == null, "Already initialized");
     factoryType = appConfig.getString(KRYO_FACTORY_PROP, DefaultFactory.class.getName());
+  }
 
+  public KryoSimplerSerializer() {}
+
+  /**
+   * Can call this method to create a serializer w/o calling {@link #init(Configuration)}
+   */
+  public KryoSimplerSerializer(KryoFactory factory) {
+    factoryType = null;
+    this.factory = factory;
   }
 
   /**
