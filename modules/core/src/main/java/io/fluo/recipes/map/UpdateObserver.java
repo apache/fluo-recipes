@@ -19,10 +19,14 @@ import java.util.Iterator;
 import io.fluo.api.client.TransactionBase;
 import io.fluo.api.observer.Observer.Context;
 
+/**
+ * A {@link CollisionFreeMap} calls this to allow additional processing to be done when key values
+ * are updated. See the project level documentation for more information.
+ */
+
 public abstract class UpdateObserver<K, V> {
   public void init(String mapId, Context observerContext) throws Exception {}
 
-  // TODO change to Iterator
   public abstract void updatingValues(TransactionBase tx, Iterator<Update<K, V>> updates);
 
   // TODO add close

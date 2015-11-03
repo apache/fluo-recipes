@@ -58,6 +58,15 @@ public class DocumentObserver extends TypedObserver {
     Map<String, Long> newWordCounts = getWordCounts(newContent);
     Map<String, Long> currentWordCounts = getWordCounts(currentContent);
 
+    Map<String, Long> changes = calculateChanges(newWordCounts, currentWordCounts);
+
+    wcm.update(tx, changes);
+
+    tx.mutate().row(row).fam("content").qual("current").set(newContent);
+  }
+
+  private static Map<String, Long> calculateChanges(Map<String, Long> newWordCounts,
+      Map<String, Long> currentWordCounts) {
     Map<String, Long> changes = new HashMap<>();
 
     for (Entry<String, Long> entry : newWordCounts.entrySet()) {
@@ -74,9 +83,6 @@ public class DocumentObserver extends TypedObserver {
         changes.put(word, -1 * currentCount);
       }
     }
-
-    wcm.update(tx, changes);
-
-    tx.mutate().row(row).fam("content").qual("current").set(newContent);
+    return changes;
   }
 }

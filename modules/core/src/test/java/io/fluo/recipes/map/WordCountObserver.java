@@ -43,5 +43,4 @@ public class WordCountObserver extends UpdateObserver<String, Long> {
       }
     }
   }
-
 }
