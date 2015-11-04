@@ -58,8 +58,8 @@ wordcount.  The first step in using this recipe is to configure it before
 initializing Fluo.  When initializing an ID will need to be provided.  This ID
 is used in two ways.  First, the ID is used as a row prefix in the table.
 Therefore nothing else should use that row range in the table.  Second, the ID
-is used in generating Fluo keys associated with the instance of the Collision
-Free Map.
+is used in generating configuration keys associated with the instance of the
+Collision Free Map.
 
 The following snippet shows how to setup a collision free map.  
 
