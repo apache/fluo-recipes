@@ -16,8 +16,9 @@ package io.fluo.recipes.map;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 
+import com.google.common.collect.MapDifference;
+import com.google.common.collect.Maps;
 import io.fluo.api.data.Bytes;
 import io.fluo.api.data.Column;
 import io.fluo.api.types.TypedObserver;
@@ -25,7 +26,7 @@ import io.fluo.api.types.TypedTransactionBase;
 
 public class DocumentObserver extends TypedObserver {
 
-  CollisionFreeMap<String, Long, Long> wcm;
+  CollisionFreeMap<String, Long> wcm;
 
   @Override
   public void init(Context context) throws Exception {
@@ -65,24 +66,23 @@ public class DocumentObserver extends TypedObserver {
     tx.mutate().row(row).fam("content").qual("current").set(newContent);
   }
 
-  private static Map<String, Long> calculateChanges(Map<String, Long> newWordCounts,
-      Map<String, Long> currentWordCounts) {
+  private static Map<String, Long> calculateChanges(Map<String, Long> newCounts,
+      Map<String, Long> currCounts) {
     Map<String, Long> changes = new HashMap<>();
 
-    for (Entry<String, Long> entry : newWordCounts.entrySet()) {
-      String word = entry.getKey();
-      long newCount = entry.getValue();
-      long currentCount = currentWordCounts.getOrDefault(word, 0L);
-      changes.put(word, newCount - currentCount);
-    }
+    // guava Maps class
+    MapDifference<String, Long> diffs = Maps.difference(currCounts, newCounts);
 
-    for (Entry<String, Long> entry : currentWordCounts.entrySet()) {
-      String word = entry.getKey();
-      long currentCount = entry.getValue();
-      if (!newWordCounts.containsKey(word)) {
-        changes.put(word, -1 * currentCount);
-      }
-    }
+    // compute the diffs for words that changed
+    changes.putAll(Maps.transformValues(diffs.entriesDiffering(), vDiff -> vDiff.rightValue()
+        - vDiff.leftValue()));
+
+    // add all new words
+    changes.putAll(diffs.entriesOnlyOnRight());
+
+    // subtract all words no longer present
+    changes.putAll(Maps.transformValues(diffs.entriesOnlyOnLeft(), l -> l * -1));
+
     return changes;
   }
 }
