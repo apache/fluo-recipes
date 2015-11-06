@@ -46,7 +46,7 @@ public class CollisionFreeMapIT {
 
   private MiniFluo miniFluo;
 
-  private CollisionFreeMap<String, Long, Long> wcMap;
+  private CollisionFreeMap<String, Long> wcMap;
 
   static final String MAP_ID = "wcm";
 
@@ -64,7 +64,7 @@ public class CollisionFreeMapIT {
     SimpleSerializer.setSetserlializer(props, TestSerializer.class);
 
     CollisionFreeMap.configure(props, new CollisionFreeMap.Options(MAP_ID, WordCountCombiner.class,
-        WordCountObserver.class, String.class, Long.class, Long.class, 17));
+        WordCountObserver.class, String.class, Long.class, 17));
 
     miniFluo = FluoFactory.newMiniFluo(props);
 

@@ -18,14 +18,14 @@ import java.util.Iterator;
 
 import com.google.common.base.Optional;
 
-public interface Combiner<K, V, U> {
+public interface Combiner<K, V> {
   /**
    * This function is called to combine the current value of a key with updates that were queued for
-   * the key. See the collision free map project level documention for more information.
+   * the key. See the collision free map project level documentation for more information.
    *
    * @return Then new value for the key. Returning Optional.absent() will cause the key to be
    *         deleted.
    */
 
-  Optional<V> combine(K key, Optional<V> currentValue, Iterator<U> updates);
+  Optional<V> combine(K key, Iterator<V> updates);
 }

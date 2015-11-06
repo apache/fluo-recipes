@@ -18,10 +18,10 @@ import java.util.Iterator;
 
 import com.google.common.base.Optional;
 
-public class WordCountCombiner implements Combiner<String, Long, Long> {
+public class WordCountCombiner implements Combiner<String, Long> {
   @Override
-  public Optional<Long> combine(String key, Optional<Long> currentValue, Iterator<Long> updates) {
-    long sum = currentValue.or(0L);
+  public Optional<Long> combine(String key, Iterator<Long> updates) {
+    long sum = 0;
 
     while (updates.hasNext()) {
       sum += updates.next();

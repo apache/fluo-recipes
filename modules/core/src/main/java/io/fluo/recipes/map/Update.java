@@ -19,10 +19,10 @@ import com.google.common.base.Optional;
 public class Update<K, V> {
 
   private final K key;
-  private final V oldValue;
-  private final V newValue;
+  private final Optional<V> oldValue;
+  private final Optional<V> newValue;
 
-  Update(K key, V oldValue, V newValue) {
+  Update(K key, Optional<V> oldValue, Optional<V> newValue) {
     this.key = key;
     this.oldValue = oldValue;
     this.newValue = newValue;
@@ -33,10 +33,10 @@ public class Update<K, V> {
   }
 
   public Optional<V> getNewValue() {
-    return Optional.fromNullable(newValue);
+    return newValue;
   }
 
   public Optional<V> getOldValue() {
-    return Optional.fromNullable(oldValue);
+    return oldValue;
   }
 }

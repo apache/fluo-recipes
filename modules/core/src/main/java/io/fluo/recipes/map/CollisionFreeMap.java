@@ -27,11 +27,11 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
 import io.fluo.api.client.SnapshotBase;
 import io.fluo.api.client.TransactionBase;
@@ -54,20 +54,19 @@ import org.apache.commons.configuration.Configuration;
  * See the project level documentation for information about this recipe.
  */
 
-public class CollisionFreeMap<K, V, U> {
+public class CollisionFreeMap<K, V> {
 
   private String mapId;
 
   private Class<K> keyType;
   private Class<V> valType;
-  private Class<U> updateType;
   private SimpleSerializer serializer;
-  private Combiner<K, V, U> combiner;
+  private Combiner<K, V> combiner;
   UpdateObserver<K, V> updateObserver;
+  private long bufferSize;
 
   static final Bytes UPDATE_CF_PREFIX = Bytes.of("upd:");
   private int numBuckets = -1;
-
 
   @SuppressWarnings("unchecked")
   CollisionFreeMap(Options opts, SimpleSerializer serializer) throws Exception {
@@ -79,9 +78,8 @@ public class CollisionFreeMap<K, V, U> {
     this.numBuckets = opts.numBuckets;
     this.keyType = (Class<K>) getClass().getClassLoader().loadClass(opts.keyType);
     this.valType = (Class<V>) getClass().getClassLoader().loadClass(opts.valueType);
-    this.updateType = (Class<U>) getClass().getClassLoader().loadClass(opts.updateType);
     this.combiner =
-        (Combiner<K, V, U>) getClass().getClassLoader().loadClass(opts.combinerType).newInstance();
+        (Combiner<K, V>) getClass().getClassLoader().loadClass(opts.combinerType).newInstance();
     this.serializer = serializer;
     if (opts.updateObserverType != null) {
       this.updateObserver =
@@ -90,6 +88,17 @@ public class CollisionFreeMap<K, V, U> {
     } else {
       this.updateObserver = new NullUpdateObserver<>();
     }
+    this.bufferSize = opts.getBufferSize();
+  }
+
+  private static Bytes getKeyFromUpdateCol(Column col) {
+    Bytes fam = col.getFamily();
+    Bytes serializedKey = fam.subSequence(UPDATE_CF_PREFIX.length(), fam.length());
+    return serializedKey;
+  }
+
+  private V deserVal(Bytes val) {
+    return serializer.deserialize(val.toArray(), valType);
   }
 
   void process(TransactionBase tx, Bytes ntfyRow, Column col) throws Exception {
@@ -99,31 +108,44 @@ public class CollisionFreeMap<K, V, U> {
 
     Map<Bytes, List<Bytes>> updates = new HashMap<>();
 
+    long approxMemUsed = 0;
+
+    Bytes partiallyReadKey = null;
+
     if (iter.hasNext()) {
+      Bytes lastKey = null;
       ColumnIterator cols = iter.next().getValue();
-      while (cols.hasNext()) {
+      while (cols.hasNext() && approxMemUsed < bufferSize) {
         // TODO processing too many at once increases chance of
         // collisions... may want to process a max # and notify self
         // when stopping could set a continue key
 
-        // TODO if there is too much in memory, then stop and processes
-        // whats there and notify self.. need to ensure entire keys are
-        // processed to avoid processing newer updates and not older
-        // ones... if single key does not fit in mem, could make
-        // multiple passes
         Entry<Column, Bytes> colVal = cols.next();
         tx.delete(ntfyRow, colVal.getKey());
 
-        Bytes fam = colVal.getKey().getFamily();
-        Bytes serializedKey = fam.subSequence(UPDATE_CF_PREFIX.length(), fam.length());
+        Bytes serializedKey = getKeyFromUpdateCol(colVal.getKey());
+        lastKey = serializedKey;
 
         List<Bytes> updateList = updates.get(serializedKey);
         if (updateList == null) {
           updateList = new ArrayList<>();
           updates.put(serializedKey, updateList);
+          approxMemUsed += serializedKey.length();
         }
 
         updateList.add(colVal.getValue());
+        approxMemUsed += colVal.getValue().length();
+      }
+
+      if (cols.hasNext()) {
+        // check if more updates for last key
+        if (getKeyFromUpdateCol(cols.next().getKey()).equals(lastKey)) {
+          // there are still more updates for this key
+          partiallyReadKey = lastKey;
+        }
+
+        // may not read all data because of mem limit, so notify self
+        tx.setWeakNotification(ntfyRow, col);
       }
     }
 
@@ -133,47 +155,43 @@ public class CollisionFreeMap<K, V, U> {
 
     Prefix prefix = new Prefix(dataPrefix);
 
-    Map<Bytes, Map<Column, Bytes>> currentVals = getCurrentValues(tx, prefix, updates.keySet());
+    Set<Bytes> keysToFetch = updates.keySet();
+    if (partiallyReadKey != null) {
+      final Bytes prk = partiallyReadKey;
+      keysToFetch = Sets.filter(keysToFetch, b -> !b.equals(prk));
+    }
+    Map<Bytes, Map<Column, Bytes>> currentVals = getCurrentValues(tx, prefix, keysToFetch);
 
     ArrayList<Update<K, V>> updatesToReport = new ArrayList<>(updates.size());
 
     for (Entry<Bytes, List<Bytes>> entry : updates.entrySet()) {
       Bytes currentValueRow = prefix.append(entry.getKey());
-      Bytes currVal = null;
-      Map<Column, Bytes> cols = currentVals.get(currentValueRow);
-      if (cols != null) {
-        currVal = cols.get(DATA_COLUMN);
-      }
-      Optional<V> cvd;
-      if (currVal == null) {
-        cvd = Optional.absent();
-      } else {
-        cvd = Optional.of(serializer.deserialize(currVal.toArray(), valType));
-      }
+      Bytes currVal =
+          currentVals.getOrDefault(currentValueRow, Collections.emptyMap()).get(DATA_COLUMN);
 
-      Iterator<U> ui = Iterators.transform(entry.getValue().iterator(), new Function<Bytes, U>() {
-        @Override
-        public U apply(Bytes b) {
-          return serializer.deserialize(b.toArray(), updateType);
-        }
-      });
+      Iterator<V> ui = Iterators.transform(entry.getValue().iterator(), this::deserVal);
 
       K kd = serializer.deserialize(entry.getKey().toArray(), keyType);
-      Optional<V> nv = combiner.combine(kd, cvd, ui);
 
-      Bytes newVal = nv.isPresent() ? Bytes.of(serializer.serialize(nv.get())) : null;
-      if (newVal != null ^ currVal != null || (currVal != null && !currVal.equals(newVal))) {
-        if (newVal == null) {
-          tx.delete(currentValueRow, DATA_COLUMN);
-        } else {
-          tx.set(currentValueRow, DATA_COLUMN, newVal);
+      if (partiallyReadKey != null && partiallyReadKey.equals(entry.getKey())) {
+        // not all updates were read for this key, so requeue the combined updates as an update
+        Optional<V> nv = combiner.combine(kd, ui);
+        if (nv.isPresent()) {
+          update(tx, Collections.singletonMap(kd, nv.get()));
         }
-        V cv = null;
-        if (currVal != null) {
-          // deserialize again in case combiner mutated Object
-          cv = serializer.deserialize(currVal.toArray(), valType);
+      } else {
+        Optional<V> nv = combiner.combine(kd, concat(ui, currVal));
+        Bytes newVal = nv.isPresent() ? Bytes.of(serializer.serialize(nv.get())) : null;
+        if (newVal != null ^ currVal != null || (currVal != null && !currVal.equals(newVal))) {
+          if (newVal == null) {
+            tx.delete(currentValueRow, DATA_COLUMN);
+          } else {
+            tx.set(currentValueRow, DATA_COLUMN, newVal);
+          }
+
+          Optional<V> cvd = Optional.fromNullable(currVal).transform(this::deserVal);
+          updatesToReport.add(new Update<K, V>(kd, cvd, nv));
         }
-        updatesToReport.add(new Update<K, V>(kd, cv, nv.orNull()));
       }
     }
 
@@ -181,7 +199,9 @@ public class CollisionFreeMap<K, V, U> {
     updates.clear();
     currentVals.clear();
 
-    updateObserver.updatingValues(tx, updatesToReport.iterator());
+    if (updatesToReport.size() > 0) {
+      updateObserver.updatingValues(tx, updatesToReport.iterator());
+    }
   }
 
   private static final Column DATA_COLUMN = new Column("data", "current");
@@ -222,10 +242,6 @@ public class CollisionFreeMap<K, V, U> {
 
   private Map<Bytes, Map<Column, Bytes>> getCurrentValues(TransactionBase tx, Prefix prefix,
       Set<Bytes> keySet) {
-    if (keySet.size() == 0) {
-      // TODO fluo should be able to handle this... it gets when passed an empty set of rows
-      return Collections.emptyMap();
-    }
 
     Set<Bytes> rows = new HashSet<>();
 
@@ -239,6 +255,14 @@ public class CollisionFreeMap<K, V, U> {
       System.out.println(rows.size());
       throw e;
     }
+  }
+
+  private Iterator<V> concat(Iterator<V> updates, Bytes currentVal) {
+    if (currentVal == null) {
+      return updates;
+    }
+
+    return Iterators.concat(updates, Iterators.singletonIterator(deserVal(currentVal)));
   }
 
   /**
@@ -259,44 +283,29 @@ public class CollisionFreeMap<K, V, U> {
     ScannerConfiguration sc = new ScannerConfiguration();
     sc.setSpan(Span.exact(updatesRow, new Column(cfPrefix.append(k))));
 
-    List<Bytes> updateList = new ArrayList<>();
     RowIterator iter = tx.get(sc);
 
+    Iterator<V> ui;
+
     if (iter.hasNext()) {
-      ColumnIterator cols = iter.next().getValue();
-      while (cols.hasNext()) {
-        Entry<Column, Bytes> colVal = cols.next();
-        updateList.add(colVal.getValue());
-      }
+      ui = Iterators.transform(iter.next().getValue(), e -> deserVal(e.getValue()));
+    } else {
+      ui = Collections.<V>emptyList().iterator();
     }
 
     Bytes dataRow = new Prefix(createDataRowPrefix(mapId, bucketId)).append(k);
 
     Bytes cv = tx.get(dataRow, DATA_COLUMN);
 
-    if (updateList.size() == 0) {
+    if (!ui.hasNext()) {
       if (cv == null) {
         return null;
       } else {
-        return serializer.deserialize(cv.toArray(), valType);
+        return deserVal(cv);
       }
     }
 
-    Optional<V> cvd;
-    if (cv == null) {
-      cvd = Optional.absent();
-    } else {
-      cvd = Optional.of(serializer.deserialize(cv.toArray(), valType));
-    }
-
-    Iterator<U> ui = Iterators.transform(updateList.iterator(), new Function<Bytes, U>() {
-      @Override
-      public U apply(Bytes b) {
-        return serializer.deserialize(b.toArray(), updateType);
-      }
-    });
-
-    return combiner.combine(key, cvd, ui).orNull();
+    return combiner.combine(key, concat(ui, cv)).orNull();
   }
 
   String getId() {
@@ -312,7 +321,7 @@ public class CollisionFreeMap<K, V, U> {
    * @param updates The keys in the map should correspond to keys in the collision free map being
    *        updated. The values in the map will be queued for updating.
    */
-  public void update(TransactionBase tx, Map<K, U> updates) {
+  public void update(TransactionBase tx, Map<K, V> updates) {
     Preconditions.checkState(numBuckets > 0, "Not initialized");
 
     UUID uuid = UUID.randomUUID();
@@ -321,7 +330,7 @@ public class CollisionFreeMap<K, V, U> {
 
     Set<Integer> buckets = new HashSet<>();
 
-    for (Entry<K, U> entry : updates.entrySet()) {
+    for (Entry<K, V> entry : updates.entrySet()) {
       byte[] k = serializer.serialize(entry.getKey());
       int hash = Hashing.murmur3_32().hashBytes(k).asInt();
       int bucketId = Math.abs(hash % numBuckets);
@@ -346,11 +355,10 @@ public class CollisionFreeMap<K, V, U> {
   }
 
 
-  public static <K2, V2, U2> CollisionFreeMap<K2, V2, U2> getInstance(String mapId,
-      Configuration appConfig) {
-    Options opts = new Options(mapId, appConfig);
+  public static <K2, V2> CollisionFreeMap<K2, V2> getInstance(String mapId, Configuration appConf) {
+    Options opts = new Options(mapId, appConf);
     try {
-      return new CollisionFreeMap<K2, V2, U2>(opts, SimpleSerializer.getInstance(appConfig));
+      return new CollisionFreeMap<K2, V2>(opts, SimpleSerializer.getInstance(appConf));
     } catch (Exception e) {
       // TODO
       throw new RuntimeException(e);
@@ -402,11 +410,14 @@ public class CollisionFreeMap<K, V, U> {
   }
 
   public static class Options {
+
+    private static final long DEFAULT_BUFFER_SIZE = 1 << 22;
+
     int numBuckets;
+    private Long bufferSize;
 
     String keyType;
     String valueType;
-    String updateType;
     String combinerType;
     String updateObserverType;
     String mapId;
@@ -420,12 +431,11 @@ public class CollisionFreeMap<K, V, U> {
       this.combinerType = appConfig.getString(PREFIX + mapId + ".combiner");
       this.keyType = appConfig.getString(PREFIX + mapId + ".key");
       this.valueType = appConfig.getString(PREFIX + mapId + ".val");
-      this.updateType = appConfig.getString(PREFIX + mapId + ".update");
       this.updateObserverType = appConfig.getString(PREFIX + mapId + ".updateObserver", null);
+      this.bufferSize = appConfig.getLong(PREFIX + mapId + ".bufferSize", DEFAULT_BUFFER_SIZE);
     }
 
-    public Options(String mapId, String combinerType, String keyType, String valueType,
-        String updateType, int buckets) {
+    public Options(String mapId, String combinerType, String keyType, String valType, int buckets) {
       Preconditions.checkArgument(buckets > 0);
 
       this.mapId = mapId;
@@ -433,12 +443,11 @@ public class CollisionFreeMap<K, V, U> {
       this.combinerType = combinerType;
       this.updateObserverType = null;
       this.keyType = keyType;
-      this.valueType = valueType;
-      this.updateType = updateType;
+      this.valueType = valType;
     }
 
     public Options(String mapId, String combinerType, String updateObserverType, String keyType,
-        String valueType, String updateType, int buckets) {
+        String valueType, int buckets) {
       Preconditions.checkArgument(buckets > 0);
 
       this.mapId = mapId;
@@ -447,20 +456,44 @@ public class CollisionFreeMap<K, V, U> {
       this.updateObserverType = updateObserverType;
       this.keyType = keyType;
       this.valueType = valueType;
-      this.updateType = updateType;
     }
 
-    public <K, V, U> Options(String mapId, Class<? extends Combiner<K, V, U>> combiner,
-        Class<K> keyType, Class<V> valueType, Class<U> updateType, int buckets) {
-      this(mapId, combiner.getName(), keyType.getName(), valueType.getName(), updateType.getName(),
-          buckets);
+    /**
+     * Sets a limit on the amount of serialized updates to read into memory. Additional memory will
+     * be used to actually deserialize and process the updates. This limit does not account for
+     * object overhead in java, which can be significant.
+     *
+     * <p>
+     * The way memory read is calculated is by summing the length of serialized key and value byte
+     * arrays. Once this sum exceeds the configured memory limit, no more update key values are
+     * processed in the current transaction. When not everything is processed, the observer
+     * processing updates will notify itself causing another transaction to continue processing
+     * later
+     */
+    public Options setBufferSize(long bufferSize) {
+      Preconditions.checkArgument(bufferSize > 0, "Buffer size must be positive");
+      this.bufferSize = bufferSize;
+      return this;
     }
 
-    public <K, V, U> Options(String mapId, Class<? extends Combiner<K, V, U>> combiner,
+    long getBufferSize() {
+      if (bufferSize == null) {
+        return DEFAULT_BUFFER_SIZE;
+      }
+
+      return bufferSize;
+    }
+
+    public <K, V> Options(String mapId, Class<? extends Combiner<K, V>> combiner, Class<K> keyType,
+        Class<V> valueType, int buckets) {
+      this(mapId, combiner.getName(), keyType.getName(), valueType.getName(), buckets);
+    }
+
+    public <K, V> Options(String mapId, Class<? extends Combiner<K, V>> combiner,
         Class<? extends UpdateObserver<K, V>> updateObserver, Class<K> keyType, Class<V> valueType,
-        Class<U> updateType, int buckets) {
+        int buckets) {
       this(mapId, combiner.getName(), updateObserver.getName(), keyType.getName(), valueType
-          .getName(), updateType.getName(), buckets);
+          .getName(), buckets);
     }
 
     void save(Configuration appConfig) {
@@ -468,9 +501,11 @@ public class CollisionFreeMap<K, V, U> {
       appConfig.setProperty(PREFIX + mapId + ".combiner", combinerType + "");
       appConfig.setProperty(PREFIX + mapId + ".key", keyType);
       appConfig.setProperty(PREFIX + mapId + ".val", valueType);
-      appConfig.setProperty(PREFIX + mapId + ".update", updateType);
       if (updateObserverType != null) {
         appConfig.setProperty(PREFIX + mapId + ".updateObserver", updateObserverType + "");
+      }
+      if (bufferSize != null) {
+        appConfig.setProperty(PREFIX + mapId + ".bufferSize", bufferSize);
       }
     }
   }

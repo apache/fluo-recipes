@@ -51,6 +51,7 @@ updates for the following reasons :
 Which bucket a key goes to is decided using hash and modulus so that multiple
 updates for the same key always go to the same bucket.
 
+
 ## Example Use
 
 The following code snippets show how to setup and use this recipe for
@@ -81,7 +82,7 @@ word counts.  These changes are pushed to a collision free map.
 ```java
 public class DocumentObserver extends TypedObserver {
 
-  CollisionFreeMap<String, Long, Long> wcm;
+  CollisionFreeMap<String, Long> wcm;
 
   @Override
   public void init(Context context) throws Exception {
@@ -116,26 +117,26 @@ public class DocumentObserver extends TypedObserver {
    //TODO extract words from doc
   }
 
-  private static Map<String, Long> calculateChanges(Map<String, Long> newWordCounts,
-      Map<String, Long> currentWordCounts) {
+  private static Map<String, Long> calculateChanges(Map<String, Long> newCounts,
+      Map<String, Long> currCounts) {
     Map<String, Long> changes = new HashMap<>();
 
-    for (Entry<String, Long> entry : newWordCounts.entrySet()) {
-      String word = entry.getKey();
-      long newCount = entry.getValue();
-      long currentCount = currentWordCounts.getOrDefault(word, 0L);
-      changes.put(word, newCount - currentCount);
-    }
+    // guava Maps class
+    MapDifference<String, Long> diffs = Maps.difference(currCounts, newCounts);
 
-    for (Entry<String, Long> entry : currentWordCounts.entrySet()) {
-      String word = entry.getKey();
-      long currentCount = entry.getValue();
-      if (!newWordCounts.containsKey(word)) {
-        changes.put(word, -1 * currentCount);
-      }
-    }
+    // compute the diffs for words that changed
+    changes.putAll(Maps.transformValues(diffs.entriesDiffering(),
+        vDiff -> vDiff.rightValue() - vDiff.leftValue()));
+
+    // add all new words
+    changes.putAll(diffs.entriesOnlyOnRight());
+
+    // subtract all words no longer present
+    changes.putAll(Maps.transformValues(diffs.entriesOnlyOnLeft(), l -> l * -1));
+
     return changes;
   }
+
 }
 ```
 
@@ -167,13 +168,13 @@ public class WordCountMap {
    */
   public static void configure(FluoConfiguration fluoConfig, int numBuckets) {
     CollisionFreeMap.configure(fluoConfig, new Options(ID, WordCountCombiner.class, 
-        WordCountObserver.class, String.class, Long.class, Long.class, numBuckets));
+        WordCountObserver.class, String.class, Long.class, numBuckets));
   }
 
-  public static class WordCountCombiner implements Combiner<String, Long, Long> {
+  public static class WordCountCombiner implements Combiner<String, Long> {
     @Override
-    public Optional<Long> combine(String key, Optional<Long> currentValue, Iterator<Long> updates) {
-      long sum = currentValue.or(0L);
+    public Optional<Long> combine(String key, Iterator<Long> updates) {
+      long sum = 0L;
 
       while (updates.hasNext()) {
         sum += updates.next();
@@ -214,4 +215,21 @@ public class WordCountMap {
 }
 ```
 
+## Guarantees
+
+This recipe makes two important guarantees about updates for a key when it
+calls `updatingValues()` on an `UpdateObserver`.
+
+ * The new value reported for an update will be derived from combining all
+   updates that were committed before the transaction thats processing updates
+   started.  The implementation may have to make multiple passes over queued
+   updates to achieve this.  In the situation where TX1 queues a `+1` and later
+   TX2 queues a `-1` for the same key, there is no need to worry about only seeing
+   the `-1` processed.  A transaction that started processing updates after TX2
+   committed would process both.
+ * The old value will always be what was reported as the new value in the
+   previous transaction that called `updatingValues()`.  
+
+
+ 
 [phrasecount]:https://github.com/fluo-io/phrasecount
