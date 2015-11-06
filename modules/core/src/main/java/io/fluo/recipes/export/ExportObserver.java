@@ -15,6 +15,7 @@
 package io.fluo.recipes.export;
 
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterators;
@@ -26,11 +27,45 @@ import io.fluo.recipes.serialization.SimpleSerializer;
 
 public class ExportObserver<K, V> extends AbstractObserver {
 
+  private static class MemLimitIterator implements Iterator<ExportEntry> {
+
+    private long memConsumed = 0;
+    private long memLimit;
+    private Iterator<ExportEntry> source;
+
+    public MemLimitIterator(Iterator<ExportEntry> input, long limit) {
+      this.source = input;
+      this.memLimit = limit;
+    }
+
+    @Override
+    public boolean hasNext() {
+      return memConsumed < memLimit && source.hasNext();
+    }
+
+    @Override
+    public ExportEntry next() {
+      if (!hasNext()) {
+        throw new NoSuchElementException();
+      }
+      ExportEntry ee = source.next();
+      memConsumed += ee.key.length + ee.value.length;
+      return ee;
+    }
+
+    @Override
+    public void remove() {
+      source.remove();
+    }
+  }
+
   private String queueId;
   private Class<K> keyType;
   private Class<V> valType;
   SimpleSerializer serializer;
   private Exporter<K, V> exporter;
+
+  private long memLimit;
 
   protected String getQueueId() {
     return queueId;
@@ -56,6 +91,8 @@ public class ExportObserver<K, V> extends AbstractObserver {
 
     serializer = SimpleSerializer.getInstance(context.getAppConfiguration());
 
+    memLimit = opts.getBufferSize();
+
     exporter.init(queueId, context);
   }
 
@@ -68,18 +105,25 @@ public class ExportObserver<K, V> extends AbstractObserver {
   public void process(TransactionBase tx, Bytes row, Column column) throws Exception {
     ExportBucket bucket = new ExportBucket(tx, row);
 
+    Iterator<ExportEntry> input = bucket.getExportIterator();
+    MemLimitIterator memLimitIter = new MemLimitIterator(input, memLimit);
+
     Iterator<SequencedExport<K, V>> exportIterator =
-        Iterators.transform(bucket.getExportIterator(),
-            new Function<ExportEntry, SequencedExport<K, V>>() {
-              @Override
-              public SequencedExport<K, V> apply(ExportEntry ee) {
-                return new SequencedExport<>(serializer.deserialize(ee.key, keyType), serializer
-                    .deserialize(ee.value, valType), ee.seq);
-              }
-            });
+        Iterators.transform(memLimitIter, new Function<ExportEntry, SequencedExport<K, V>>() {
+          @Override
+          public SequencedExport<K, V> apply(ExportEntry ee) {
+            return new SequencedExport<>(serializer.deserialize(ee.key, keyType), serializer
+                .deserialize(ee.value, valType), ee.seq);
+          }
+        });
 
     exportIterator = Iterators.consumingIterator(exportIterator);
 
     exporter.processExports(exportIterator);
+
+    if (input.hasNext()) {
+      // not everything was processed so notify self
+      bucket.notifyExportObserver();
+    }
   }
 }

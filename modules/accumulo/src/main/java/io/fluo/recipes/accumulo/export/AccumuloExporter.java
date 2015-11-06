@@ -56,23 +56,12 @@ public abstract class AccumuloExporter<K, V> extends Exporter<K, V> {
   @Override
   protected void processExports(Iterator<SequencedExport<K, V>> exports) {
     ArrayList<Mutation> buffer = new ArrayList<>();
-    long bufferSize = 0;
 
     while (exports.hasNext()) {
       SequencedExport<K, V> export = exports.next();
-      Collection<Mutation> mutationList =
-          convert(export.getKey(), export.getSequence(), export.getValue());
-      for (Mutation m : mutationList) {
-        buffer.add(m);
-        bufferSize += m.estimatedMemoryUsed();
-      }
-      if (bufferSize > 1 << 20) {
-        sbw.write(buffer);
-        buffer.clear();
-        bufferSize = 0;
-      }
-
+      buffer.addAll(convert(export.getKey(), export.getSequence(), export.getValue()));
     }
+
     if (buffer.size() > 0) {
       sbw.write(buffer);
     }

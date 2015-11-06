@@ -47,6 +47,8 @@ class ExportBucket {
   private final Bytes bucketRow;
 
   ExportBucket(TransactionBase tx, String qid, int bucket) {
+    // TODO encode in a more robust way... but for now fail early
+    Preconditions.checkArgument(!qid.contains(":"), "Export QID can not contain :");
     this.ttx = new TypeLayer(new StringEncoder()).wrap(tx);
     this.qid = qid;
     bucketRow = Bytes.of(qid + ":" + Integer.toString(bucket, 16));
@@ -54,10 +56,20 @@ class ExportBucket {
 
   ExportBucket(TransactionBase tx, Bytes bucketRow) {
     this.ttx = new TypeLayer(new StringEncoder()).wrap(tx);
-    this.qid = null;
-    // TODO encode in a more robust way... this method doe snot work when
-    // queue id has a :
+
+    int colonLoc = -1;
+
+    for (int i = 0; i < bucketRow.length(); i++) {
+      if (bucketRow.byteAt(i) == ':') {
+        colonLoc = i;
+        break;
+      }
+    }
+
+    Preconditions.checkArgument(colonLoc != -1, "Invalid bucket row " + bucketRow);
+
     this.bucketRow = bucketRow;
+    this.qid = bucketRow.subSequence(0, colonLoc).toString();
   }
 
   // this method is 10x faster than String.format("%016x",seq)
@@ -81,7 +93,6 @@ class ExportBucket {
   }
 
   public void notifyExportObserver() {
-    Preconditions.checkNotNull(qid);
     ttx.mutate().row(bucketRow).col(newNotificationColumn(qid)).weaklyNotify();
   }
 

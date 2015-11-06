@@ -120,8 +120,10 @@ public class ExportQueue<K, V> {
   public static class Options {
 
     private static final String PREFIX = "recipes.exportQueue.";
+    private static final long DEFAULT_BUFFER_SIZE = 1 << 22;
 
     int numBuckets;
+    private Long bufferSize;
 
     String keyType;
     String valueType;
@@ -135,6 +137,7 @@ public class ExportQueue<K, V> {
       this.exporterType = appConfig.getString(PREFIX + queueId + ".exporter");
       this.keyType = appConfig.getString(PREFIX + queueId + ".key");
       this.valueType = appConfig.getString(PREFIX + queueId + ".val");
+      this.bufferSize = appConfig.getLong(PREFIX + queueId + ".bufferSize", DEFAULT_BUFFER_SIZE);
     }
 
     public Options(String queueId, String exporterType, String keyType, String valueType,
@@ -154,11 +157,41 @@ public class ExportQueue<K, V> {
       this(queueId, exporter.getName(), keyType.getName(), valueType.getName(), buckets);
     }
 
+    /**
+     * Sets a limit on the amount of serialized updates to read into memory. Additional memory will
+     * be used to actually deserialize and process the updates. This limit does not account for
+     * object overhead in java, which can be significant.
+     *
+     * <p>
+     * The way memory read is calculated is by summing the length of serialized key and value byte
+     * arrays. Once this sum exceeds the configured memory limit, no more export key values are
+     * processed in the current transaction. When not everything is processed, the observer
+     * processing exports will notify itself causing another transaction to continue processing
+     * later.
+     */
+    public Options setBufferSize(long bufferSize) {
+      Preconditions.checkArgument(bufferSize > 0, "Buffer size must be positive");
+      this.bufferSize = bufferSize;
+      return this;
+    }
+
+    long getBufferSize() {
+      if (bufferSize == null) {
+        return DEFAULT_BUFFER_SIZE;
+      }
+
+      return bufferSize;
+    }
+
     void save(Configuration appConfig) {
       appConfig.setProperty(PREFIX + queueId + ".buckets", numBuckets + "");
       appConfig.setProperty(PREFIX + queueId + ".exporter", exporterType + "");
       appConfig.setProperty(PREFIX + queueId + ".key", keyType);
       appConfig.setProperty(PREFIX + queueId + ".val", valueType);
+
+      if (bufferSize != null) {
+        appConfig.setProperty(PREFIX + queueId + ".bufferSize", bufferSize);
+      }
     }
   }
 }
