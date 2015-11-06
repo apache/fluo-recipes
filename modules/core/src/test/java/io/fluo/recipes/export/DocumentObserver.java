@@ -22,7 +22,7 @@ import io.fluo.api.data.Bytes;
 import io.fluo.api.data.Column;
 import io.fluo.api.types.TypedObserver;
 import io.fluo.api.types.TypedTransactionBase;
-import io.fluo.recipes.export.ExportQueueIT.RefExporter;
+import io.fluo.recipes.export.ExportTestBase.RefExporter;
 
 public class DocumentObserver extends TypedObserver {
 
