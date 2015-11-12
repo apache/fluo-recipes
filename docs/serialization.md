@@ -46,12 +46,10 @@ public class MyKryoFactory implements KryoFactory {
   public Kryo create() {
     Kryo kryo = new Kryo();
     
-    //Note, registration order affects serialization.  As each class is registered
-    //its assigned a unique id based on registration order.  This unique id is used
-    //in serialized data to identify the class (instead of the fully qualified
-    //class name).
-    kryo.register(Node.class);
-    kryo.register(Edge.class);
+    //Explicitly assign each class a unique id here to ensure its stable over
+    //time and in different environments with different dependencies.
+    kryo.register(Node.class, 9);
+    kryo.register(Edge.class, 10);
     
     //instruct kryo that these are the only classes we expect to be serialized
     kryo.setRegistrationRequired(true);
