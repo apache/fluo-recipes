@@ -25,7 +25,6 @@ import io.fluo.api.data.Bytes;
 import io.fluo.api.types.StringEncoder;
 import io.fluo.api.types.TypeLayer;
 import io.fluo.api.types.TypedTransaction;
-import io.fluo.recipes.common.Pirtos;
 import io.fluo.recipes.export.ExportQueue;
 import io.fluo.recipes.transaction.RecordingTransaction;
 import io.fluo.recipes.transaction.TxLog;
@@ -44,18 +43,15 @@ public class AccumuloReplicatorIT extends AccumuloITBase {
 
 
   @Override
-  public Pirtos setupExporter() throws Exception {
-    Pirtos pirtos =
-        ExportQueue.configure(props, new ExportQueue.Options(QUEUE_ID, AccumuloReplicator.class,
-            Bytes.class, TxLog.class, 5));
+  public void setupExporter() throws Exception {
+    ExportQueue.configure(props, new ExportQueue.Options(QUEUE_ID, AccumuloReplicator.class,
+        Bytes.class, TxLog.class, 5));
 
     // create and configure export table
     et = "export" + tableCounter.getAndIncrement();
     cluster.getConnector("root", "secret").tableOperations().create(et);
     AccumuloReplicator.setExportTableInfo(props.getAppConfiguration(), QUEUE_ID, new TableInfo(
         cluster.getInstanceName(), cluster.getZooKeepers(), "root", "secret", et));
-
-    return pirtos;
   }
 
   @Test

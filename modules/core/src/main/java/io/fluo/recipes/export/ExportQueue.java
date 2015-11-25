@@ -30,6 +30,7 @@ import io.fluo.api.data.Bytes;
 import io.fluo.recipes.common.Pirtos;
 import io.fluo.recipes.common.RowRange;
 import io.fluo.recipes.common.TransientRegistry;
+import io.fluo.recipes.impl.BucketUtil;
 import io.fluo.recipes.serialization.SimpleSerializer;
 import org.apache.commons.configuration.Configuration;
 
@@ -67,7 +68,7 @@ public class ExportQueue<K, V> {
       int hash = Hashing.murmur3_32().hashBytes(k).asInt();
       int bucketId = Math.abs(hash % numBuckets);
 
-      ExportBucket bucket = new ExportBucket(tx, queueId, bucketId);
+      ExportBucket bucket = new ExportBucket(tx, queueId, bucketId, numBuckets);
       bucket.add(tx.getStartTimestamp(), k, v);
 
       if (!bucketsNotified.contains(bucketId)) {
@@ -93,12 +94,48 @@ public class ExportQueue<K, V> {
    *
    * @param fluoConfig The configuration that will be used to initialize fluo.
    */
-  public static Pirtos configure(FluoConfiguration fluoConfig, Options opts) {
+  public static void configure(FluoConfiguration fluoConfig, Options opts) {
     Configuration appConfig = fluoConfig.getAppConfiguration();
     opts.save(appConfig);
 
     fluoConfig.addObserver(new ObserverConfiguration(ExportObserver.class.getName())
         .setParameters(Collections.singletonMap("queueId", opts.queueId)));
+
+    Bytes exportRangeStart = Bytes.of(opts.queueId + ":");
+    Bytes exportRangeStop = Bytes.of(opts.queueId + ";");
+
+    new TransientRegistry(fluoConfig.getAppConfiguration()).addTransientRange("exportQueue."
+        + opts.queueId, new RowRange(exportRangeStart, exportRangeStop));
+  }
+
+  /**
+   * Return suggested Fluo table optimizations for all previously configured export queues.
+   *
+   * @param appConfig Must pass in the application configuration obtained from
+   *        {@code FluoClient.getAppConfiguration()} or
+   *        {@code FluoConfiguration.getAppConfiguration()}
+   */
+
+  public static Pirtos getTableOptimizations(Configuration appConfig) {
+    HashSet<String> queueIds = new HashSet<>();
+    appConfig.getKeys(Options.PREFIX.substring(0, Options.PREFIX.length() - 1)).forEachRemaining(
+        k -> queueIds.add(k.substring(Options.PREFIX.length()).split("\\.", 2)[0]));
+
+    Pirtos pirtos = new Pirtos();
+    queueIds.forEach(qid -> pirtos.merge(getTableOptimizations(qid, appConfig)));
+
+    return pirtos;
+  }
+
+  /**
+   * Return suggested Fluo table optimizations for the specified export queue.
+   *
+   * @param appConfig Must pass in the application configuration obtained from
+   *        {@code FluoClient.getAppConfiguration()} or
+   *        {@code FluoConfiguration.getAppConfiguration()}
+   */
+  public static Pirtos getTableOptimizations(String queueId, Configuration appConfig) {
+    Options opts = new Options(queueId, appConfig);
 
     List<Bytes> splits = new ArrayList<>();
 
@@ -108,8 +145,12 @@ public class ExportQueue<K, V> {
     splits.add(exportRangeStart);
     splits.add(exportRangeStop);
 
-    new TransientRegistry(fluoConfig.getAppConfiguration()).addTransientRange("exportQueue."
-        + opts.queueId, new RowRange(exportRangeStart, exportRangeStop));
+    List<Bytes> exportSplits = new ArrayList<>();
+    for (int i = 0; i < opts.numBuckets; i++) {
+      exportSplits.add(ExportBucket.generateBucketRow(opts.queueId, i, opts.numBuckets));
+    }
+    Collections.sort(exportSplits);
+    splits.addAll(BucketUtil.shrink(exportSplits, 30));
 
     Pirtos pirtos = new Pirtos();
     pirtos.setSplits(splits);

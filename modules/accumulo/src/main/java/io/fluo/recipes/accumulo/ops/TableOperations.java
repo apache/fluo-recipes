@@ -17,12 +17,15 @@ package io.fluo.recipes.accumulo.ops;
 import java.util.List;
 import java.util.TreeSet;
 
+import io.fluo.api.client.FluoClient;
 import io.fluo.api.client.FluoFactory;
 import io.fluo.api.config.FluoConfiguration;
 import io.fluo.api.data.Bytes;
 import io.fluo.recipes.common.Pirtos;
 import io.fluo.recipes.common.RowRange;
 import io.fluo.recipes.common.TransientRegistry;
+import io.fluo.recipes.export.ExportQueue;
+import io.fluo.recipes.map.CollisionFreeMap;
 import org.apache.accumulo.core.client.Connector;
 import org.apache.accumulo.core.client.ZooKeeperInstance;
 import org.apache.accumulo.core.client.security.tokens.PasswordToken;
@@ -45,6 +48,23 @@ public class TableOperations {
   }
 
   /**
+   * This method will optimize the Accumulo table for all previously configured recipes. Call this
+   * method after initializing Fluo, but before using Fluo.
+   */
+  public static void optimizeTable(FluoConfiguration fluoConfig) throws Exception {
+
+    try (FluoClient client = FluoFactory.newClient(fluoConfig)) {
+      Configuration appConfig = client.getAppConfiguration();
+      Pirtos pirtos = new Pirtos();
+
+      pirtos.merge(ExportQueue.getTableOptimizations(appConfig));
+      pirtos.merge(CollisionFreeMap.getTableOptimizations(appConfig));
+
+      optimizeTable(fluoConfig, pirtos);
+    }
+  }
+
+  /**
    * This method will perform all post initialization recommended actions.
    */
   public static void optimizeTable(FluoConfiguration fluoConfig, Pirtos pirtos) throws Exception {
@@ -53,7 +73,6 @@ public class TableOperations {
     TreeSet<Text> splits = new TreeSet<>();
 
     for (Bytes split : pirtos.getSplits()) {
-      System.out.println("split : " + split);
       splits.add(new Text(split.toArray()));
     }
 
@@ -66,14 +85,16 @@ public class TableOperations {
   public static void compactTransient(FluoConfiguration fluoConfig) throws Exception {
     Connector conn = getConnector(fluoConfig);
 
-    Configuration appConfig = FluoFactory.newClient(fluoConfig).getAppConfiguration();
+    try (FluoClient client = FluoFactory.newClient(fluoConfig)) {
+      Configuration appConfig = client.getAppConfiguration();
 
-    TransientRegistry transientRegistry = new TransientRegistry(appConfig);
-    List<RowRange> ranges = transientRegistry.getTransientRanges();
+      TransientRegistry transientRegistry = new TransientRegistry(appConfig);
+      List<RowRange> ranges = transientRegistry.getTransientRanges();
 
-    for (RowRange r : ranges) {
-      conn.tableOperations().compact(fluoConfig.getAccumuloTable(),
-          new Text(r.getStart().toArray()), new Text(r.getEnd().toArray()), true, true);
+      for (RowRange r : ranges) {
+        conn.tableOperations().compact(fluoConfig.getAccumuloTable(),
+            new Text(r.getStart().toArray()), new Text(r.getEnd().toArray()), true, true);
+      }
     }
   }
 }
