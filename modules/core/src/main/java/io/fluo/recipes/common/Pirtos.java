@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.google.common.base.Preconditions;
 import io.fluo.api.data.Bytes;
 
 /**
@@ -41,11 +42,12 @@ public class Pirtos {
   }
 
   public void setTabletGroupingRegex(String tgr) {
+    Preconditions.checkNotNull(tgr);
     this.tabletGroupingRegex = tgr;
   }
 
   public String getTabletGroupingRegex() {
-    return tabletGroupingRegex;
+    return "(" + tabletGroupingRegex + ").*";
   }
 
   public void merge(Pirtos other) {

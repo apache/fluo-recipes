@@ -51,7 +51,7 @@ public abstract class AccumuloITBase {
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     cluster.stop();
-    // folder.delete();
+    folder.delete();
   }
 
   @Before

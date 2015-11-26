@@ -26,17 +26,25 @@ import io.fluo.recipes.common.RowRange;
 import io.fluo.recipes.common.TransientRegistry;
 import io.fluo.recipes.export.ExportQueue;
 import io.fluo.recipes.map.CollisionFreeMap;
+import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.Connector;
 import org.apache.accumulo.core.client.ZooKeeperInstance;
 import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.commons.configuration.Configuration;
 import org.apache.hadoop.io.Text;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility methods for operating on the Fluo table used by recipes.
  */
 
 public class TableOperations {
+
+  private static final String RGB_CLASS =
+      "org.apache.accumulo.server.master.balancer.RegexGroupBalancer";
+  private static final String RGB_PATTERN_PROP = "table.custom.balancer.group.regex.pattern";
+  private static final String RGB_DEFAULT_PROP = "table.custom.balancer.group.regex.default";
+  private static final String TABLE_BALANCER_PROP = "table.balancer";
 
   private static Connector getConnector(FluoConfiguration fluoConfig) throws Exception {
     ZooKeeperInstance zki =
@@ -68,6 +76,7 @@ public class TableOperations {
    * This method will perform all post initialization recommended actions.
    */
   public static void optimizeTable(FluoConfiguration fluoConfig, Pirtos pirtos) throws Exception {
+
     Connector conn = getConnector(fluoConfig);
 
     TreeSet<Text> splits = new TreeSet<>();
@@ -76,7 +85,25 @@ public class TableOperations {
       splits.add(new Text(split.toArray()));
     }
 
-    conn.tableOperations().addSplits(fluoConfig.getAccumuloTable(), splits);
+    String table = fluoConfig.getAccumuloTable();
+    conn.tableOperations().addSplits(table, splits);
+
+    if (pirtos.getTabletGroupingRegex() != null && !pirtos.getTabletGroupingRegex().isEmpty()) {
+      // was going to call :
+      // conn.instanceOperations().testClassLoad(RGB_CLASS, TABLET_BALANCER_CLASS)
+      // but that failed. See ACCUMULO-4068
+
+      try {
+        // setting this prop first intentionally because it should fail in 1.6
+        conn.tableOperations()
+            .setProperty(table, RGB_PATTERN_PROP, pirtos.getTabletGroupingRegex());
+        conn.tableOperations().setProperty(table, RGB_DEFAULT_PROP, "none");
+        conn.tableOperations().setProperty(table, TABLE_BALANCER_PROP, RGB_CLASS);
+      } catch (AccumuloException e) {
+        LoggerFactory.getLogger(TableOperations.class).warn(
+            "Unable to setup regex balancer (this is expected to fail in Accumulo 1.6.X) ", e);
+      }
+    }
   }
 
   /**
