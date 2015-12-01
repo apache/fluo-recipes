@@ -19,6 +19,7 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 
 import com.google.common.base.Preconditions;
+
 import io.fluo.api.client.TransactionBase;
 import io.fluo.api.config.ScannerConfiguration;
 import io.fluo.api.data.Bytes;
@@ -29,6 +30,7 @@ import io.fluo.api.iterator.RowIterator;
 import io.fluo.api.types.StringEncoder;
 import io.fluo.api.types.TypeLayer;
 import io.fluo.api.types.TypedTransactionBase;
+import io.fluo.recipes.impl.BucketUtil;
 
 /**
  * This class encapsulates a buckets serialization code.
@@ -46,12 +48,16 @@ class ExportBucket {
   private final String qid;
   private final Bytes bucketRow;
 
-  ExportBucket(TransactionBase tx, String qid, int bucket) {
+  static Bytes generateBucketRow(String qid, int bucket, int numBuckets) {
+    return Bytes.of(qid + ":" + BucketUtil.genBucketId(bucket, numBuckets));
+  }
+
+  ExportBucket(TransactionBase tx, String qid, int bucket, int numBuckets) {
     // TODO encode in a more robust way... but for now fail early
     Preconditions.checkArgument(!qid.contains(":"), "Export QID can not contain :");
     this.ttx = new TypeLayer(new StringEncoder()).wrap(tx);
     this.qid = qid;
-    bucketRow = Bytes.of(qid + ":" + Integer.toString(bucket, 16));
+    this.bucketRow = generateBucketRow(qid, bucket, numBuckets);
   }
 
   ExportBucket(TransactionBase tx, Bytes bucketRow) {

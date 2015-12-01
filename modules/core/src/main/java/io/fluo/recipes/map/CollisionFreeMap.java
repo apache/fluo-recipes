@@ -47,6 +47,7 @@ import io.fluo.api.iterator.RowIterator;
 import io.fluo.recipes.common.Pirtos;
 import io.fluo.recipes.common.RowRange;
 import io.fluo.recipes.common.TransientRegistry;
+import io.fluo.recipes.impl.BucketUtil;
 import io.fluo.recipes.serialization.SimpleSerializer;
 import org.apache.commons.configuration.Configuration;
 
@@ -276,7 +277,7 @@ public class CollisionFreeMap<K, V> {
     int hash = Hashing.murmur3_32().hashBytes(k).asInt();
     int bucketId = Math.abs(hash % numBuckets);
 
-    Bytes updatesRow = createUpdateRow(mapId, bucketId);
+    Bytes updatesRow = createUpdateRow(mapId, bucketId, numBuckets);
 
     Prefix cfPrefix = new Prefix(UPDATE_CF_PREFIX.subSequence(0, UPDATE_CF_PREFIX.length() - 1));
 
@@ -293,7 +294,7 @@ public class CollisionFreeMap<K, V> {
       ui = Collections.<V>emptyList().iterator();
     }
 
-    Bytes dataRow = new Prefix(createDataRowPrefix(mapId, bucketId)).append(k);
+    Bytes dataRow = new Prefix(createDataRowPrefix(mapId, bucketId, numBuckets)).append(k);
 
     Bytes cv = tx.get(dataRow, DATA_COLUMN);
 
@@ -335,7 +336,7 @@ public class CollisionFreeMap<K, V> {
       int hash = Hashing.murmur3_32().hashBytes(k).asInt();
       int bucketId = Math.abs(hash % numBuckets);
 
-      Bytes row = createUpdateRow(mapId, bucketId);
+      Bytes row = createUpdateRow(mapId, bucketId, numBuckets);
       Bytes cf = cfPrefix.append(k);
       Bytes val = Bytes.of(serializer.serialize(entry.getValue()));
 
@@ -347,7 +348,7 @@ public class CollisionFreeMap<K, V> {
     }
 
     for (Integer bucketId : buckets) {
-      Bytes row = createUpdateRow(mapId, bucketId);
+      Bytes row = createUpdateRow(mapId, bucketId, numBuckets);
       // TODO is ok to call set weak notification multiple times for the
       // same row col???
       tx.setWeakNotification(row, new Column("fluoRecipes", "cfm:" + mapId));
@@ -402,7 +403,7 @@ public class CollisionFreeMap<K, V> {
       int hash = Hashing.murmur3_32().hashBytes(k).asInt();
       int bucketId = Math.abs(hash % numBuckets);
 
-      Bytes row = new Prefix(createDataRowPrefix(mapId, bucketId)).append(k);
+      Bytes row = new Prefix(createDataRowPrefix(mapId, bucketId, numBuckets)).append(k);
       byte[] v = serializer.serialize(val);
 
       return new RowColumnValue(row, DATA_COLUMN, Bytes.of(v));
@@ -514,22 +515,69 @@ public class CollisionFreeMap<K, V> {
    * This method configures a collision free map for use. It must be called before initializing
    * Fluo.
    */
-  public static Pirtos configure(FluoConfiguration fluoConfig, Options opts) {
+  public static void configure(FluoConfiguration fluoConfig, Options opts) {
     opts.save(fluoConfig.getAppConfiguration());
     fluoConfig.addObserver(new ObserverConfiguration(CollisionFreeMapObserver.class.getName())
         .setParameters(ImmutableMap.of("mapId", opts.mapId)));
 
-    List<Bytes> splits = new ArrayList<>();
+    Bytes updateRangeStart = Bytes.of(opts.mapId + ":u");
+    Bytes updateRangeEnd = Bytes.of(opts.mapId + ":u;");
+
+    new TransientRegistry(fluoConfig.getAppConfiguration()).addTransientRange("cfm." + opts.mapId,
+        new RowRange(updateRangeStart, updateRangeEnd));
+  }
+
+  /**
+   * Return suggested Fluo table optimizations for all previously configured collision free maps.
+   *
+   * @param appConfig Must pass in the application configuration obtained from
+   *        {@code FluoClient.getAppConfiguration()} or
+   *        {@code FluoConfiguration.getAppConfiguration()}
+   */
+  public static Pirtos getTableOptimizations(Configuration appConfig) {
+    HashSet<String> mapIds = new HashSet<>();
+    appConfig.getKeys(Options.PREFIX.substring(0, Options.PREFIX.length() - 1)).forEachRemaining(
+        k -> mapIds.add(k.substring(Options.PREFIX.length()).split("\\.", 2)[0]));
+
+    Pirtos pirtos = new Pirtos();
+    mapIds.forEach(mid -> pirtos.merge(getTableOptimizations(mid, appConfig)));
+
+    return pirtos;
+  }
+
+  /**
+   * Return suggested Fluo table optimizations for the specified collisiong free map.
+   *
+   * @param appConfig Must pass in the application configuration obtained from
+   *        {@code FluoClient.getAppConfiguration()} or
+   *        {@code FluoConfiguration.getAppConfiguration()}
+   */
+  public static Pirtos getTableOptimizations(String mapId, Configuration appConfig) {
+    Options opts = new Options(mapId, appConfig);
+
+    List<Bytes> dataSplits = new ArrayList<>();
+    for (int i = 0; i < opts.numBuckets; i++) {
+      dataSplits.add(createDataRowPrefix(opts.mapId, i, opts.numBuckets));
+    }
+    Collections.sort(dataSplits);
+    dataSplits = BucketUtil.shrink(dataSplits, 10);
+
+    List<Bytes> updateSplits = new ArrayList<>();
+    for (int i = 0; i < opts.numBuckets; i++) {
+      updateSplits.add(createUpdateRow(opts.mapId, i, opts.numBuckets));
+    }
+    Collections.sort(updateSplits);
+    updateSplits = BucketUtil.shrink(updateSplits, 30);
 
     Bytes updateRangeStart = Bytes.of(opts.mapId + ":u");
     Bytes updateRangeEnd = Bytes.of(opts.mapId + ":u;");
 
+    List<Bytes> splits = new ArrayList<>();
     splits.add(Bytes.of(opts.mapId + ":"));
     splits.add(updateRangeStart);
     splits.add(updateRangeEnd);
-
-    new TransientRegistry(fluoConfig.getAppConfiguration()).addTransientRange("cfm." + opts.mapId,
-        new RowRange(updateRangeStart, updateRangeEnd));
+    splits.addAll(dataSplits);
+    splits.addAll(updateSplits);
 
     Pirtos pirtos = new Pirtos();
     pirtos.setSplits(splits);
@@ -537,12 +585,12 @@ public class CollisionFreeMap<K, V> {
     return pirtos;
   }
 
-  private Bytes createUpdateRow(String mapId, int bucketId) {
-    return Bytes.of(mapId + ":u:" + bucketId);
+  private static Bytes createUpdateRow(String mapId, int bucketId, int maxBucket) {
+    return Bytes.of(mapId + ":u:" + BucketUtil.genBucketId(bucketId, maxBucket));
   }
 
-  private static Bytes createDataRowPrefix(String mapId, int bucketId) {
-    return Bytes.of(mapId + ":d:" + bucketId);
+  private static Bytes createDataRowPrefix(String mapId, int bucketId, int maxBucket) {
+    return Bytes.of(mapId + ":d:" + BucketUtil.genBucketId(bucketId, maxBucket));
   }
 
   private Bytes createCq(UUID uuid) {

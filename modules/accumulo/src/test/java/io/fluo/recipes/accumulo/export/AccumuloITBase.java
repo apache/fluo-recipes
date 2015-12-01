@@ -22,7 +22,6 @@ import io.fluo.api.client.FluoFactory;
 import io.fluo.api.config.FluoConfiguration;
 import io.fluo.api.mini.MiniFluo;
 import io.fluo.recipes.accumulo.ops.TableOperations;
-import io.fluo.recipes.common.Pirtos;
 import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.minicluster.MiniAccumuloCluster;
 import org.apache.accumulo.minicluster.MiniAccumuloConfig;
@@ -68,17 +67,17 @@ public abstract class AccumuloITBase {
     props.setAccumuloTable("data" + tableCounter.getAndIncrement());
     props.setWorkerThreads(5);
 
-    Pirtos pirtos = setupExporter();
+    setupExporter();
 
     FluoFactory.newAdmin(props).initialize(
         new InitOpts().setClearTable(true).setClearZookeeper(true));
 
-    TableOperations.optimizeTable(props, pirtos);
+    TableOperations.optimizeTable(props);
 
     miniFluo = FluoFactory.newMiniFluo(props);
   }
 
-  public abstract Pirtos setupExporter() throws Exception;
+  public abstract void setupExporter() throws Exception;
 
   @After
   public void tearDownFluo() throws Exception {

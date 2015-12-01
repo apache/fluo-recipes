@@ -14,6 +14,7 @@
 
 package io.fluo.recipes.accumulo.export;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -22,12 +23,12 @@ import java.util.Random;
 import io.fluo.api.client.FluoClient;
 import io.fluo.api.client.FluoFactory;
 import io.fluo.api.client.Transaction;
-import io.fluo.recipes.common.Pirtos;
 import io.fluo.recipes.export.ExportQueue;
 import org.apache.accumulo.core.client.Scanner;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.security.Authorizations;
+import org.apache.hadoop.io.Text;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -37,10 +38,10 @@ public class AccumuloExporterIT extends AccumuloITBase {
   public static final String QUEUE_ID = "aeqt";
 
   @Override
-  public Pirtos setupExporter() throws Exception {
-    Pirtos pirtos =
-        ExportQueue.configure(props, new ExportQueue.Options(QUEUE_ID, TestExporter.class,
-            String.class, String.class, 5));
+  public void setupExporter() throws Exception {
+
+    ExportQueue.configure(props, new ExportQueue.Options(QUEUE_ID, TestExporter.class,
+        String.class, String.class, 5));
 
     // create and configure export table
     et = "export" + tableCounter.getAndIncrement();
@@ -48,7 +49,6 @@ public class AccumuloExporterIT extends AccumuloITBase {
     AccumuloExporter.setExportTableInfo(props.getAppConfiguration(), QUEUE_ID, new TableInfo(
         cluster.getInstanceName(), cluster.getZooKeepers(), "root", "secret", et));
 
-    return pirtos;
   }
 
   @Test
@@ -56,6 +56,8 @@ public class AccumuloExporterIT extends AccumuloITBase {
 
     ExportQueue<String, String> teq =
         ExportQueue.getInstance(QUEUE_ID, props.getAppConfiguration());
+
+    Assert.assertEquals(2, getFluoSplits().size());
 
     try (FluoClient fc = FluoFactory.newClient(miniFluo.getClientConfiguration())) {
 
@@ -112,6 +114,11 @@ public class AccumuloExporterIT extends AccumuloITBase {
       Map<String, String> expected, String k, String v) {
     teq.add(tx, k, v);
     expected.put(k, v);
+  }
+
+  private Collection<Text> getFluoSplits() throws Exception {
+    return cluster.getConnector("root", "secret").tableOperations()
+        .listSplits(props.getAccumuloTable());
   }
 
   private Map<String, String> getExports() throws Exception {
