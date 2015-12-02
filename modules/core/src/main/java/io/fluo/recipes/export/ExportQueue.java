@@ -20,6 +20,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import com.google.common.base.Preconditions;
 import com.google.common.hash.Hashing;
@@ -35,6 +36,9 @@ import io.fluo.recipes.serialization.SimpleSerializer;
 import org.apache.commons.configuration.Configuration;
 
 public class ExportQueue<K, V> {
+
+  private static final String RANGE_BEGIN = "#";
+  private static final String RANGE_END = ":~";
 
   private int numBuckets;
   private SimpleSerializer serializer;
@@ -101,8 +105,8 @@ public class ExportQueue<K, V> {
     fluoConfig.addObserver(new ObserverConfiguration(ExportObserver.class.getName())
         .setParameters(Collections.singletonMap("queueId", opts.queueId)));
 
-    Bytes exportRangeStart = Bytes.of(opts.queueId + ":");
-    Bytes exportRangeStop = Bytes.of(opts.queueId + ";");
+    Bytes exportRangeStart = Bytes.of(opts.queueId + RANGE_BEGIN);
+    Bytes exportRangeStop = Bytes.of(opts.queueId + RANGE_END);
 
     new TransientRegistry(fluoConfig.getAppConfiguration()).addTransientRange("exportQueue."
         + opts.queueId, new RowRange(exportRangeStart, exportRangeStop));
@@ -139,8 +143,8 @@ public class ExportQueue<K, V> {
 
     List<Bytes> splits = new ArrayList<>();
 
-    Bytes exportRangeStart = Bytes.of(opts.queueId + ":");
-    Bytes exportRangeStop = Bytes.of(opts.queueId + ";");
+    Bytes exportRangeStart = Bytes.of(opts.queueId + RANGE_BEGIN);
+    Bytes exportRangeStop = Bytes.of(opts.queueId + RANGE_END);
 
     splits.add(exportRangeStart);
     splits.add(exportRangeStop);
@@ -154,6 +158,10 @@ public class ExportQueue<K, V> {
 
     Pirtos pirtos = new Pirtos();
     pirtos.setSplits(splits);
+
+    // the tablet with end row <queueId># does not contain any data for the export queue and
+    // should not be grouped with the export queue
+    pirtos.setTabletGroupingRegex(Pattern.quote(queueId + ":"));
 
     return pirtos;
   }

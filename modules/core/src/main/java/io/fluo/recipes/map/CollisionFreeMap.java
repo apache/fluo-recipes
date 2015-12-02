@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -56,6 +57,10 @@ import org.apache.commons.configuration.Configuration;
  */
 
 public class CollisionFreeMap<K, V> {
+
+  private static final String UPDATE_RANGE_END = ":u:~";
+
+  private static final String DATA_RANGE_END = ":d:~";
 
   private String mapId;
 
@@ -520,11 +525,11 @@ public class CollisionFreeMap<K, V> {
     fluoConfig.addObserver(new ObserverConfiguration(CollisionFreeMapObserver.class.getName())
         .setParameters(ImmutableMap.of("mapId", opts.mapId)));
 
-    Bytes updateRangeStart = Bytes.of(opts.mapId + ":u");
-    Bytes updateRangeEnd = Bytes.of(opts.mapId + ":u;");
+    Bytes dataRangeEnd = Bytes.of(opts.mapId + DATA_RANGE_END);
+    Bytes updateRangeEnd = Bytes.of(opts.mapId + UPDATE_RANGE_END);
 
     new TransientRegistry(fluoConfig.getAppConfiguration()).addTransientRange("cfm." + opts.mapId,
-        new RowRange(updateRangeStart, updateRangeEnd));
+        new RowRange(dataRangeEnd, updateRangeEnd));
   }
 
   /**
@@ -569,18 +574,19 @@ public class CollisionFreeMap<K, V> {
     Collections.sort(updateSplits);
     updateSplits = BucketUtil.shrink(updateSplits, 30);
 
-    Bytes updateRangeStart = Bytes.of(opts.mapId + ":u");
-    Bytes updateRangeEnd = Bytes.of(opts.mapId + ":u;");
+    Bytes dataRangeEnd = Bytes.of(opts.mapId + DATA_RANGE_END);
+    Bytes updateRangeEnd = Bytes.of(opts.mapId + UPDATE_RANGE_END);
 
     List<Bytes> splits = new ArrayList<>();
-    splits.add(Bytes.of(opts.mapId + ":"));
-    splits.add(updateRangeStart);
+    splits.add(dataRangeEnd);
     splits.add(updateRangeEnd);
     splits.addAll(dataSplits);
     splits.addAll(updateSplits);
 
     Pirtos pirtos = new Pirtos();
     pirtos.setSplits(splits);
+
+    pirtos.setTabletGroupingRegex(Pattern.quote(mapId + ":") + "[du]:");
 
     return pirtos;
   }

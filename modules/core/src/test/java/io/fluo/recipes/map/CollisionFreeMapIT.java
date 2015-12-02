@@ -380,9 +380,9 @@ public class CollisionFreeMapIT {
     Pirtos pirtos1 =
         CollisionFreeMap.getTableOptimizations("foo", fluoConfig.getAppConfiguration());
     List<Bytes> expected1 =
-        Lists.transform(Arrays.asList("foo:", "foo:d:0a", "foo:d:14", "foo:d:1e", "foo:d:28",
-            "foo:d:32", "foo:d:3c", "foo:d:46", "foo:d:50", "foo:d:5a", "foo:d:64", "foo:u",
-            "foo:u:27", "foo:u:4e", "foo:u;"), Bytes::of);
+        Lists.transform(Arrays.asList("foo:d:0a", "foo:d:14", "foo:d:1e", "foo:d:28", "foo:d:32",
+            "foo:d:3c", "foo:d:46", "foo:d:50", "foo:d:5a", "foo:d:64", "foo:d:~", "foo:u:27",
+            "foo:u:4e", "foo:u:~"), Bytes::of);
 
     Assert.assertEquals(expected1, sort(pirtos1.getSplits()));
 
@@ -391,7 +391,7 @@ public class CollisionFreeMapIT {
 
     Pirtos pirtos2 =
         CollisionFreeMap.getTableOptimizations("bar", fluoConfig.getAppConfiguration());
-    List<Bytes> expected2 = Lists.transform(Arrays.asList("bar:", "bar:u", "bar:u;"), Bytes::of);
+    List<Bytes> expected2 = Lists.transform(Arrays.asList("bar:d:~", "bar:u:~"), Bytes::of);
     Assert.assertEquals(expected2, sort(pirtos2.getSplits()));
 
     Pirtos pirtos3 = CollisionFreeMap.getTableOptimizations(fluoConfig.getAppConfiguration());
