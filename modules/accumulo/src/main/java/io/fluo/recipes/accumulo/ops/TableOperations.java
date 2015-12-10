@@ -27,11 +27,13 @@ import io.fluo.recipes.common.TransientRegistry;
 import io.fluo.recipes.export.ExportQueue;
 import io.fluo.recipes.map.CollisionFreeMap;
 import org.apache.accumulo.core.client.AccumuloException;
+import org.apache.accumulo.core.client.ClientConfiguration;
 import org.apache.accumulo.core.client.Connector;
 import org.apache.accumulo.core.client.ZooKeeperInstance;
 import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.commons.configuration.Configuration;
 import org.apache.hadoop.io.Text;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
@@ -46,9 +48,14 @@ public class TableOperations {
   private static final String RGB_DEFAULT_PROP = "table.custom.balancer.group.regex.default";
   private static final String TABLE_BALANCER_PROP = "table.balancer";
 
+  private static final Logger logger = LoggerFactory.getLogger(TableOperations.class);
+
   private static Connector getConnector(FluoConfiguration fluoConfig) throws Exception {
+
     ZooKeeperInstance zki =
-        new ZooKeeperInstance(fluoConfig.getAccumuloInstance(), fluoConfig.getAccumuloZookeepers());
+        new ZooKeeperInstance(new ClientConfiguration().withInstance(
+            fluoConfig.getAccumuloInstance()).withZkHosts(fluoConfig.getAccumuloZookeepers()));
+
     Connector conn =
         zki.getConnector(fluoConfig.getAccumuloUser(),
             new PasswordToken(fluoConfig.getAccumuloPassword()));
@@ -100,8 +107,8 @@ public class TableOperations {
         conn.tableOperations().setProperty(table, RGB_DEFAULT_PROP, "none");
         conn.tableOperations().setProperty(table, TABLE_BALANCER_PROP, RGB_CLASS);
       } catch (AccumuloException e) {
-        LoggerFactory.getLogger(TableOperations.class).warn(
-            "Unable to setup regex balancer (this is expected to fail in Accumulo 1.6.X) ", e);
+        logger.warn("Unable to setup regex balancer (this is expected to fail in Accumulo 1.6.X) ",
+            e);
       }
     }
   }
@@ -119,6 +126,7 @@ public class TableOperations {
       List<RowRange> ranges = transientRegistry.getTransientRanges();
 
       for (RowRange r : ranges) {
+        logger.debug("Compacting {} {}", r.getStart(), r.getEnd());
         conn.tableOperations().compact(fluoConfig.getAccumuloTable(),
             new Text(r.getStart().toArray()), new Text(r.getEnd().toArray()), true, true);
       }

@@ -48,7 +48,17 @@ FluoConfiguration fluoConfig = ...;
 TableOperations.compactTransient(fluoConfig);
 ```
 
-A process could be started that calls this every 15 minutes or 30 minutes.
+Fluo recipes provides and easy way to call `compactTransient()` from the
+command line using the `fluo exec` command as follows:
+
+```
+fluo exec <app name> io.fluo.recipes.accumulo.cmds.CompactTransient [<interval> [<count>]]
+```
+
+If no arguments are specified the command will call `compactTransient()` once.
+If only `<interval>` is specied the command will loop forever calling
+`compactTransient()` sleeping `<interval>` seconds between calls.  If `<count>`
+is additionally specified then the command will only loop `<count>` times.
 
 [1]:../modules/core/src/main/java/io/fluo/recipes/common/TransientRegistry.java
 [2]:../modules/accumulo/src/main/java/io/fluo/recipes/accumulo/ops/TableOperations.java
