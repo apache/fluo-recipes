@@ -26,6 +26,7 @@ import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.BatchWriter;
 import org.apache.accumulo.core.client.BatchWriterConfig;
+import org.apache.accumulo.core.client.ClientConfiguration;
 import org.apache.accumulo.core.client.Connector;
 import org.apache.accumulo.core.client.MutationsRejectedException;
 import org.apache.accumulo.core.client.TableExistsException;
@@ -52,7 +53,9 @@ public class SharedBatchWriter {
 
     public ExportTask(String instanceName, String zookeepers, String user, String password,
         String table) throws TableNotFoundException, AccumuloException, AccumuloSecurityException {
-      ZooKeeperInstance zki = new ZooKeeperInstance(instanceName, zookeepers);
+      ZooKeeperInstance zki =
+          new ZooKeeperInstance(new ClientConfiguration().withInstance(instanceName).withZkHosts(
+              zookeepers));
 
       // TODO need to close batch writer
       Connector conn = zki.getConnector(user, new PasswordToken(password));
