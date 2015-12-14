@@ -154,7 +154,7 @@ public class ExportQueue<K, V> {
       exportSplits.add(ExportBucket.generateBucketRow(opts.queueId, i, opts.numBuckets));
     }
     Collections.sort(exportSplits);
-    splits.addAll(BucketUtil.shrink(exportSplits, 30));
+    splits.addAll(BucketUtil.shrink(exportSplits, 8));
 
     Pirtos pirtos = new Pirtos();
     pirtos.setSplits(splits);
