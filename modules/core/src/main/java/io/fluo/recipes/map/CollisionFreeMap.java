@@ -565,14 +565,14 @@ public class CollisionFreeMap<K, V> {
       dataSplits.add(createDataRowPrefix(opts.mapId, i, opts.numBuckets));
     }
     Collections.sort(dataSplits);
-    dataSplits = BucketUtil.shrink(dataSplits, 10);
+    dataSplits = BucketUtil.shrink(dataSplits, 8);
 
     List<Bytes> updateSplits = new ArrayList<>();
     for (int i = 0; i < opts.numBuckets; i++) {
       updateSplits.add(createUpdateRow(opts.mapId, i, opts.numBuckets));
     }
     Collections.sort(updateSplits);
-    updateSplits = BucketUtil.shrink(updateSplits, 30);
+    updateSplits = BucketUtil.shrink(updateSplits, 4);
 
     Bytes dataRangeEnd = Bytes.of(opts.mapId + DATA_RANGE_END);
     Bytes updateRangeEnd = Bytes.of(opts.mapId + UPDATE_RANGE_END);

@@ -380,9 +380,13 @@ public class CollisionFreeMapIT {
     Pirtos pirtos1 =
         CollisionFreeMap.getTableOptimizations("foo", fluoConfig.getAppConfiguration());
     List<Bytes> expected1 =
-        Lists.transform(Arrays.asList("foo:d:0a", "foo:d:14", "foo:d:1e", "foo:d:28", "foo:d:32",
-            "foo:d:3c", "foo:d:46", "foo:d:50", "foo:d:5a", "foo:d:64", "foo:d:~", "foo:u:27",
-            "foo:u:4e", "foo:u:~"), Bytes::of);
+        Lists.transform(Arrays.asList("foo:d:08", "foo:d:10", "foo:d:18", "foo:d:20", "foo:d:28",
+            "foo:d:30", "foo:d:38", "foo:d:40", "foo:d:48", "foo:d:50", "foo:d:58", "foo:d:60",
+            "foo:d:68", "foo:d:~", "foo:u:04", "foo:u:08", "foo:u:0c", "foo:u:10", "foo:u:14",
+            "foo:u:18", "foo:u:1c", "foo:u:20", "foo:u:24", "foo:u:28", "foo:u:2c", "foo:u:30",
+            "foo:u:34", "foo:u:38", "foo:u:3c", "foo:u:40", "foo:u:44", "foo:u:48", "foo:u:4c",
+            "foo:u:50", "foo:u:54", "foo:u:58", "foo:u:5c", "foo:u:60", "foo:u:64", "foo:u:68",
+            "foo:u:6c", "foo:u:70", "foo:u:~"), Bytes::of);
 
     Assert.assertEquals(expected1, sort(pirtos1.getSplits()));
 
