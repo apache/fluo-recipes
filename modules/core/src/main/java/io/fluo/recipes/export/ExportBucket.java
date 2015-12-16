@@ -19,7 +19,6 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 
 import com.google.common.base.Preconditions;
-
 import io.fluo.api.client.TransactionBase;
 import io.fluo.api.config.ScannerConfiguration;
 import io.fluo.api.data.Bytes;
@@ -36,9 +35,9 @@ import io.fluo.recipes.impl.BucketUtil;
  * This class encapsulates a buckets serialization code.
  */
 class ExportBucket {
-  private static final String DATA_CF_PREFIX = "data:";
   private static final String NOTIFICATION_CF = "fluoRecipes";
   private static final String NOTIFICATION_CQ_PREFIX = "eq:";
+  private static final Column EXPORT_COL = new Column("exp", "val");
 
   static Column newNotificationColumn(String queueId) {
     return new Column(NOTIFICATION_CF, NOTIFICATION_CQ_PREFIX + queueId);
@@ -91,11 +90,10 @@ class ExportBucket {
   }
 
   public void add(long seq, byte[] key, byte[] value) {
-    byte[] family = new byte[DATA_CF_PREFIX.length() + key.length];
-    byte[] prefix = DATA_CF_PREFIX.getBytes();
-    System.arraycopy(prefix, 0, family, 0, prefix.length);
-    System.arraycopy(key, 0, family, prefix.length, key.length);
-    ttx.mutate().row(bucketRow).fam(family).qual(encSeq(seq)).set(value);
+    Bytes row =
+        Bytes.newBuilder(bucketRow.length() + 1 + key.length + 16).append(bucketRow).append(":")
+            .append(key).append(encSeq(seq)).toBytes();
+    ttx.set(row, EXPORT_COL, Bytes.of(value));
   }
 
   public void notifyExportObserver() {
@@ -104,12 +102,12 @@ class ExportBucket {
 
   public Iterator<ExportEntry> getExportIterator() {
     ScannerConfiguration sc = new ScannerConfiguration();
-    sc.setSpan(Span.prefix(bucketRow, new Column(DATA_CF_PREFIX)));
+    sc.setSpan(Span.prefix(bucketRow));
+    sc.fetchColumn(EXPORT_COL.getFamily(), EXPORT_COL.getQualifier());
     RowIterator iter = ttx.get(sc);
 
     if (iter.hasNext()) {
-      ColumnIterator cols = iter.next().getValue();
-      return new ExportIterator(cols);
+      return new ExportIterator(iter);
     } else {
       return Collections.<ExportEntry>emptySet().iterator();
     }
@@ -117,38 +115,40 @@ class ExportBucket {
 
   private class ExportIterator implements Iterator<ExportEntry> {
 
-    private ColumnIterator cols;
-    private Column lastCol;
+    private RowIterator rowIter;
+    private Bytes lastRow;
 
-    public ExportIterator(ColumnIterator cols) {
-      this.cols = cols;
+    public ExportIterator(RowIterator rowIter) {
+      this.rowIter = rowIter;
     }
 
     @Override
     public boolean hasNext() {
-      return cols.hasNext();
+      return rowIter.hasNext();
     }
 
     @Override
     public ExportEntry next() {
-      Entry<Column, Bytes> cv = cols.next();
+      Entry<Bytes, ColumnIterator> rowCol = rowIter.next();
+      Bytes row = rowCol.getKey();
+      Bytes keyBytes = row.subSequence(bucketRow.length() + 1, row.length() - 16);
+      Bytes seqBytes = row.subSequence(row.length() - 16, row.length());
 
       ExportEntry ee = new ExportEntry();
 
-      Bytes fam = cv.getKey().getFamily();
-      ee.key = fam.subSequence(DATA_CF_PREFIX.length(), fam.length()).toArray();
-      ee.seq = Long.parseLong(cv.getKey().getQualifier().toString(), 16);
+      ee.key = keyBytes.toArray();
+      ee.seq = Long.parseLong(seqBytes.toString(), 16);
       // TODO maybe leave as Bytes?
-      ee.value = cv.getValue().toArray();
+      ee.value = rowCol.getValue().next().getValue().toArray();
 
-      lastCol = cv.getKey();
+      lastRow = row;
 
       return ee;
     }
 
     @Override
     public void remove() {
-      ttx.mutate().row(bucketRow).col(lastCol).delete();
+      ttx.mutate().row(lastRow).col(EXPORT_COL).delete();
     }
   }
 }
