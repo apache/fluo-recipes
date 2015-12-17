@@ -40,6 +40,7 @@ import io.fluo.api.config.FluoConfiguration;
 import io.fluo.api.config.ObserverConfiguration;
 import io.fluo.api.config.ScannerConfiguration;
 import io.fluo.api.data.Bytes;
+import io.fluo.api.data.BytesBuilder;
 import io.fluo.api.data.Column;
 import io.fluo.api.data.RowColumnValue;
 import io.fluo.api.data.Span;
@@ -71,7 +72,8 @@ public class CollisionFreeMap<K, V> {
   UpdateObserver<K, V> updateObserver;
   private long bufferSize;
 
-  static final Bytes UPDATE_CF_PREFIX = Bytes.of("upd:");
+  static final Column UPDATE_COL = new Column("u", "v");
+
   private int numBuckets = -1;
 
   @SuppressWarnings("unchecked")
@@ -97,19 +99,18 @@ public class CollisionFreeMap<K, V> {
     this.bufferSize = opts.getBufferSize();
   }
 
-  private static Bytes getKeyFromUpdateCol(Column col) {
-    Bytes fam = col.getFamily();
-    Bytes serializedKey = fam.subSequence(UPDATE_CF_PREFIX.length(), fam.length());
-    return serializedKey;
-  }
-
   private V deserVal(Bytes val) {
     return serializer.deserialize(val.toArray(), valType);
   }
 
+  private Bytes getKeyFromUpdateRow(Bytes prefix, Bytes row) {
+    return row.subSequence(prefix.length(), row.length() - 16);
+  }
+
   void process(TransactionBase tx, Bytes ntfyRow, Column col) throws Exception {
     ScannerConfiguration sc = new ScannerConfiguration();
-    sc.setSpan(Span.prefix(ntfyRow, new Column(UPDATE_CF_PREFIX)));
+    sc.setSpan(Span.prefix(ntfyRow));
+    sc.fetchColumn(UPDATE_COL.getFamily(), UPDATE_COL.getQualifier());
     RowIterator iter = tx.get(sc);
 
     Map<Bytes, List<Bytes>> updates = new HashMap<>();
@@ -120,16 +121,17 @@ public class CollisionFreeMap<K, V> {
 
     if (iter.hasNext()) {
       Bytes lastKey = null;
-      ColumnIterator cols = iter.next().getValue();
-      while (cols.hasNext() && approxMemUsed < bufferSize) {
+      while (iter.hasNext() && approxMemUsed < bufferSize) {
+        Entry<Bytes, ColumnIterator> rowCol = iter.next();
+        Bytes curRow = rowCol.getKey();
+
         // TODO processing too many at once increases chance of
         // collisions... may want to process a max # and notify self
         // when stopping could set a continue key
 
-        Entry<Column, Bytes> colVal = cols.next();
-        tx.delete(ntfyRow, colVal.getKey());
+        tx.delete(curRow, UPDATE_COL);
 
-        Bytes serializedKey = getKeyFromUpdateCol(colVal.getKey());
+        Bytes serializedKey = getKeyFromUpdateRow(ntfyRow, curRow);
         lastKey = serializedKey;
 
         List<Bytes> updateList = updates.get(serializedKey);
@@ -139,13 +141,17 @@ public class CollisionFreeMap<K, V> {
           approxMemUsed += serializedKey.length();
         }
 
-        updateList.add(colVal.getValue());
-        approxMemUsed += colVal.getValue().length();
+        Bytes val = rowCol.getValue().next().getValue();
+        updateList.add(val);
+        approxMemUsed += val.length();
       }
 
-      if (cols.hasNext()) {
+      if (iter.hasNext()) {
+        Entry<Bytes, ColumnIterator> rowCol = iter.next();
+        Bytes curRow = rowCol.getKey();
+
         // check if more updates for last key
-        if (getKeyFromUpdateCol(cols.next().getKey()).equals(lastKey)) {
+        if (getKeyFromUpdateRow(ntfyRow, curRow).equals(lastKey)) {
           // there are still more updates for this key
           partiallyReadKey = lastKey;
         }
@@ -159,19 +165,22 @@ public class CollisionFreeMap<K, V> {
     // TODO this is awful... no sanity check... hard to read
     dataPrefix[Bytes.of(mapId).length() + 1] = 'd';
 
-    Prefix prefix = new Prefix(dataPrefix);
+    BytesBuilder rowBuilder = Bytes.newBuilder();
+    rowBuilder.append(dataPrefix);
+    int rowPrefixLen = rowBuilder.getLength();
 
     Set<Bytes> keysToFetch = updates.keySet();
     if (partiallyReadKey != null) {
       final Bytes prk = partiallyReadKey;
       keysToFetch = Sets.filter(keysToFetch, b -> !b.equals(prk));
     }
-    Map<Bytes, Map<Column, Bytes>> currentVals = getCurrentValues(tx, prefix, keysToFetch);
+    Map<Bytes, Map<Column, Bytes>> currentVals = getCurrentValues(tx, rowBuilder, keysToFetch);
 
     ArrayList<Update<K, V>> updatesToReport = new ArrayList<>(updates.size());
 
     for (Entry<Bytes, List<Bytes>> entry : updates.entrySet()) {
-      Bytes currentValueRow = prefix.append(entry.getKey());
+      rowBuilder.setLength(rowPrefixLen);
+      Bytes currentValueRow = rowBuilder.append(entry.getKey()).toBytes();
       Bytes currVal =
           currentVals.getOrDefault(currentValueRow, Collections.emptyMap()).get(DATA_COLUMN);
 
@@ -212,47 +221,15 @@ public class CollisionFreeMap<K, V> {
 
   private static final Column DATA_COLUMN = new Column("data", "current");
 
-  private static class Prefix {
-    byte[] tmp;
-    int prefixLen;
-
-    Prefix(byte[] p) {
-      tmp = new byte[p.length + 32];
-      System.arraycopy(p, 0, tmp, 0, p.length);
-      tmp[p.length] = ':';
-      prefixLen = p.length + 1;
-    }
-
-    Prefix(Bytes p) {
-      tmp = new byte[p.length() + 32];
-      System.arraycopy(p.toArray(), 0, tmp, 0, p.length());
-      tmp[p.length()] = ':';
-      prefixLen = p.length() + 1;
-    }
-
-    Bytes append(Bytes s) {
-      return append(s.toArray());
-    }
-
-    public Bytes append(byte[] s) {
-      if (tmp.length < prefixLen + s.length) {
-        byte[] newTmp = new byte[prefixLen + s.length * 2];
-        System.arraycopy(tmp, 0, newTmp, 0, prefixLen);
-        tmp = newTmp;
-      }
-
-      System.arraycopy(s, 0, tmp, prefixLen, s.length);
-      return Bytes.of(tmp, 0, prefixLen + s.length);
-    }
-  }
-
-  private Map<Bytes, Map<Column, Bytes>> getCurrentValues(TransactionBase tx, Prefix prefix,
+  private Map<Bytes, Map<Column, Bytes>> getCurrentValues(TransactionBase tx, BytesBuilder prefix,
       Set<Bytes> keySet) {
 
     Set<Bytes> rows = new HashSet<>();
 
+    int prefixLen = prefix.getLength();
     for (Bytes key : keySet) {
-      rows.add(prefix.append(key));
+      prefix.setLength(prefixLen);
+      rows.add(prefix.append(key).toBytes());
     }
 
     try {
@@ -280,26 +257,29 @@ public class CollisionFreeMap<K, V> {
     byte[] k = serializer.serialize(key);
 
     int hash = Hashing.murmur3_32().hashBytes(k).asInt();
-    int bucketId = Math.abs(hash % numBuckets);
+    String bucketId = BucketUtil.genBucketId(Math.abs(hash % numBuckets), numBuckets);
 
-    Bytes updatesRow = createUpdateRow(mapId, bucketId, numBuckets);
 
-    Prefix cfPrefix = new Prefix(UPDATE_CF_PREFIX.subSequence(0, UPDATE_CF_PREFIX.length() - 1));
+    BytesBuilder rowBuilder = Bytes.newBuilder();
+    rowBuilder.append(mapId).append(":u:").append(bucketId).append(":").append(k);
 
     ScannerConfiguration sc = new ScannerConfiguration();
-    sc.setSpan(Span.exact(updatesRow, new Column(cfPrefix.append(k))));
+    sc.setSpan(Span.prefix(rowBuilder.toBytes()));
 
     RowIterator iter = tx.get(sc);
 
     Iterator<V> ui;
 
     if (iter.hasNext()) {
-      ui = Iterators.transform(iter.next().getValue(), e -> deserVal(e.getValue()));
+      ui = Iterators.transform(iter, e -> deserVal(e.getValue().next().getValue()));
     } else {
       ui = Collections.<V>emptyList().iterator();
     }
 
-    Bytes dataRow = new Prefix(createDataRowPrefix(mapId, bucketId, numBuckets)).append(k);
+    rowBuilder.setLength(mapId.length());
+    rowBuilder.append(":d:").append(bucketId).append(":").append(k);
+
+    Bytes dataRow = rowBuilder.toBytes();
 
     Bytes cv = tx.get(dataRow, DATA_COLUMN);
 
@@ -331,31 +311,38 @@ public class CollisionFreeMap<K, V> {
     Preconditions.checkState(numBuckets > 0, "Not initialized");
 
     UUID uuid = UUID.randomUUID();
-    Prefix cfPrefix = new Prefix(UPDATE_CF_PREFIX.subSequence(0, UPDATE_CF_PREFIX.length() - 1));
-    Bytes cq = createCq(uuid);
 
-    Set<Integer> buckets = new HashSet<>();
+    Set<String> buckets = new HashSet<>();
+
+    BytesBuilder rowBuilder = Bytes.newBuilder();
+    rowBuilder.append(mapId).append(":u:");
+    int prefixLength = rowBuilder.getLength();
 
     for (Entry<K, V> entry : updates.entrySet()) {
       byte[] k = serializer.serialize(entry.getKey());
       int hash = Hashing.murmur3_32().hashBytes(k).asInt();
-      int bucketId = Math.abs(hash % numBuckets);
+      String bucketId = BucketUtil.genBucketId(Math.abs(hash % numBuckets), numBuckets);
 
-      Bytes row = createUpdateRow(mapId, bucketId, numBuckets);
-      Bytes cf = cfPrefix.append(k);
+      // reset to the common row prefix
+      rowBuilder.setLength(prefixLength);
+
+      Bytes row =
+          rowBuilder.append(bucketId).append(":").append(k).append(uuidToBytes(uuid)).toBytes();
       Bytes val = Bytes.of(serializer.serialize(entry.getValue()));
 
       // TODO set if not exists would be comforting here.... but
       // collisions on bucketId+key+uuid should never occur
-      tx.set(row, new Column(cf, cq), val);
+      tx.set(row, UPDATE_COL, val);
 
       buckets.add(bucketId);
     }
 
-    for (Integer bucketId : buckets) {
-      Bytes row = createUpdateRow(mapId, bucketId, numBuckets);
-      // TODO is ok to call set weak notification multiple times for the
-      // same row col???
+    for (String bucketId : buckets) {
+      rowBuilder.setLength(prefixLength);
+      rowBuilder.append(bucketId).append(":");
+
+      Bytes row = rowBuilder.toBytes();
+
       tx.setWeakNotification(row, new Column("fluoRecipes", "cfm:" + mapId));
     }
   }
@@ -406,9 +393,10 @@ public class CollisionFreeMap<K, V> {
     public RowColumnValue convert(K2 key, V2 val) {
       byte[] k = serializer.serialize(key);
       int hash = Hashing.murmur3_32().hashBytes(k).asInt();
-      int bucketId = Math.abs(hash % numBuckets);
+      String bucketId = BucketUtil.genBucketId(Math.abs(hash % numBuckets), numBuckets);
 
-      Bytes row = new Prefix(createDataRowPrefix(mapId, bucketId, numBuckets)).append(k);
+      BytesBuilder bb = Bytes.newBuilder();
+      Bytes row = bb.append(mapId).append(":d:").append(bucketId).append(":").append(k).toBytes();
       byte[] v = serializer.serialize(val);
 
       return new RowColumnValue(row, DATA_COLUMN, Bytes.of(v));
@@ -443,6 +431,7 @@ public class CollisionFreeMap<K, V> {
 
     public Options(String mapId, String combinerType, String keyType, String valType, int buckets) {
       Preconditions.checkArgument(buckets > 0);
+      Preconditions.checkArgument(!mapId.contains(":"), "Map id cannot contain ':'");
 
       this.mapId = mapId;
       this.numBuckets = buckets;
@@ -455,6 +444,7 @@ public class CollisionFreeMap<K, V> {
     public Options(String mapId, String combinerType, String updateObserverType, String keyType,
         String valueType, int buckets) {
       Preconditions.checkArgument(buckets > 0);
+      Preconditions.checkArgument(!mapId.contains(":"), "Map id cannot contain ':'");
 
       this.mapId = mapId;
       this.numBuckets = buckets;
@@ -560,16 +550,23 @@ public class CollisionFreeMap<K, V> {
   public static Pirtos getTableOptimizations(String mapId, Configuration appConfig) {
     Options opts = new Options(mapId, appConfig);
 
+    BytesBuilder rowBuilder = Bytes.newBuilder();
+    rowBuilder.append(mapId);
+
     List<Bytes> dataSplits = new ArrayList<>();
     for (int i = 0; i < opts.numBuckets; i++) {
-      dataSplits.add(createDataRowPrefix(opts.mapId, i, opts.numBuckets));
+      String bucketId = BucketUtil.genBucketId(i, opts.numBuckets);
+      rowBuilder.setLength(mapId.length());
+      dataSplits.add(rowBuilder.append(":d:").append(bucketId).toBytes());
     }
     Collections.sort(dataSplits);
     dataSplits = BucketUtil.shrink(dataSplits, 8);
 
     List<Bytes> updateSplits = new ArrayList<>();
     for (int i = 0; i < opts.numBuckets; i++) {
-      updateSplits.add(createUpdateRow(opts.mapId, i, opts.numBuckets));
+      String bucketId = BucketUtil.genBucketId(i, opts.numBuckets);
+      rowBuilder.setLength(mapId.length());
+      updateSplits.add(rowBuilder.append(":u:").append(bucketId).toBytes());
     }
     Collections.sort(updateSplits);
     updateSplits = BucketUtil.shrink(updateSplits, 4);
@@ -591,15 +588,7 @@ public class CollisionFreeMap<K, V> {
     return pirtos;
   }
 
-  private static Bytes createUpdateRow(String mapId, int bucketId, int maxBucket) {
-    return Bytes.of(mapId + ":u:" + BucketUtil.genBucketId(bucketId, maxBucket));
-  }
-
-  private static Bytes createDataRowPrefix(String mapId, int bucketId, int maxBucket) {
-    return Bytes.of(mapId + ":d:" + BucketUtil.genBucketId(bucketId, maxBucket));
-  }
-
-  private Bytes createCq(UUID uuid) {
+  private Bytes uuidToBytes(UUID uuid) {
     ByteBuffer bb = ByteBuffer.wrap(new byte[16]);
     bb.putLong(uuid.getMostSignificantBits());
     bb.putLong(uuid.getLeastSignificantBits());
