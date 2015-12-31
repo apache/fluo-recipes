@@ -15,7 +15,6 @@
 package io.fluo.recipes.export;
 
 class ExportEntry {
-
   byte[] key;
   long seq;
   byte[] value;
