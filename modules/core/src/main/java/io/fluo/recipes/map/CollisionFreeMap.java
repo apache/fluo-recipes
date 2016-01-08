@@ -554,22 +554,20 @@ public class CollisionFreeMap<K, V> {
     rowBuilder.append(mapId);
 
     List<Bytes> dataSplits = new ArrayList<>();
-    for (int i = 0; i < opts.numBuckets; i++) {
+    for (int i = 1; i < opts.numBuckets; i++) {
       String bucketId = BucketUtil.genBucketId(i, opts.numBuckets);
       rowBuilder.setLength(mapId.length());
       dataSplits.add(rowBuilder.append(":d:").append(bucketId).toBytes());
     }
     Collections.sort(dataSplits);
-    dataSplits = BucketUtil.shrink(dataSplits, 8);
 
     List<Bytes> updateSplits = new ArrayList<>();
-    for (int i = 0; i < opts.numBuckets; i++) {
+    for (int i = 1; i < opts.numBuckets; i++) {
       String bucketId = BucketUtil.genBucketId(i, opts.numBuckets);
       rowBuilder.setLength(mapId.length());
       updateSplits.add(rowBuilder.append(":u:").append(bucketId).toBytes());
     }
     Collections.sort(updateSplits);
-    updateSplits = BucketUtil.shrink(updateSplits, 4);
 
     Bytes dataRangeEnd = Bytes.of(opts.mapId + DATA_RANGE_END);
     Bytes updateRangeEnd = Bytes.of(opts.mapId + UPDATE_RANGE_END);

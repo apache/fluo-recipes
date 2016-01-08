@@ -71,9 +71,12 @@ class ExportBucket {
       }
     }
 
-    Preconditions.checkArgument(colonLoc != -1, "Invalid bucket row " + bucketRow);
+    Preconditions.checkArgument(colonLoc != -1 && colonLoc != bucketRow.length(),
+        "Invalid bucket row " + bucketRow);
+    Preconditions.checkArgument(bucketRow.byteAt(bucketRow.length() - 1) == ':',
+        "Invalid bucket row " + bucketRow);
 
-    this.bucketRow = bucketRow;
+    this.bucketRow = bucketRow.subSequence(0, bucketRow.length() - 1);
     this.qid = bucketRow.subSequence(0, colonLoc).toString();
   }
 
@@ -106,7 +109,9 @@ class ExportBucket {
   }
 
   public void notifyExportObserver() {
-    ttx.mutate().row(bucketRow).col(newNotificationColumn(qid)).weaklyNotify();
+    Bytes ntfyRow =
+        Bytes.newBuilder(bucketRow.length() + 1).append(bucketRow).append(":").toBytes();
+    ttx.mutate().row(ntfyRow).col(newNotificationColumn(qid)).weaklyNotify();
   }
 
   public Iterator<ExportEntry> getExportIterator() {

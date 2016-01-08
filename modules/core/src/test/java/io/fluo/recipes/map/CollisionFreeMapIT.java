@@ -15,17 +15,12 @@
 package io.fluo.recipes.map;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import io.fluo.api.client.FluoClient;
 import io.fluo.api.client.FluoFactory;
 import io.fluo.api.client.LoaderExecutor;
@@ -40,8 +35,6 @@ import io.fluo.api.data.Span;
 import io.fluo.api.iterator.ColumnIterator;
 import io.fluo.api.iterator.RowIterator;
 import io.fluo.api.mini.MiniFluo;
-import io.fluo.recipes.common.Pirtos;
-import io.fluo.recipes.map.CollisionFreeMap.Options;
 import io.fluo.recipes.serialization.SimpleSerializer;
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
@@ -332,7 +325,7 @@ public class CollisionFreeMapIT {
   }
 
   @Test
-  public void testStress() {
+  public void testStress() throws Exception {
     try (FluoClient fc = FluoFactory.newClient(miniFluo.getClientConfiguration())) {
       Random rand = new Random();
 
@@ -363,47 +356,5 @@ public class CollisionFreeMapIT {
       diff(expected, actual);
       Assert.fail();
     }
-  }
-
-  private static List<Bytes> sort(List<Bytes> in) {
-    ArrayList<Bytes> out = new ArrayList<>(in);
-    Collections.sort(out);
-    return out;
-  }
-
-  @Test
-  public void testSplits() {
-    Options opts = new Options("foo", WordCountCombiner.class, String.class, Long.class, 119);
-    FluoConfiguration fluoConfig = new FluoConfiguration();
-    CollisionFreeMap.configure(fluoConfig, opts);
-
-    Pirtos pirtos1 =
-        CollisionFreeMap.getTableOptimizations("foo", fluoConfig.getAppConfiguration());
-    List<Bytes> expected1 =
-        Lists.transform(Arrays.asList("foo:d:08", "foo:d:10", "foo:d:18", "foo:d:20", "foo:d:28",
-            "foo:d:30", "foo:d:38", "foo:d:40", "foo:d:48", "foo:d:50", "foo:d:58", "foo:d:60",
-            "foo:d:68", "foo:d:~", "foo:u:04", "foo:u:08", "foo:u:0c", "foo:u:10", "foo:u:14",
-            "foo:u:18", "foo:u:1c", "foo:u:20", "foo:u:24", "foo:u:28", "foo:u:2c", "foo:u:30",
-            "foo:u:34", "foo:u:38", "foo:u:3c", "foo:u:40", "foo:u:44", "foo:u:48", "foo:u:4c",
-            "foo:u:50", "foo:u:54", "foo:u:58", "foo:u:5c", "foo:u:60", "foo:u:64", "foo:u:68",
-            "foo:u:6c", "foo:u:70", "foo:u:~"), Bytes::of);
-
-    Assert.assertEquals(expected1, sort(pirtos1.getSplits()));
-
-    Options opts2 = new Options("bar", WordCountCombiner.class, String.class, Long.class, 7);
-    CollisionFreeMap.configure(fluoConfig, opts2);
-
-    Pirtos pirtos2 =
-        CollisionFreeMap.getTableOptimizations("bar", fluoConfig.getAppConfiguration());
-    List<Bytes> expected2 = Lists.transform(Arrays.asList("bar:d:~", "bar:u:~"), Bytes::of);
-    Assert.assertEquals(expected2, sort(pirtos2.getSplits()));
-
-    Pirtos pirtos3 = CollisionFreeMap.getTableOptimizations(fluoConfig.getAppConfiguration());
-
-    ArrayList<Bytes> expected3 = new ArrayList<>(expected2);
-    expected3.addAll(expected1);
-
-    Assert.assertEquals(expected3, sort(pirtos3.getSplits()));
-
   }
 }

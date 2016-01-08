@@ -107,7 +107,10 @@ public class TableOperations {
         conn.tableOperations().setProperty(table, RGB_DEFAULT_PROP, "none");
         conn.tableOperations().setProperty(table, TABLE_BALANCER_PROP, RGB_CLASS);
       } catch (AccumuloException e) {
-        logger.warn("Unable to setup regex balancer (this is expected to fail in Accumulo 1.6.X) ",
+        logger
+            .warn("Unable to setup regex balancer (this is expected to fail in Accumulo 1.6.X) : "
+                + e.getMessage());
+        logger.debug("Unable to setup regex balancer (this is expected to fail in Accumulo 1.6.X)",
             e);
       }
     }
