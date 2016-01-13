@@ -10,7 +10,7 @@
 
   <groupId>io.fluo</groupId>
   <artifactId>fluo-recipes-parent</artifactId>
-  <version>1.0.0-beta-1-SNAPSHOT</version>
+  <version>1.0.0-beta-1</version>
   <packaging>pom</packaging>
 
   <name>Fluo Recipes Parent POM</name>
@@ -45,7 +45,7 @@
   <scm>
     <connection>scm:git:https://github.com/fluo-io/fluo-recipes.git</connection>
     <developerConnection>scm:git:git@github.com:fluo-io/fluo-recipes.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>1.0.0-beta-1</tag>
     <url>https://github.com/fluo-io/fluo-recipes</url>
   </scm>
   <issueManagement>
