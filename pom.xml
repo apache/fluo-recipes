@@ -68,7 +68,7 @@
   <properties>
     <accumulo.version>1.6.4</accumulo.version>
     <eclipseFormatterStyle>${project.parent.basedir}/contrib/fluo-eclipse-style.xml</eclipseFormatterStyle>
-    <fluo.version>1.0.0-beta-2-SNAPSHOT</fluo.version>
+    <fluo.version>1.0.0-beta-2</fluo.version>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
   </properties>
