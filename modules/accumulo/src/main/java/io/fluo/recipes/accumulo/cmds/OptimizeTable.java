@@ -19,44 +19,20 @@ import javax.inject.Inject;
 import io.fluo.api.config.FluoConfiguration;
 import io.fluo.recipes.accumulo.ops.TableOperations;
 
-public class CompactTransient {
+public class OptimizeTable {
 
   // when run with fluo exec command, the applications fluo config will be injected
   @Inject
   private static FluoConfiguration fluoConfig;
 
   public static void main(String[] args) throws Exception {
-
-    if ((args.length == 1 && args[0].startsWith("-h")) || (args.length > 2)) {
-      System.out
-          .println("Usage : " + CompactTransient.class.getName() + " [<interval> [<count>]] ");
-
+    if (args.length != 0) {
+      System.out.println("Usage : " + OptimizeTable.class.getName());
       System.exit(-1);
     }
 
-    int interval = 0;
-    int count = 1;
 
-    if (args.length >= 1) {
-      interval = Integer.parseInt(args[0]);
-      if (args.length == 2) {
-        count = Integer.parseInt(args[1]);
-      } else {
-        count = Integer.MAX_VALUE;
-      }
-    }
-
-    System.out.print("Compacting transient ranges ... ");
-    TableOperations.compactTransient(fluoConfig);
-    System.out.println("done.");
-    count--;
-
-    while (count > 0) {
-      Thread.sleep(interval * 1000);
-      System.out.print("Compacting transient ranges ... ");
-      TableOperations.compactTransient(fluoConfig);
-      System.out.println("done.");
-      count--;
-    }
+    TableOperations.optimizeTable(fluoConfig);
+    System.out.println("Finished optimizing table");
   }
 }
