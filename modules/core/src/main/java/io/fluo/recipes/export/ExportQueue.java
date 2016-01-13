@@ -31,7 +31,6 @@ import io.fluo.api.data.Bytes;
 import io.fluo.recipes.common.Pirtos;
 import io.fluo.recipes.common.RowRange;
 import io.fluo.recipes.common.TransientRegistry;
-import io.fluo.recipes.impl.BucketUtil;
 import io.fluo.recipes.serialization.SimpleSerializer;
 import org.apache.commons.configuration.Configuration;
 
@@ -150,11 +149,11 @@ public class ExportQueue<K, V> {
     splits.add(exportRangeStop);
 
     List<Bytes> exportSplits = new ArrayList<>();
-    for (int i = 0; i < opts.numBuckets; i++) {
+    for (int i = 1; i < opts.numBuckets; i++) {
       exportSplits.add(ExportBucket.generateBucketRow(opts.queueId, i, opts.numBuckets));
     }
     Collections.sort(exportSplits);
-    splits.addAll(BucketUtil.shrink(exportSplits, 8));
+    splits.addAll(exportSplits);
 
     Pirtos pirtos = new Pirtos();
     pirtos.setSplits(splits);

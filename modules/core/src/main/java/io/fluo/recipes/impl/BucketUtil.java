@@ -14,35 +14,10 @@
 
 package io.fluo.recipes.impl;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import io.fluo.api.data.Bytes;
-
 public class BucketUtil {
   public static String genBucketId(int bucket, int maxBucket) {
     int bucketLen = Integer.toHexString(maxBucket).length();
     // TODO printf is slow
     return String.format("%0" + bucketLen + "x", bucket);
-  }
-
-  public static List<Bytes> shrink(List<Bytes> bl, int targetBucketsPerTablet) {
-
-    if (targetBucketsPerTablet > bl.size()) {
-      return Collections.emptyList();
-    }
-
-    // evenly spread the split points based on the target
-    int bucketsPerTablet = bl.size() / (bl.size() / targetBucketsPerTablet);
-
-    ArrayList<Bytes> ret = new ArrayList<>();
-    for (int i = 0; i < bl.size(); i++) {
-      if (i > 0 && i % bucketsPerTablet == 0 && (bl.size() - i) > bucketsPerTablet) {
-        ret.add(bl.get(i));
-      }
-    }
-
-    return ret;
   }
 }

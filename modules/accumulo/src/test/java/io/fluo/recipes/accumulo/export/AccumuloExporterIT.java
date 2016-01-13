@@ -57,7 +57,7 @@ public class AccumuloExporterIT extends AccumuloITBase {
     ExportQueue<String, String> teq =
         ExportQueue.getInstance(QUEUE_ID, props.getAppConfiguration());
 
-    Assert.assertEquals(2, getFluoSplits().size());
+    Assert.assertEquals(6, getFluoSplits().size());
 
     try (FluoClient fc = FluoFactory.newClient(miniFluo.getClientConfiguration())) {
 
