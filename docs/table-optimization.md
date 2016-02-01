@@ -24,7 +24,8 @@ CollisionFreeMap.configure(fluoConf, ...);
 FluoFactory.newAdmin(fluoConf).initialize(...)
 
 //Automatically optimize the Fluo table for all configured recipes
-TableOperations.optimizeTable(fluoConf);
+Pirtos tableOptimizations = getConfiguredOptimizations(fluoConf);
+TableOperations.optimizeTable(fluoConf, tableOptimizations);
 ```
 
 The above example automatically optimizes all configured recipes.  If more
@@ -33,6 +34,7 @@ selective optimizations is need look into using the following methods instead.
  * `CollisionFreeMap.getTableOptimizations(String mapId, Configuration appConfig)`
  * `ExportQueue.getTableOptimizations(String queueId, Configuration appConfig)`
  * `TableOperations.optimizeTable(FluoConfiguration fluoConfig, Pirtos pirtos)`
+ * `Pirtos.merge()`
 
 ## Command Example
 
@@ -50,7 +52,7 @@ fluo new app1
 #initialize Fluo
 fluo init app1
 
-#optimize table for recipes
+#optimize table for all configured recipes
 fluo exec app1 io.fluo.recipes.accumulo.cmds.OptimizeTable
 
 ```

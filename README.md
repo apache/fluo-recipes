@@ -8,6 +8,7 @@ Common code for Fluo application developers.
 
 * [Collision Free Map][cfm] - A recipe for making many to many updates.
 * [Export Queue][export-q] - A recipe for exporting data from Fluo to external systems.
+* [Row Hash Prefix][row-hasher] - A recipe for spreading data evenly in a row prefix.
 * [RecordingTransaction][recording-tx] - A wrapper for a Fluo transaction that records all transaction
 operations to a log which can be used to export data from Fluo.
 
@@ -25,3 +26,4 @@ Recipes have common needs that are broken down into the following reusable compo
 [serialization]: docs/serialization.md
 [transient]: docs/transient.md
 [optimization]: docs/table-optimization.md
+[row-hasher]: docs/row-hasher.md

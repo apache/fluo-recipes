@@ -24,8 +24,6 @@ import io.fluo.api.data.Bytes;
 import io.fluo.recipes.common.Pirtos;
 import io.fluo.recipes.common.RowRange;
 import io.fluo.recipes.common.TransientRegistry;
-import io.fluo.recipes.export.ExportQueue;
-import io.fluo.recipes.map.CollisionFreeMap;
 import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.ClientConfiguration;
 import org.apache.accumulo.core.client.Connector;
@@ -60,23 +58,6 @@ public class TableOperations {
         zki.getConnector(fluoConfig.getAccumuloUser(),
             new PasswordToken(fluoConfig.getAccumuloPassword()));
     return conn;
-  }
-
-  /**
-   * This method will optimize the Accumulo table for all previously configured recipes. Call this
-   * method after initializing Fluo, but before using Fluo.
-   */
-  public static void optimizeTable(FluoConfiguration fluoConfig) throws Exception {
-
-    try (FluoClient client = FluoFactory.newClient(fluoConfig)) {
-      Configuration appConfig = client.getAppConfiguration();
-      Pirtos pirtos = new Pirtos();
-
-      pirtos.merge(ExportQueue.getTableOptimizations(appConfig));
-      pirtos.merge(CollisionFreeMap.getTableOptimizations(appConfig));
-
-      optimizeTable(fluoConfig, pirtos);
-    }
   }
 
   /**
