@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Fluo authors (see AUTHORS)
+ * Copyright 2016 Fluo authors (see AUTHORS)
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -14,16 +14,22 @@
 
 package io.fluo.recipes.accumulo.export;
 
-import java.util.Collections;
-import java.util.List;
+import java.util.Collection;
 
 import org.apache.accumulo.core.data.Mutation;
 
-public class TestExporter extends AccumuloExporter<String, String> {
-  @Override
-  protected List<Mutation> convert(String key, long seq, String value) {
-    Mutation m = new Mutation(key);
-    m.put("cf", "cq", seq, value);
-    return Collections.singletonList(m);
-  }
+/**
+ * Implemented by users to export data to Accumulo.
+ * 
+ * @param <K> Export queue key type
+ */
+public interface AccumuloExport<K> {
+
+  /**
+   * Creates mutations for export from user's data
+   * 
+   * @param key Export queue key
+   * @param seq Export sequence number
+   */
+  Collection<Mutation> toMutations(K key, long seq);
 }

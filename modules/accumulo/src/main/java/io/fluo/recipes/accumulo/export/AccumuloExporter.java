@@ -15,7 +15,6 @@
 package io.fluo.recipes.accumulo.export;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
 
 import io.fluo.api.observer.Observer.Context;
@@ -24,7 +23,12 @@ import io.fluo.recipes.export.SequencedExport;
 import org.apache.accumulo.core.data.Mutation;
 import org.apache.commons.configuration.Configuration;
 
-public abstract class AccumuloExporter<K, V> extends Exporter<K, V> {
+/**
+ * An {@link Exporter} that takes {@link AccumuloExport} objects and writes mutations to Accumulo
+ * 
+ * @param <K> Export queue key type
+ */
+public class AccumuloExporter<K> extends Exporter<K, AccumuloExport<K>> {
 
   private SharedBatchWriter sbw;
 
@@ -51,15 +55,13 @@ public abstract class AccumuloExporter<K, V> extends Exporter<K, V> {
     appConf.setProperty("recipes.accumuloExporter." + queueId + ".table", ti.table);
   }
 
-  protected abstract Collection<Mutation> convert(K key, long seq, V value);
-
   @Override
-  protected void processExports(Iterator<SequencedExport<K, V>> exports) {
+  protected void processExports(Iterator<SequencedExport<K, AccumuloExport<K>>> exports) {
     ArrayList<Mutation> buffer = new ArrayList<>();
 
     while (exports.hasNext()) {
-      SequencedExport<K, V> export = exports.next();
-      buffer.addAll(convert(export.getKey(), export.getSequence(), export.getValue()));
+      SequencedExport<K, AccumuloExport<K>> export = exports.next();
+      buffer.addAll(export.getValue().toMutations(export.getKey(), export.getSequence()));
     }
 
     if (buffer.size() > 0) {

@@ -12,31 +12,27 @@
  * the License.
  */
 
-package io.fluo.recipes.map;
+package io.fluo.recipes.accumulo.export;
 
-import java.util.Optional;
+import java.util.Collection;
+import java.util.Collections;
 
-public class Update<K, V> {
+import org.apache.accumulo.core.data.Mutation;
 
-  private final K key;
-  private final Optional<V> oldValue;
-  private final Optional<V> newValue;
+public class TestExport implements AccumuloExport<String> {
 
-  Update(K key, Optional<V> oldValue, Optional<V> newValue) {
-    this.key = key;
-    this.oldValue = oldValue;
-    this.newValue = newValue;
+  private String value;
+
+  public TestExport() {}
+
+  public TestExport(String value) {
+    this.value = value;
   }
 
-  public K getKey() {
-    return key;
-  }
-
-  public Optional<V> getNewValue() {
-    return newValue;
-  }
-
-  public Optional<V> getOldValue() {
-    return oldValue;
+  @Override
+  public Collection<Mutation> toMutations(String key, long seq) {
+    Mutation m = new Mutation(key);
+    m.put("cf", "cq", seq, value);
+    return Collections.singletonList(m);
   }
 }

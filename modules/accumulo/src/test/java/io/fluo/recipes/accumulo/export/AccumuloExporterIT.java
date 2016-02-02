@@ -40,8 +40,8 @@ public class AccumuloExporterIT extends AccumuloITBase {
   @Override
   public void setupExporter() throws Exception {
 
-    ExportQueue.configure(props, new ExportQueue.Options(QUEUE_ID, TestExporter.class,
-        String.class, String.class, 5));
+    ExportQueue.configure(props, new ExportQueue.Options(QUEUE_ID,
+        AccumuloExporter.class.getName(), String.class.getName(), TestExport.class.getName(), 5));
 
     // create and configure export table
     et = "export" + tableCounter.getAndIncrement();
@@ -54,7 +54,7 @@ public class AccumuloExporterIT extends AccumuloITBase {
   @Test
   public void testAccumuloExport() throws Exception {
 
-    ExportQueue<String, String> teq =
+    ExportQueue<String, TestExport> teq =
         ExportQueue.getInstance(QUEUE_ID, props.getAppConfiguration());
 
     Assert.assertEquals(6, getFluoSplits().size());
@@ -110,9 +110,9 @@ public class AccumuloExporterIT extends AccumuloITBase {
     }
   }
 
-  private void export(ExportQueue<String, String> teq, Transaction tx,
+  private void export(ExportQueue<String, TestExport> teq, Transaction tx,
       Map<String, String> expected, String k, String v) {
-    teq.add(tx, k, v);
+    teq.add(tx, k, new TestExport(v));
     expected.put(k, v);
   }
 

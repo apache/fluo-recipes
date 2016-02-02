@@ -24,11 +24,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
@@ -204,7 +204,7 @@ public class CollisionFreeMap<K, V> {
             tx.set(currentValueRow, DATA_COLUMN, newVal);
           }
 
-          Optional<V> cvd = Optional.fromNullable(currVal).transform(this::deserVal);
+          Optional<V> cvd = Optional.ofNullable(currVal).map(this::deserVal);
           updatesToReport.add(new Update<K, V>(kd, cvd, nv));
         }
       }
@@ -291,7 +291,7 @@ public class CollisionFreeMap<K, V> {
       }
     }
 
-    return combiner.combine(key, concat(ui, cv)).orNull();
+    return combiner.combine(key, concat(ui, cv)).orElse(null);
   }
 
   String getId() {
