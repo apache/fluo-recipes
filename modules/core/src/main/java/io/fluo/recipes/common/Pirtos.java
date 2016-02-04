@@ -19,7 +19,13 @@ import java.util.Collections;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+import io.fluo.api.client.FluoClient;
+import io.fluo.api.client.FluoFactory;
+import io.fluo.api.config.FluoConfiguration;
 import io.fluo.api.data.Bytes;
+import io.fluo.recipes.export.ExportQueue;
+import io.fluo.recipes.map.CollisionFreeMap;
+import org.apache.commons.configuration.Configuration;
 
 /**
  * Post initialization recommended table optimizations.
@@ -57,6 +63,20 @@ public class Pirtos {
     } else {
       tabletGroupingRegex += other.tabletGroupingRegex;
     }
+  }
 
+  /**
+   * A utility method to get table optimizations for all configured recipes.
+   */
+  public static Pirtos getConfiguredOptimizations(FluoConfiguration fluoConfig) {
+    try (FluoClient client = FluoFactory.newClient(fluoConfig)) {
+      Configuration appConfig = client.getAppConfiguration();
+      Pirtos pirtos = new Pirtos();
+
+      pirtos.merge(ExportQueue.getTableOptimizations(appConfig));
+      pirtos.merge(CollisionFreeMap.getTableOptimizations(appConfig));
+
+      return pirtos;
+    }
   }
 }
