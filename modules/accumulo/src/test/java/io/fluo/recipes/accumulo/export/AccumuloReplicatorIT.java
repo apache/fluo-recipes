@@ -27,7 +27,6 @@ import io.fluo.api.types.TypeLayer;
 import io.fluo.api.types.TypedTransaction;
 import io.fluo.recipes.export.ExportQueue;
 import io.fluo.recipes.transaction.RecordingTransaction;
-import io.fluo.recipes.transaction.TxLog;
 import org.apache.accumulo.core.client.Scanner;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
@@ -44,32 +43,34 @@ public class AccumuloReplicatorIT extends AccumuloITBase {
 
   @Override
   public void setupExporter() throws Exception {
-    ExportQueue.configure(props, new ExportQueue.Options(QUEUE_ID, AccumuloReplicator.class,
-        Bytes.class, TxLog.class, 5));
+    ExportQueue
+        .configure(props, new ExportQueue.Options(QUEUE_ID, AccumuloExporter.class.getName(),
+            Bytes.class.getName(), AccumuloExport.class.getName(), 5));
 
     // create and configure export table
     et = "export" + tableCounter.getAndIncrement();
     cluster.getConnector("root", "secret").tableOperations().create(et);
-    AccumuloReplicator.setExportTableInfo(props.getAppConfiguration(), QUEUE_ID, new TableInfo(
+    AccumuloExporter.setExportTableInfo(props.getAppConfiguration(), QUEUE_ID, new TableInfo(
         cluster.getInstanceName(), cluster.getZooKeepers(), "root", "secret", et));
   }
 
   @Test
   public void testAccumuloReplicator() throws Exception {
 
-    ExportQueue<Bytes, TxLog> eq = ExportQueue.getInstance(QUEUE_ID, props.getAppConfiguration());
+    ExportQueue<Bytes, AccumuloExport> eq =
+        ExportQueue.getInstance(QUEUE_ID, props.getAppConfiguration());
 
     try (FluoClient fc = FluoFactory.newClient(miniFluo.getClientConfiguration())) {
 
       Map<String, String> expected = new HashMap<>();
 
       try (Transaction tx = fc.newTransaction()) {
-        RecordingTransaction rtx = RecordingTransaction.wrap(tx, AccumuloReplicator.getFilter());
+        RecordingTransaction rtx = RecordingTransaction.wrap(tx, ReplicationExport.getFilter());
         TypedTransaction ttx = tl.wrap(rtx);
         write(ttx, expected, "k1", "v1");
         write(ttx, expected, "k2", "v2");
         write(ttx, expected, "k3", "v3");
-        eq.add(tx, Bytes.of("q1"), rtx.getTxLog());
+        eq.add(tx, Bytes.of("q1"), new ReplicationExport(rtx.getTxLog()));
         tx.commit();
       }
 
@@ -77,13 +78,13 @@ public class AccumuloReplicatorIT extends AccumuloITBase {
       Assert.assertEquals(expected, getExports());
 
       try (Transaction tx = fc.newTransaction()) {
-        RecordingTransaction rtx = RecordingTransaction.wrap(tx, AccumuloReplicator.getFilter());
+        RecordingTransaction rtx = RecordingTransaction.wrap(tx, ReplicationExport.getFilter());
         TypedTransaction ttx = tl.wrap(rtx);
         write(ttx, expected, "k1", "v4");
         delete(ttx, expected, "k3");
         write(ttx, expected, "k2", "v5");
         write(ttx, expected, "k4", "v6");
-        eq.add(tx, Bytes.of("q1"), rtx.getTxLog());
+        eq.add(tx, Bytes.of("q1"), new ReplicationExport(rtx.getTxLog()));
         tx.commit();
       }
 
@@ -91,13 +92,13 @@ public class AccumuloReplicatorIT extends AccumuloITBase {
       Assert.assertEquals(expected, getExports());
 
       try (Transaction tx = fc.newTransaction()) {
-        RecordingTransaction rtx = RecordingTransaction.wrap(tx, AccumuloReplicator.getFilter());
+        RecordingTransaction rtx = RecordingTransaction.wrap(tx, ReplicationExport.getFilter());
         TypedTransaction ttx = tl.wrap(rtx);
         write(ttx, expected, "k2", "v7");
         write(ttx, expected, "k3", "v8");
         delete(ttx, expected, "k1");
         delete(ttx, expected, "k4");
-        eq.add(tx, Bytes.of("q1"), rtx.getTxLog());
+        eq.add(tx, Bytes.of("q1"), new ReplicationExport(rtx.getTxLog()));
         tx.commit();
       }
 

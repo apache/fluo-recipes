@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Predicate;
 
+import com.google.common.base.Preconditions;
 import io.fluo.api.data.Bytes;
 import io.fluo.api.data.Column;
 import io.fluo.recipes.transaction.LogEntry;
@@ -26,10 +27,30 @@ import io.fluo.recipes.transaction.TxLog;
 import org.apache.accumulo.core.data.Mutation;
 import org.apache.accumulo.core.security.ColumnVisibility;
 
-public class AccumuloReplicator extends AccumuloExporter<Bytes, TxLog> {
+/**
+ * An implementation of {@link AccumuloExport} that replicates a Fluo table to Accumulo using a
+ * TxLog
+ * 
+ * @param <K> Type of export queue key
+ */
+public class ReplicationExport<K> implements AccumuloExport<K> {
+
+  private TxLog txLog;
+
+  public ReplicationExport() {}
+
+  public ReplicationExport(TxLog txLog) {
+    Preconditions.checkNotNull(txLog);
+    this.txLog = txLog;
+  }
+
+  public static Predicate<LogEntry> getFilter() {
+    return le -> le.getOp().equals(LogEntry.Operation.DELETE)
+        || le.getOp().equals(LogEntry.Operation.SET);
+  }
 
   @Override
-  protected Collection<Mutation> convert(Bytes key, long seq, TxLog txLog) {
+  public Collection<Mutation> toMutations(K key, long seq) {
     Map<Bytes, Mutation> mutationMap = new HashMap<>();
     for (LogEntry le : txLog.getLogEntries()) {
       LogEntry.Operation op = le.getOp();
@@ -55,10 +76,5 @@ public class AccumuloReplicator extends AccumuloExporter<Bytes, TxLog> {
       }
     }
     return mutationMap.values();
-  }
-
-  public static Predicate<LogEntry> getFilter() {
-    return le -> le.getOp().equals(LogEntry.Operation.DELETE)
-        || le.getOp().equals(LogEntry.Operation.SET);
   }
 }

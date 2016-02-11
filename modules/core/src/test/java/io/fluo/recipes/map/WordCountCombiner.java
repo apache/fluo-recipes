@@ -15,8 +15,7 @@
 package io.fluo.recipes.map;
 
 import java.util.Iterator;
-
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 public class WordCountCombiner implements Combiner<String, Long> {
   @Override
@@ -28,7 +27,7 @@ public class WordCountCombiner implements Combiner<String, Long> {
     }
 
     if (sum == 0) {
-      return Optional.absent();
+      return Optional.empty();
     } else {
       return Optional.of(sum);
     }

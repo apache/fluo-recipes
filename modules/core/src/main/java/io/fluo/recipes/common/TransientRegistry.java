@@ -17,7 +17,6 @@ package io.fluo.recipes.common;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
 import javax.xml.bind.DatatypeConverter;
 
 import io.fluo.api.client.FluoClient;

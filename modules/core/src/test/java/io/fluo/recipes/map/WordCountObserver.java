@@ -15,8 +15,8 @@
 package io.fluo.recipes.map;
 
 import java.util.Iterator;
+import java.util.Optional;
 
-import com.google.common.base.Optional;
 import io.fluo.api.client.TransactionBase;
 import io.fluo.api.data.Bytes;
 import io.fluo.api.data.Column;

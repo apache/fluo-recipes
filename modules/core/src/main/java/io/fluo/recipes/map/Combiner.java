@@ -15,8 +15,7 @@
 package io.fluo.recipes.map;
 
 import java.util.Iterator;
-
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 public interface Combiner<K, V> {
   /**
