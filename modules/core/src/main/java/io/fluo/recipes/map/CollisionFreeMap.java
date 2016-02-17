@@ -56,7 +56,6 @@ import org.apache.commons.configuration.Configuration;
 /**
  * See the project level documentation for information about this recipe.
  */
-
 public class CollisionFreeMap<K, V> {
 
   private static final String UPDATE_RANGE_END = ":u:~";

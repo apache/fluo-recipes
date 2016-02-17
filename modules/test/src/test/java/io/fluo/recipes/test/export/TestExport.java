@@ -12,11 +12,12 @@
  * the License.
  */
 
-package io.fluo.recipes.accumulo.export;
+package io.fluo.recipes.test.export;
 
 import java.util.Collection;
 import java.util.Collections;
 
+import io.fluo.recipes.accumulo.export.AccumuloExport;
 import org.apache.accumulo.core.data.Mutation;
 
 public class TestExport implements AccumuloExport<String> {

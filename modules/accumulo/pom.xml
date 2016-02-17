@@ -48,18 +48,8 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>io.fluo</groupId>
-      <artifactId>fluo-mini</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.accumulo</groupId>
-      <artifactId>accumulo-minicluster</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

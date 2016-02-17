@@ -28,14 +28,14 @@ import io.fluo.recipes.common.Pirtos;
 /**
  * This recipe provides code to help add a hash of the row as a prefix of the row. Using this recipe
  * rows are structured like the following.
- *
+ * 
  * <p>
  * {@code <prefix>:<fixed len row hash>:<user row>}
- *
+ * 
  * <p>
  * The recipe also provides code the help generate split points and configure balancing of the
  * prefix.
- *
+ * 
  * <p>
  * The project documentation has more information.
  */

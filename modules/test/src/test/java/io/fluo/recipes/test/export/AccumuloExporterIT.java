@@ -12,7 +12,7 @@
  * the License.
  */
 
-package io.fluo.recipes.accumulo.export;
+package io.fluo.recipes.test.export;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -23,16 +23,22 @@ import java.util.Random;
 import io.fluo.api.client.FluoClient;
 import io.fluo.api.client.FluoFactory;
 import io.fluo.api.client.Transaction;
+import io.fluo.api.config.FluoConfiguration;
+import io.fluo.api.mini.MiniFluo;
+import io.fluo.recipes.accumulo.export.AccumuloExporter;
+import io.fluo.recipes.accumulo.export.TableInfo;
+import io.fluo.recipes.test.FluoITHelper;
 import io.fluo.recipes.export.ExportQueue;
 import org.apache.accumulo.core.client.Scanner;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.security.Authorizations;
+import org.apache.accumulo.minicluster.MiniAccumuloCluster;
 import org.apache.hadoop.io.Text;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class AccumuloExporterIT extends AccumuloITBase {
+public class AccumuloExporterIT extends ExportITBase {
 
   private String et;
   public static final String QUEUE_ID = "aeqt";
@@ -40,24 +46,29 @@ public class AccumuloExporterIT extends AccumuloITBase {
   @Override
   public void setupExporter() throws Exception {
 
-    ExportQueue.configure(props, new ExportQueue.Options(QUEUE_ID,
-        AccumuloExporter.class.getName(), String.class.getName(), TestExport.class.getName(), 5));
+    FluoConfiguration fluoConfig = fluoIT.getFluoConfig();
+    ExportQueue.configure(fluoConfig,
+        new ExportQueue.Options(QUEUE_ID, AccumuloExporter.class.getName(), String.class.getName(),
+            TestExport.class.getName(), 5));
 
     // create and configure export table
-    et = "export" + tableCounter.getAndIncrement();
-    cluster.getConnector("root", "secret").tableOperations().create(et);
-    AccumuloExporter.setExportTableInfo(props.getAppConfiguration(), QUEUE_ID, new TableInfo(
-        cluster.getInstanceName(), cluster.getZooKeepers(), "root", "secret", et));
-
+    et = "export" + exportTableCounter.getAndIncrement();
+    fluoIT.getAccumuloConnector().tableOperations().create(et);
+    MiniAccumuloCluster miniAccumulo = fluoIT.getMiniAccumuloCluster();
+    AccumuloExporter.setExportTableInfo(fluoConfig.getAppConfiguration(), QUEUE_ID, new TableInfo(
+        miniAccumulo.getInstanceName(), miniAccumulo.getZooKeepers(), FluoITHelper.ACCUMULO_USER,
+        FluoITHelper.ACCUMULO_PASSWORD, et));
   }
 
   @Test
   public void testAccumuloExport() throws Exception {
 
     ExportQueue<String, TestExport> teq =
-        ExportQueue.getInstance(QUEUE_ID, props.getAppConfiguration());
+        ExportQueue.getInstance(QUEUE_ID, fluoIT.getFluoConfig().getAppConfiguration());
 
     Assert.assertEquals(6, getFluoSplits().size());
+
+    MiniFluo miniFluo = fluoIT.getMiniFluo();
 
     try (FluoClient fc = FluoFactory.newClient(miniFluo.getClientConfiguration())) {
 
@@ -117,13 +128,12 @@ public class AccumuloExporterIT extends AccumuloITBase {
   }
 
   private Collection<Text> getFluoSplits() throws Exception {
-    return cluster.getConnector("root", "secret").tableOperations()
-        .listSplits(props.getAccumuloTable());
+    return fluoIT.getAccumuloConnector().tableOperations()
+        .listSplits(fluoIT.getFluoConfig().getAccumuloTable());
   }
 
   private Map<String, String> getExports() throws Exception {
-    Scanner scanner =
-        cluster.getConnector("root", "secret").createScanner(et, Authorizations.EMPTY);
+    Scanner scanner = fluoIT.getAccumuloConnector().createScanner(et, Authorizations.EMPTY);
     Map<String, String> ret = new HashMap<>();
 
     for (Entry<Key, Value> entry : scanner) {
