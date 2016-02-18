@@ -123,24 +123,24 @@ public class RecordingTransactionBase implements TransactionBase {
           final Map.Entry<Bytes, ColumnIterator> rowEntry = rowIter.next();
           if ((rowEntry != null) && (rowEntry.getValue() != null)) {
             final ColumnIterator colIter = rowEntry.getValue();
-            return new AbstractMap.SimpleEntry<Bytes, ColumnIterator>(rowEntry.getKey(),
-                new ColumnIterator() {
+            return new AbstractMap.SimpleEntry<>(rowEntry.getKey(), new ColumnIterator() {
 
-                  @Override
-                  public boolean hasNext() {
-                    return colIter.hasNext();
-                  }
+              @Override
+              public boolean hasNext() {
+                return colIter.hasNext();
+              }
 
-                  @Override
-                  public Map.Entry<Column, Bytes> next() {
-                    Map.Entry<Column, Bytes> colEntry = colIter.next();
-                    if (colEntry != null) {
-                      txLog.filteredAdd(LogEntry.newGet(rowEntry.getKey(), colEntry.getKey(),
-                          colEntry.getValue()), filter);
-                    }
-                    return colEntry;
-                  }
-                });
+              @Override
+              public Map.Entry<Column, Bytes> next() {
+                Map.Entry<Column, Bytes> colEntry = colIter.next();
+                if (colEntry != null) {
+                  txLog.filteredAdd(
+                      LogEntry.newGet(rowEntry.getKey(), colEntry.getKey(), colEntry.getValue()),
+                      filter);
+                }
+                return colEntry;
+              }
+            });
           }
           return rowEntry;
         }

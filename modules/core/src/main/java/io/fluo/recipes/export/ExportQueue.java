@@ -56,7 +56,7 @@ public class ExportQueue<K, V> {
   }
 
   public void add(TransactionBase tx, K key, V value) {
-    addAll(tx, Collections.singleton(new Export<K, V>(key, value)).iterator());
+    addAll(tx, Collections.singleton(new Export<>(key, value)).iterator());
   }
 
   public void addAll(TransactionBase tx, Iterator<Export<K, V>> exports) {
@@ -85,7 +85,7 @@ public class ExportQueue<K, V> {
       Configuration appConfig) {
     Options opts = new Options(exportQueueId, appConfig);
     try {
-      return new ExportQueue<K2, V2>(opts, SimpleSerializer.getInstance(appConfig));
+      return new ExportQueue<>(opts, SimpleSerializer.getInstance(appConfig));
     } catch (Exception e) {
       // TODO
       throw new RuntimeException(e);

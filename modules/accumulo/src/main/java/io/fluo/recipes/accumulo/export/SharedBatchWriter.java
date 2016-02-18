@@ -43,7 +43,7 @@ public class SharedBatchWriter {
     CountDownLatch cdl = new CountDownLatch(1);
 
     public Mutations(Collection<Mutation> mutations) {
-      this.mutations = new ArrayList<Mutation>(mutations);
+      this.mutations = new ArrayList<>(mutations);
     }
   }
 
@@ -75,7 +75,7 @@ public class SharedBatchWriter {
     @Override
     public void run() {
 
-      ArrayList<Mutations> exports = new ArrayList<Mutations>();
+      ArrayList<Mutations> exports = new ArrayList<>();
 
       while (true) {
         try {
@@ -111,7 +111,7 @@ public class SharedBatchWriter {
   public SharedBatchWriter(String instanceName, String zookeepers, String user, String password,
       String table) throws Exception, AccumuloSecurityException {
 
-    exportQueue = new LinkedBlockingQueue<Mutations>(10000);
+    exportQueue = new LinkedBlockingQueue<>(10000);
     Thread queueProcessingTask =
         new Thread(new ExportTask(instanceName, zookeepers, user, password, table));
 

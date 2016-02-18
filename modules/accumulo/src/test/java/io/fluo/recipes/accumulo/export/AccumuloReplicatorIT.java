@@ -18,13 +18,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.accumulo.core.client.Scanner;
-import org.apache.accumulo.core.data.Key;
-import org.apache.accumulo.core.data.Value;
-import org.apache.accumulo.core.security.Authorizations;
-import org.junit.Assert;
-import org.junit.Test;
-
 import io.fluo.api.client.FluoClient;
 import io.fluo.api.client.FluoFactory;
 import io.fluo.api.client.Transaction;
@@ -34,6 +27,12 @@ import io.fluo.api.types.TypeLayer;
 import io.fluo.api.types.TypedTransaction;
 import io.fluo.recipes.export.ExportQueue;
 import io.fluo.recipes.transaction.RecordingTransaction;
+import org.apache.accumulo.core.client.Scanner;
+import org.apache.accumulo.core.data.Key;
+import org.apache.accumulo.core.data.Value;
+import org.apache.accumulo.core.security.Authorizations;
+import org.junit.Assert;
+import org.junit.Test;
 
 public class AccumuloReplicatorIT extends AccumuloITBase {
 
@@ -70,7 +69,7 @@ public class AccumuloReplicatorIT extends AccumuloITBase {
         write(ttx, expected, "k1", "v1");
         write(ttx, expected, "k2", "v2");
         write(ttx, expected, "k3", "v3");
-        eq.add(tx, Bytes.of("q1"), new ReplicationExport<Object>(rtx.getTxLog()));
+        eq.add(tx, Bytes.of("q1"), new ReplicationExport<>(rtx.getTxLog()));
         tx.commit();
       }
 
@@ -84,7 +83,7 @@ public class AccumuloReplicatorIT extends AccumuloITBase {
         delete(ttx, expected, "k3");
         write(ttx, expected, "k2", "v5");
         write(ttx, expected, "k4", "v6");
-        eq.add(tx, Bytes.of("q1"), new ReplicationExport<Object>(rtx.getTxLog()));
+        eq.add(tx, Bytes.of("q1"), new ReplicationExport<>(rtx.getTxLog()));
         tx.commit();
       }
 
@@ -98,7 +97,7 @@ public class AccumuloReplicatorIT extends AccumuloITBase {
         write(ttx, expected, "k3", "v8");
         delete(ttx, expected, "k1");
         delete(ttx, expected, "k4");
-        eq.add(tx, Bytes.of("q1"), new ReplicationExport<Object>(rtx.getTxLog()));
+        eq.add(tx, Bytes.of("q1"), new ReplicationExport<>(rtx.getTxLog()));
         tx.commit();
       }
 

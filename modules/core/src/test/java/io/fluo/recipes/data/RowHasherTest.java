@@ -14,10 +14,9 @@
 
 package io.fluo.recipes.data;
 
+import io.fluo.api.data.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
-
-import io.fluo.api.data.Bytes;
 
 public class RowHasherTest {
 

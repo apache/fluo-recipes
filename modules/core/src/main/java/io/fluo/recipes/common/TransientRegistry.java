@@ -20,11 +20,10 @@ import java.util.List;
 
 import javax.xml.bind.DatatypeConverter;
 
-import org.apache.commons.configuration.Configuration;
-
 import io.fluo.api.client.FluoClient;
 import io.fluo.api.config.FluoConfiguration;
 import io.fluo.api.data.Bytes;
+import org.apache.commons.configuration.Configuration;
 
 /**
  * This class offers a standard way to register transient ranges. The project level documentation
