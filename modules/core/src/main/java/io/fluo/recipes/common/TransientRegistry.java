@@ -17,13 +17,14 @@ package io.fluo.recipes.common;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+
 import javax.xml.bind.DatatypeConverter;
+
+import org.apache.commons.configuration.Configuration;
 
 import io.fluo.api.client.FluoClient;
 import io.fluo.api.config.FluoConfiguration;
 import io.fluo.api.data.Bytes;
-import io.fluo.api.observer.Observer;
-import org.apache.commons.configuration.Configuration;
 
 /**
  * This class offers a standard way to register transient ranges. The project level documentation
@@ -40,7 +41,7 @@ public class TransientRegistry {
    *        {@link FluoConfiguration#getAppConfiguration()} before initializing fluo when adding
    *        Transient ranges. After Fluo is initialized, app config can be obtained from
    *        {@link FluoClient#getAppConfiguration()} or
-   *        {@link Observer.Context#getAppConfiguration()}
+   *        {@link io.fluo.api.observer.Observer.Context#getAppConfiguration()}
    */
   public TransientRegistry(Configuration appConfig) {
     this.appConfig = appConfig;
