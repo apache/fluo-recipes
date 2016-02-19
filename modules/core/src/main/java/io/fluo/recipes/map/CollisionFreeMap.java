@@ -205,7 +205,7 @@ public class CollisionFreeMap<K, V> {
           }
 
           Optional<V> cvd = Optional.ofNullable(currVal).map(this::deserVal);
-          updatesToReport.add(new Update<K, V>(kd, cvd, nv));
+          updatesToReport.add(new Update<>(kd, cvd, nv));
         }
       }
     }
@@ -351,7 +351,7 @@ public class CollisionFreeMap<K, V> {
   public static <K2, V2> CollisionFreeMap<K2, V2> getInstance(String mapId, Configuration appConf) {
     Options opts = new Options(mapId, appConf);
     try {
-      return new CollisionFreeMap<K2, V2>(opts, SimpleSerializer.getInstance(appConf));
+      return new CollisionFreeMap<>(opts, SimpleSerializer.getInstance(appConf));
     } catch (Exception e) {
       // TODO
       throw new RuntimeException(e);
@@ -367,7 +367,7 @@ public class CollisionFreeMap<K, V> {
    */
   public static <K2, V2> Initializer<K2, V2> getInitializer(String mapId, int numBuckets,
       SimpleSerializer serializer) {
-    return new Initializer<K2, V2>(mapId, numBuckets, serializer);
+    return new Initializer<>(mapId, numBuckets, serializer);
   }
 
 

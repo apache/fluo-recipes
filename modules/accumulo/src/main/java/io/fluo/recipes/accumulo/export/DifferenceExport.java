@@ -28,16 +28,16 @@ import org.apache.accumulo.core.data.Mutation;
 /**
  * Implemented by users to export data to Accumulo by comparing the differences between a
  * RowColumn/Bytes map that is generated for old and new data and represents how the data should
- * exist in Accumulo.  When comparing each row/column/value (RCV) of old and new data,
- * mutations are generated using the following rules:
+ * exist in Accumulo. When comparing each row/column/value (RCV) of old and new data, mutations are
+ * generated using the following rules:
  * <ul>
- *   <li> If old and new data have the same RCV, nothing is done.
- *   <li> If old and new data have same row/column but different values, an update mutation is
- *   created for the row/column.
- *   <li> If old data has a row/column that is not in the new data, a delete mutation is generated.
- *   <li> If new data has a row/column that is not in the old data, an insert mutation is generated.
- *   <li> Only one mutation is generated per row.
- *   <li> The export sequence number is used for the timestamp in the mutation.
+ * <li>If old and new data have the same RCV, nothing is done.
+ * <li>If old and new data have same row/column but different values, an update mutation is created
+ * for the row/column.
+ * <li>If old data has a row/column that is not in the new data, a delete mutation is generated.
+ * <li>If new data has a row/column that is not in the old data, an insert mutation is generated.
+ * <li>Only one mutation is generated per row.
+ * <li>The export sequence number is used for the timestamp in the mutation.
  * </ul>
  *
  * @param <K> Export queue key type

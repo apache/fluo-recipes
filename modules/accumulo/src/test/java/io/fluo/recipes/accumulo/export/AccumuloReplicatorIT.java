@@ -40,7 +40,6 @@ public class AccumuloReplicatorIT extends AccumuloITBase {
   public static final String QUEUE_ID = "aeqt";
   private TypeLayer tl = new TypeLayer(new StringEncoder());
 
-
   @Override
   public void setupExporter() throws Exception {
     ExportQueue
@@ -57,7 +56,7 @@ public class AccumuloReplicatorIT extends AccumuloITBase {
   @Test
   public void testAccumuloReplicator() throws Exception {
 
-    ExportQueue<Bytes, AccumuloExport> eq =
+    ExportQueue<Bytes, AccumuloExport<?>> eq =
         ExportQueue.getInstance(QUEUE_ID, props.getAppConfiguration());
 
     try (FluoClient fc = FluoFactory.newClient(miniFluo.getClientConfiguration())) {
@@ -70,7 +69,7 @@ public class AccumuloReplicatorIT extends AccumuloITBase {
         write(ttx, expected, "k1", "v1");
         write(ttx, expected, "k2", "v2");
         write(ttx, expected, "k3", "v3");
-        eq.add(tx, Bytes.of("q1"), new ReplicationExport(rtx.getTxLog()));
+        eq.add(tx, Bytes.of("q1"), new ReplicationExport<>(rtx.getTxLog()));
         tx.commit();
       }
 
@@ -84,7 +83,7 @@ public class AccumuloReplicatorIT extends AccumuloITBase {
         delete(ttx, expected, "k3");
         write(ttx, expected, "k2", "v5");
         write(ttx, expected, "k4", "v6");
-        eq.add(tx, Bytes.of("q1"), new ReplicationExport(rtx.getTxLog()));
+        eq.add(tx, Bytes.of("q1"), new ReplicationExport<>(rtx.getTxLog()));
         tx.commit();
       }
 
@@ -98,7 +97,7 @@ public class AccumuloReplicatorIT extends AccumuloITBase {
         write(ttx, expected, "k3", "v8");
         delete(ttx, expected, "k1");
         delete(ttx, expected, "k4");
-        eq.add(tx, Bytes.of("q1"), new ReplicationExport(rtx.getTxLog()));
+        eq.add(tx, Bytes.of("q1"), new ReplicationExport<>(rtx.getTxLog()));
         tx.commit();
       }
 
