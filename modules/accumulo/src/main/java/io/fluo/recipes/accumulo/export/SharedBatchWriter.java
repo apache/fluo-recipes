@@ -96,9 +96,7 @@ public class SharedBatchWriter {
             ml.cdl.countDown();
           }
 
-        } catch (InterruptedException e) {
-          throw new RuntimeException(e);
-        } catch (MutationsRejectedException e) {
+        } catch (InterruptedException | MutationsRejectedException e) {
           throw new RuntimeException(e);
         }
       }
@@ -109,8 +107,9 @@ public class SharedBatchWriter {
   private static LinkedBlockingQueue<Mutations> exportQueue = null;
 
   public SharedBatchWriter(String instanceName, String zookeepers, String user, String password,
-      String table) throws Exception, AccumuloSecurityException {
+      String table) throws Exception {
 
+    // TODO: fix this write to static and remove findbugs max rank override in pom.xml
     exportQueue = new LinkedBlockingQueue<>(10000);
     Thread queueProcessingTask =
         new Thread(new ExportTask(instanceName, zookeepers, user, password, table));

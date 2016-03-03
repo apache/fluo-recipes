@@ -64,7 +64,10 @@ public class FluoSparkHelper {
   private FileSystem hdfs;
   private Connector defaultConn;
 
-  public FluoSparkHelper(FluoConfiguration fluoConfig, Configuration hadoopConfig, Path tempBaseDir) {
+  // @formatter:off
+  public FluoSparkHelper(FluoConfiguration fluoConfig, Configuration hadoopConfig,
+                         Path tempBaseDir) {
+    // @formatter:on
     this.fluoConfig = fluoConfig;
     this.hadoopConfig = hadoopConfig;
     this.tempBaseDir = tempBaseDir;
@@ -234,7 +237,10 @@ public class FluoSparkHelper {
       // delete data directory
       hdfs.delete(tempDir, true);
       log.info("Deleted HDFS temp directory created for bulk import: {}", tempDir);
-    } catch (IOException | TableNotFoundException | AccumuloException | AccumuloSecurityException e) {
+      // @formatter:off
+    } catch (IOException | TableNotFoundException | AccumuloException
+        | AccumuloSecurityException e) {
+      // @formatter:on
       throw new IllegalStateException(e);
     }
   }

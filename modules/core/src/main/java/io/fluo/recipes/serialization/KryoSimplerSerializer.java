@@ -38,7 +38,7 @@ public class KryoSimplerSerializer implements SimpleSerializer, Serializable {
   private static final String KRYO_FACTORY_PROP = "recipes.serializer.kryo.factory";
   private static Map<String, KryoPool> pools = new ConcurrentHashMap<>();
   private String factoryType = null;
-  private KryoFactory factory = null;
+  private transient KryoFactory factory = null;
 
   private static KryoFactory getFactory(String factoryType) {
     try {

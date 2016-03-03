@@ -17,6 +17,7 @@ package io.fluo.recipes.accumulo.export;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import com.google.common.base.Preconditions;
@@ -51,8 +52,8 @@ public abstract class DifferenceExport<K, V> implements AccumuloExport<K> {
   public DifferenceExport() {}
 
   public DifferenceExport(Optional<V> oldVal, Optional<V> newVal) {
-    Preconditions.checkNotNull(oldVal);
-    Preconditions.checkNotNull(newVal);
+    Objects.requireNonNull(oldVal);
+    Objects.requireNonNull(newVal);
     Preconditions.checkArgument(oldVal.isPresent() || newVal.isPresent(),
         "At least one value must be set");
     this.oldVal = oldVal;

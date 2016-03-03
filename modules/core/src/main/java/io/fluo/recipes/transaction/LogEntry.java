@@ -14,6 +14,8 @@
 
 package io.fluo.recipes.transaction;
 
+import java.util.Objects;
+
 import com.google.common.base.Preconditions;
 import io.fluo.api.data.Bytes;
 import io.fluo.api.data.Column;
@@ -36,10 +38,10 @@ public class LogEntry {
   private LogEntry() {}
 
   private LogEntry(Operation op, Bytes row, Column col, Bytes value) {
-    Preconditions.checkNotNull(op);
-    Preconditions.checkNotNull(row);
-    Preconditions.checkNotNull(col);
-    Preconditions.checkNotNull(value);
+    Objects.requireNonNull(op);
+    Objects.requireNonNull(row);
+    Objects.requireNonNull(col);
+    Objects.requireNonNull(value);
     this.op = op;
     this.row = row;
     this.col = col;
@@ -70,6 +72,15 @@ public class LogEntry {
           .equals(other.value));
     }
     return false;
+  }
+
+  @Override
+  public int hashCode() {
+    int result = op.hashCode();
+    result = 31 * result + row.hashCode();
+    result = 31 * result + col.hashCode();
+    result = 31 * result + value.hashCode();
+    return result;
   }
 
   @Override

@@ -14,15 +14,15 @@
 
 package io.fluo.recipes.export;
 
-import com.google.common.base.Preconditions;
+import java.util.Objects;
 
 public class Export<K, V> {
   private final K key;
   private final V value;
 
   public Export(K key, V val) {
-    Preconditions.checkNotNull(key);
-    Preconditions.checkNotNull(val);
+    Objects.requireNonNull(key);
+    Objects.requireNonNull(val);
     this.key = key;
     this.value = val;
   }
