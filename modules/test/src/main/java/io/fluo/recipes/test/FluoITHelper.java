@@ -14,16 +14,15 @@
 
 package io.fluo.recipes.test;
 
-import java.io.IOException;
-import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
-import io.fluo.api.client.FluoAdmin;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Iterables;
 import io.fluo.api.client.FluoClient;
 import io.fluo.api.client.FluoFactory;
 import io.fluo.api.client.Snapshot;
@@ -34,69 +33,36 @@ import io.fluo.api.data.Column;
 import io.fluo.api.data.RowColumnValue;
 import io.fluo.api.iterator.ColumnIterator;
 import io.fluo.api.iterator.RowIterator;
-import io.fluo.api.mini.MiniFluo;
-import io.fluo.recipes.accumulo.ops.TableOperations;
-import io.fluo.recipes.common.Pirtos;
-import org.apache.accumulo.core.client.AccumuloException;
-import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.Connector;
 import org.apache.accumulo.core.client.Scanner;
 import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.security.Authorizations;
-import org.apache.accumulo.minicluster.MiniAccumuloCluster;
-import org.apache.accumulo.minicluster.MiniAccumuloConfig;
-import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Helper for creating integration tests that connect to a MiniFluo/MiniAccumuloCluster instance.
  */
-public class FluoITHelper implements AutoCloseable {
+public class FluoITHelper {
 
-  public static final String ACCUMULO_USER = "root";
-  public static final String ACCUMULO_PASSWORD = "secret";
   private static final Logger log = LoggerFactory.getLogger(FluoITHelper.class);
-  private Path baseDir;
-  private FluoConfiguration fluoConfig;
-  private MiniAccumuloCluster cluster;
-  private MiniFluo miniFluo;
-  private AtomicInteger fluoTableCounter = new AtomicInteger(1);
-  private AtomicBoolean fluoRunning = new AtomicBoolean(false);
-
-  public FluoITHelper(Path baseDir) {
-    this.baseDir = baseDir;
-    Objects.requireNonNull(baseDir);
-    try {
-      FileUtils.deleteDirectory(baseDir.toFile());
-      MiniAccumuloConfig cfg = new MiniAccumuloConfig(baseDir.toFile(), ACCUMULO_PASSWORD);
-      cluster = new MiniAccumuloCluster(cfg);
-      cluster.start();
-    } catch (IOException | InterruptedException e) {
-      throw new IllegalStateException(e);
-    }
-    updateFluoConfig();
-  }
 
   /**
    * Prints list of RowColumnValue objects
    *
    * @param rcvList RowColumnValue list
    */
-  public static void printRowColumnValues(List<RowColumnValue> rcvList) {
+  public static void printRowColumnValues(Collection<RowColumnValue> rcvList) {
     System.out.println("== RDD start ==");
     rcvList.forEach(rcv -> System.out.println("rc " + Hex.encNonAscii(rcv, " ")));
     System.out.println("== RDD end ==");
   }
 
-  /**
-   * Prints default Fluo table
-   */
-  public void printFluoTable() {
-    try (FluoClient fc = FluoFactory.newClient(miniFluo.getClientConfiguration())) {
-      printFluoTable(fc);
+  public static void printFluoTable(FluoConfiguration conf) {
+    try (FluoClient client = FluoFactory.newClient(conf)) {
+      printFluoTable(client);
     }
   }
 
@@ -130,16 +96,10 @@ public class FluoITHelper implements AutoCloseable {
     }
   }
 
-  /**
-   * Verifies that the actual data in the default Fluo instance of FluoITHelper matches expected
-   * data
-   *
-   * @param expected RowColumnValue list containing expected data
-   * @return True if actual data matches expected data
-   */
-  public boolean verifyFluoTable(List<RowColumnValue> expected) {
-    try (FluoClient fc = FluoFactory.newClient(miniFluo.getClientConfiguration())) {
-      return verifyFluoTable(fc, expected);
+
+  public static boolean verifyFluoTable(FluoConfiguration conf, Collection<RowColumnValue> expected) {
+    try (FluoClient client = FluoFactory.newClient(conf)) {
+      return verifyFluoTable(client, expected);
     }
   }
 
@@ -150,7 +110,10 @@ public class FluoITHelper implements AutoCloseable {
    * @param expected RowColumnValue list containing expected data
    * @return True if actual data matches expected data
    */
-  public static boolean verifyFluoTable(FluoClient client, List<RowColumnValue> expected) {
+  public static boolean verifyFluoTable(FluoClient client, Collection<RowColumnValue> expected) {
+
+    expected = sort(expected);
+
     try (Snapshot s = client.newSnapshot()) {
       RowIterator rowIter = s.get(new ScannerConfiguration());
       Iterator<RowColumnValue> rcvIter = expected.iterator();
@@ -189,15 +152,6 @@ public class FluoITHelper implements AutoCloseable {
       log.debug("Actual data matched expected data");
       return true;
     }
-  }
-
-  /**
-   * Prints specified Accumulo table in default Mini Accumulo instance
-   *
-   * @param accumuloTable Table to print
-   */
-  public void printAccumuloTable(String accumuloTable) {
-    printAccumuloTable(getAccumuloConnector(), accumuloTable);
   }
 
   /**
@@ -241,17 +195,6 @@ public class FluoITHelper implements AutoCloseable {
   }
 
   /**
-   * Verifies that the actual data in Accumulo table matches expected data
-   *
-   * @param accumuloTable Accumulo table with actual data
-   * @param expected RowColumnValue list containing expected data
-   * @return True if actual data matches expected data
-   */
-  public boolean verifyAccumuloTable(String accumuloTable, List<RowColumnValue> expected) {
-    return verifyAccumuloTable(getAccumuloConnector(), accumuloTable, expected);
-  }
-
-  /**
    * Verifies that actual data in Accumulo table matches expected data
    *
    * @param conn Connector to Accumulo instance with actual data
@@ -260,7 +203,10 @@ public class FluoITHelper implements AutoCloseable {
    * @return True if actual data matches expected data
    */
   public static boolean verifyAccumuloTable(Connector conn, String accumuloTable,
-      List<RowColumnValue> expected) {
+      Collection<RowColumnValue> expected) {
+
+    expected = sort(expected);
+
     Scanner scanner;
     try {
       scanner = conn.createScanner(accumuloTable, Authorizations.EMPTY);
@@ -306,8 +252,11 @@ public class FluoITHelper implements AutoCloseable {
    * @param actual RowColumnValue list containing actual data
    * @return True if actual data matches expected data
    */
-  public static boolean verifyRowColumnValues(List<RowColumnValue> expected,
-      List<RowColumnValue> actual) {
+  public static boolean verifyRowColumnValues(Collection<RowColumnValue> expected,
+      Collection<RowColumnValue> actual) {
+
+    expected = sort(expected);
+    actual = sort(actual);
 
     Iterator<RowColumnValue> expectIter = expected.iterator();
     Iterator<RowColumnValue> actualIter = actual.iterator();
@@ -339,97 +288,44 @@ public class FluoITHelper implements AutoCloseable {
     return true;
   }
 
-  /**
-   * Retrieves MiniAccumuloCluster
-   */
-  public MiniAccumuloCluster getMiniAccumuloCluster() {
-    return cluster;
+  private static List<RowColumnValue> sort(Collection<RowColumnValue> input) {
+    ArrayList<RowColumnValue> copy = new ArrayList<>(input);
+    Collections.sort(copy);
+    return copy;
   }
 
   /**
-   * Retrieves MiniFluo
+   * A helper method for parsing test data. Each string passed in is expected to have the following
+   * format {@literal <row>|<family>|<qualifier>|<value>}
    */
-  public synchronized MiniFluo getMiniFluo() {
-    if (!fluoRunning.get()) {
-      throw new IllegalStateException("Fluo is not running. The setupFluo() method must called "
-          + "first");
-    }
-    return miniFluo;
+  public static List<RowColumnValue> parse(String... data) {
+    return parse(Splitter.on('|'), data);
   }
 
   /**
-   * Returns an Accumulo Connector to MiniAccumuloCluster
+   * A helper method for parsing test data. Each string passed in is split using the specified
+   * splitter into four fields for row, family, qualifier, and value.
    */
-  public Connector getAccumuloConnector() {
-    try {
-      return cluster.getConnector(ACCUMULO_USER, ACCUMULO_PASSWORD);
-    } catch (AccumuloException | AccumuloSecurityException e) {
-      throw new IllegalStateException(e);
-    }
-  }
 
-  /**
-   * Retrieves Fluo Configuration
-   */
-  public synchronized FluoConfiguration getFluoConfig() {
-    return fluoConfig;
-  }
+  public static List<RowColumnValue> parse(Splitter splitter, String... data) {
+    ArrayList<RowColumnValue> ret = new ArrayList<>();
 
-  /**
-   * Sets up Fluo by initializing Fluo instance and starting MiniFluo
-   */
-  public synchronized void setupFluo() {
-    if (fluoRunning.get()) {
-      throw new IllegalStateException("Attempting to setup Fluo when its already running");
+    for (String line : data) {
+      Iterable<String> cols = splitter.split(line);
+      if (Iterables.size(cols) != 4) {
+        throw new IllegalArgumentException("Bad input " + line);
+      }
+
+      Iterator<String> iter = cols.iterator();
+      RowColumnValue rcv =
+          new RowColumnValue(Bytes.of(iter.next()), new Column(iter.next(), iter.next()),
+              Bytes.of(iter.next()));
+
+      ret.add(rcv);
     }
 
-    try {
-      FluoFactory.newAdmin(fluoConfig).initialize(
-          new FluoAdmin.InitOpts().setClearTable(true).setClearZookeeper(true));
-      TableOperations.optimizeTable(fluoConfig, Pirtos.getConfiguredOptimizations(fluoConfig));
-    } catch (Exception e) {
-      throw new IllegalStateException(e);
-    }
-    miniFluo = FluoFactory.newMiniFluo(fluoConfig);
-    fluoRunning.set(true);
+    return ret;
   }
 
-  private void updateFluoConfig() {
-    fluoConfig = new FluoConfiguration();
-    fluoConfig.setMiniStartAccumulo(false);
-    fluoConfig.setApplicationName("fluo-it");
-    fluoConfig.setAccumuloInstance(cluster.getInstanceName());
-    fluoConfig.setAccumuloUser(ACCUMULO_USER);
-    fluoConfig.setAccumuloPassword(ACCUMULO_PASSWORD);
-    fluoConfig.setInstanceZookeepers(cluster.getZooKeepers() + "/fluo");
-    fluoConfig.setAccumuloZookeepers(cluster.getZooKeepers());
-    fluoConfig.setAccumuloTable("fluo" + fluoTableCounter.getAndIncrement());
-    fluoConfig.setWorkerThreads(5);
-  }
 
-  /**
-   * Tears down Fluo by closing MiniFluo
-   */
-  public synchronized void teardownFluo() {
-    if (!fluoRunning.get()) {
-      throw new IllegalStateException("Attempting to teardown Fluo but it's not running");
-    }
-    try {
-      miniFluo.close();
-    } catch (Exception e) {
-      throw new IllegalStateException(e);
-    }
-    updateFluoConfig();
-    fluoRunning.set(false);
-  }
-
-  @Override
-  public void close() {
-    try {
-      cluster.stop();
-      FileUtils.deleteDirectory(baseDir.toFile());
-    } catch (Exception e) {
-      throw new IllegalStateException(e);
-    }
-  }
 }

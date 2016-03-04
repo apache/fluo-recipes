@@ -14,79 +14,68 @@
 
 package io.fluo.recipes.spark;
 
-import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
 
-import io.fluo.api.data.Column;
+import io.fluo.api.client.FluoFactory;
 import io.fluo.api.data.RowColumnValue;
+import io.fluo.api.mini.MiniFluo;
+import io.fluo.recipes.test.AccumuloExportITBase;
 import io.fluo.recipes.test.FluoITHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.api.java.JavaSparkContext;
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class FluoSparkHelperIT {
+public class FluoSparkHelperIT extends AccumuloExportITBase {
 
-  static FluoITHelper fluoIT;
   static JavaSparkContext ctx;
+
+  public FluoSparkHelperIT() {
+    super(false);
+  }
 
   @BeforeClass
   public static void setupIT() {
-    fluoIT = new FluoITHelper(Paths.get("target/miniAccumulo"));
     ctx = FluoSparkTestUtil.newSparkContext("fluo-spark-helper");
   }
 
   @AfterClass
   public static void teardownIT() {
     ctx.stop();
-    fluoIT.close();
-  }
-
-  @Before
-  public void setupTest() {
-    fluoIT.setupFluo();
-  }
-
-  @After
-  public void teardownTest() {
-    fluoIT.teardownFluo();
   }
 
   private List<RowColumnValue> getData() {
-    List<RowColumnValue> rcvList = new ArrayList<>();
-    rcvList.add(new RowColumnValue("arow", new Column("acf", "acq"), "aval"));
-    rcvList.add(new RowColumnValue("brow", new Column("bcf", "bcq"), "bval"));
-    rcvList.add(new RowColumnValue("crow", new Column("ccf", "ccq"), "cval"));
-    return rcvList;
+    return FluoITHelper.parse("arow|acf|acq|aval", "brow|bcf|bcq|bval", "crow|ccf|ccq|cval");
   }
 
   @Test
   public void testAccumuloBulkImport() throws Exception {
     FluoSparkHelper fsh =
-        new FluoSparkHelper(fluoIT.getFluoConfig(), ctx.hadoopConfiguration(), new Path("/tmp/"));
+        new FluoSparkHelper(getFluoConfiguration(), ctx.hadoopConfiguration(), new Path("/tmp/"));
     List<RowColumnValue> expected = getData();
     final String accumuloTable = "table1";
-    fluoIT.getAccumuloConnector().tableOperations().create(accumuloTable);
+    getAccumuloConnector().tableOperations().create(accumuloTable);
     fsh.bulkImportRcvToAccumulo(FluoSparkHelper.toPairRDD(ctx.parallelize(expected)),
         accumuloTable, new FluoSparkHelper.BulkImportOptions());
-    Assert.assertTrue(fluoIT.verifyAccumuloTable(accumuloTable, expected));
+    Assert.assertTrue(FluoITHelper.verifyAccumuloTable(getAccumuloConnector(), accumuloTable,
+        expected));
   }
 
   @Test
   public void testFluoBulkImport() throws Exception {
     FluoSparkHelper fsh =
-        new FluoSparkHelper(fluoIT.getFluoConfig(), ctx.hadoopConfiguration(), new Path("/tmp/"));
+        new FluoSparkHelper(getFluoConfiguration(), ctx.hadoopConfiguration(), new Path("/tmp/"));
     List<RowColumnValue> expected = getData();
     fsh.bulkImportRcvToFluo(FluoSparkHelper.toPairRDD(ctx.parallelize(expected)),
         new FluoSparkHelper.BulkImportOptions());
-    Assert.assertTrue(fluoIT.verifyFluoTable(expected));
 
-    List<RowColumnValue> actualRead = FluoSparkHelper.toRcvRDD(fsh.readFromFluo(ctx)).collect();
-    Assert.assertTrue(fluoIT.verifyRowColumnValues(expected, actualRead));
+    try (MiniFluo miniFluo = FluoFactory.newMiniFluo(getFluoConfiguration())) {
+      Assert.assertTrue(FluoITHelper.verifyFluoTable(getFluoConfiguration(), expected));
+
+      List<RowColumnValue> actualRead = FluoSparkHelper.toRcvRDD(fsh.readFromFluo(ctx)).collect();
+      Assert.assertTrue(FluoITHelper.verifyRowColumnValues(expected, actualRead));
+    }
   }
 }

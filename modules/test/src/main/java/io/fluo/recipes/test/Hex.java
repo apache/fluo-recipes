@@ -24,7 +24,7 @@ import io.fluo.api.data.RowColumnValue;
 /**
  * Utility code for encoding/decoding Non-Ascii bytes to/from String
  */
-public class Hex {
+class Hex {
 
   public static void encNonAscii(StringBuilder sb, Bytes bytes) {
     for (int i = 0; i < bytes.length(); i++) {
