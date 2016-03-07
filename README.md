@@ -11,6 +11,7 @@ Common code for Fluo application developers.
 * [Row Hash Prefix][row-hasher] - A recipe for spreading data evenly in a row prefix.
 * [RecordingTransaction][recording-tx] - A wrapper for a Fluo transaction that records all transaction
 operations to a log which can be used to export data from Fluo.
+* [Testing][testing] Some code to help write Fluo Integration test.
 
 ### Common Functionality
 
@@ -27,3 +28,4 @@ Recipes have common needs that are broken down into the following reusable compo
 [transient]: docs/transient.md
 [optimization]: docs/table-optimization.md
 [row-hasher]: docs/row-hasher.md
+[testing]: docs/testing.md

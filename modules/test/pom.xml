@@ -24,19 +24,34 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>fluo-recipes-core</artifactId>
+  <artifactId>fluo-recipes-test</artifactId>
 
-  <name>Fluo Recipes</name>
+  <name>Fluo Test Recipes</name>
 
   <dependencies>
     <dependency>
-      <groupId>com.esotericsoftware</groupId>
-      <artifactId>kryo</artifactId>
-      <version>3.0.3</version>
+      <groupId>io.fluo</groupId>
+      <artifactId>fluo-api</artifactId>
     </dependency>
     <dependency>
       <groupId>io.fluo</groupId>
-      <artifactId>fluo-api</artifactId>
+      <artifactId>fluo-recipes-accumulo</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.fluo</groupId>
+      <artifactId>fluo-recipes-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.accumulo</groupId>
+      <artifactId>accumulo-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.accumulo</groupId>
+      <artifactId>accumulo-minicluster</artifactId>
     </dependency>
     <!-- Test Dependencies -->
     <dependency>
@@ -47,16 +62,6 @@
     <dependency>
       <groupId>io.fluo</groupId>
       <artifactId>fluo-mini</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.easymock</groupId>
-      <artifactId>easymock</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

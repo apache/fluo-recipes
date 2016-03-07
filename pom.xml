@@ -40,6 +40,8 @@
   <modules>
     <module>modules/core</module>
     <module>modules/accumulo</module>
+    <module>modules/spark</module>
+    <module>modules/test</module>
   </modules>
 
   <scm>
@@ -72,6 +74,7 @@
     <eclipseFormatterStyle>${project.parent.basedir}/contrib/fluo-eclipse-style.xml</eclipseFormatterStyle>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
+    <spark.version>1.5.1</spark.version>
   </properties>
 
   <repositories>
@@ -110,12 +113,32 @@
       </dependency>
       <dependency>
         <groupId>io.fluo</groupId>
+        <artifactId>fluo-mapreduce</artifactId>
+        <version>${fluo.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.fluo</groupId>
         <artifactId>fluo-mini</artifactId>
         <version>${fluo.version}</version>
       </dependency>
       <dependency>
         <groupId>io.fluo</groupId>
+        <artifactId>fluo-recipes-accumulo</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.fluo</groupId>
         <artifactId>fluo-recipes-core</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.fluo</groupId>
+        <artifactId>fluo-recipes-spark</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.fluo</groupId>
+        <artifactId>fluo-recipes-test</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
@@ -132,6 +155,11 @@
         <groupId>org.apache.accumulo</groupId>
         <artifactId>accumulo-minicluster</artifactId>
         <version>${accumulo.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.spark</groupId>
+        <artifactId>spark-core_2.10</artifactId>
+        <version>${spark.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.zookeeper</groupId>
@@ -312,7 +340,7 @@
               <outputFile>${project.build.directory}/checkstyle-results-accumulo.xml</outputFile>
             </configuration>
           </execution>
-          <execution>
+          <!--execution>
             <id>java-style-check</id>
             <goals>
               <goal>check</goal>
@@ -326,7 +354,7 @@
               <violationSeverity>warning</violationSeverity>
               <outputFile>${project.build.directory}/checkstyle-results-java.xml</outputFile>
             </configuration>
-          </execution>
+          </execution-->
         </executions>
       </plugin>
     </plugins>
