@@ -319,7 +319,7 @@ public class CollisionFreeMapIT {
       Long v2 = m2.get(word);
 
       if (v1 == null) {
-        System.out.println(word + " " + v1 + " != " + v2);
+        System.out.println(word + " null != " + v2);
       }
     }
   }

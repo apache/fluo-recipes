@@ -96,8 +96,10 @@ public class FluoITHelper {
     }
   }
 
-
-  public static boolean verifyFluoTable(FluoConfiguration conf, Collection<RowColumnValue> expected) {
+  // @formatter:off
+  public static boolean verifyFluoTable(FluoConfiguration conf,
+                                        Collection<RowColumnValue> expected) {
+    // @formatter:on
     try (FluoClient client = FluoFactory.newClient(conf)) {
       return verifyFluoTable(client, expected);
     }

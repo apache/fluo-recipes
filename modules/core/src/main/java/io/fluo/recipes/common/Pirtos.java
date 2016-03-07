@@ -17,8 +17,8 @@ package io.fluo.recipes.common;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
-import com.google.common.base.Preconditions;
 import io.fluo.api.client.FluoClient;
 import io.fluo.api.client.FluoFactory;
 import io.fluo.api.config.FluoConfiguration;
@@ -48,7 +48,7 @@ public class Pirtos {
   }
 
   public void setTabletGroupingRegex(String tgr) {
-    Preconditions.checkNotNull(tgr);
+    Objects.requireNonNull(tgr);
     this.tabletGroupingRegex = tgr;
   }
 

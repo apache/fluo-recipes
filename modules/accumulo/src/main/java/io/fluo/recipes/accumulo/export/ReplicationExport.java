@@ -17,6 +17,7 @@ package io.fluo.recipes.accumulo.export;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Predicate;
 
 import com.google.common.base.Preconditions;
@@ -40,7 +41,7 @@ public class ReplicationExport<K> implements AccumuloExport<K> {
   public ReplicationExport() {}
 
   public ReplicationExport(TxLog txLog) {
-    Preconditions.checkNotNull(txLog);
+    Objects.requireNonNull(txLog);
     this.txLog = txLog;
   }
 

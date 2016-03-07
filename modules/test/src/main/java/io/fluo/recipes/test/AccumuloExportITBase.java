@@ -55,8 +55,7 @@ import org.junit.BeforeClass;
  *           super(true);
  *         }
  * 
- * 
- *         @Override
+ *         {@literal @}Override
  *         //this is method is called by super class before initializing Fluo
  *         public void preFluoInitHook() throws Exception {
  * 
@@ -77,7 +76,7 @@ import org.junit.BeforeClass;
  *           //Configure observers on fluoConfig to export using info above
  *        }
  * 
- *        @Test
+ *        {@literal @}Test
  *        public void exportTest1(){
  *            try(FluoClient client = FluoFactory.newClient(getFluoConfiguration())) {
  *              //write some data that will cause an observer to export data
@@ -88,13 +87,9 @@ import org.junit.BeforeClass;
  *            //verify data was exported
  *        }
  *    }
- * 
  * </code>
  * </pre>
- *
- *
  */
-
 public class AccumuloExportITBase {
 
   public static final String ACCUMULO_USER = "root";

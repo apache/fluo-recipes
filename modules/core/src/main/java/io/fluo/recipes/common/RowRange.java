@@ -14,7 +14,8 @@
 
 package io.fluo.recipes.common;
 
-import com.google.common.base.Preconditions;
+import java.util.Objects;
+
 import io.fluo.api.data.Bytes;
 
 public class RowRange {
@@ -22,8 +23,8 @@ public class RowRange {
   private final Bytes end;
 
   public RowRange(Bytes start, Bytes end) {
-    Preconditions.checkNotNull(start);
-    Preconditions.checkNotNull(end);
+    Objects.requireNonNull(start);
+    Objects.requireNonNull(end);
     this.start = start;
     this.end = end;
   }

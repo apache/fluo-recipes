@@ -17,7 +17,6 @@ package io.fluo.recipes.export;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Iterators;
 import io.fluo.api.client.TransactionBase;
 import io.fluo.api.data.Bytes;
@@ -109,13 +108,10 @@ public class ExportObserver<K, V> extends AbstractObserver {
     MemLimitIterator memLimitIter = new MemLimitIterator(input, memLimit);
 
     Iterator<SequencedExport<K, V>> exportIterator =
-        Iterators.transform(memLimitIter, new Function<ExportEntry, SequencedExport<K, V>>() {
-          @Override
-          public SequencedExport<K, V> apply(ExportEntry ee) {
-            return new SequencedExport<>(serializer.deserialize(ee.key, keyType), serializer
-                .deserialize(ee.value, valType), ee.seq);
-          }
-        });
+        Iterators.transform(
+            memLimitIter,
+            ee -> new SequencedExport<>(serializer.deserialize(ee.key, keyType), serializer
+                .deserialize(ee.value, valType), ee.seq));
 
     exportIterator = Iterators.consumingIterator(exportIterator);
 
