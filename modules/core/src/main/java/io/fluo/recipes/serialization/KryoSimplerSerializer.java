@@ -106,7 +106,7 @@ public class KryoSimplerSerializer implements SimpleSerializer, Serializable {
    * Can call this method to create a serializer w/o calling {@link #init(Configuration)}
    */
   public KryoSimplerSerializer(KryoFactory factory) {
-    factoryType = null;
+    factoryType = factory.getClass().getName();
     this.factory = factory;
   }
 
