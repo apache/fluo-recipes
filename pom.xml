@@ -21,6 +21,7 @@
   <modules>
     <module>modules/core</module>
     <module>modules/accumulo</module>
+    <module>modules/kryo</module>
     <module>modules/spark</module>
     <module>modules/test</module>
   </modules>
@@ -78,6 +79,11 @@
       <dependency>
         <groupId>io.fluo</groupId>
         <artifactId>fluo-recipes-core</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.fluo</groupId>
+        <artifactId>fluo-recipes-kryo</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

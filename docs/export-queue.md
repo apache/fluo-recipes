@@ -16,8 +16,9 @@ One way to make data transformed by Fluo available for low latency queries is
 to export that data to another system.  For example Fluo could be running
 cluster A, continually transforming a large data set, and exporting data to
 Accumulo tables on cluster B.  The tables on cluster B would service user
-queries.  This recipe could be used to export to systems other than Accumulo,
-like Redis, Elasticsearch, MySQL, etc.
+queries.  Fluo Recipes has built in support for [exporting to Accumulo][3],
+however recipe could be used to export to systems other than Accumulo, like
+Redis, Elasticsearch, MySQL, etc.
 
 Exporting data from Fluo is easy to get wrong which is why this recipe exists.
 To understand what can go wrong consider the following example observer
@@ -275,4 +276,5 @@ example of write skew mentioned in the Percolater paper.
 
 [1]:../modules/core/src/main/java/io/fluo/recipes/export/Exporter.java
 [2]:https://en.wikipedia.org/wiki/Serializability
+[3]:accumulo-export.md
 

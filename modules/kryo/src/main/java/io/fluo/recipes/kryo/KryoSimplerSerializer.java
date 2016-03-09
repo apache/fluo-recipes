@@ -12,7 +12,7 @@
  * the License.
  */
 
-package io.fluo.recipes.serialization;
+package io.fluo.recipes.kryo;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -28,9 +28,9 @@ import com.esotericsoftware.kryo.pool.KryoFactory;
 import com.esotericsoftware.kryo.pool.KryoPool;
 import com.google.common.base.Preconditions;
 import io.fluo.api.config.FluoConfiguration;
+import io.fluo.recipes.serialization.SimpleSerializer;
 import org.apache.commons.configuration.Configuration;
 
-// TODO maybe put in own module so that fluo-recipes does not depend on Kryo
 public class KryoSimplerSerializer implements SimpleSerializer, Serializable {
 
   private static final long serialVersionUID = 1L;

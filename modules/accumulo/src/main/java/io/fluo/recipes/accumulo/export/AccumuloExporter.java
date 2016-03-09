@@ -17,6 +17,7 @@ package io.fluo.recipes.accumulo.export;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import io.fluo.api.config.FluoConfiguration;
 import io.fluo.api.observer.Observer.Context;
 import io.fluo.recipes.export.Exporter;
 import io.fluo.recipes.export.SequencedExport;
@@ -25,7 +26,7 @@ import org.apache.commons.configuration.Configuration;
 
 /**
  * An {@link Exporter} that takes {@link AccumuloExport} objects and writes mutations to Accumulo
- * 
+ *
  * @param <K> Export queue key type
  */
 public class AccumuloExporter<K> extends Exporter<K, AccumuloExport<K>> {
@@ -47,7 +48,8 @@ public class AccumuloExporter<K> extends Exporter<K, AccumuloExport<K>> {
     sbw = SharedBatchWriter.getInstance(instanceName, zookeepers, user, password, table);
   }
 
-  public static void setExportTableInfo(Configuration appConf, String queueId, TableInfo ti) {
+  public static void setExportTableInfo(FluoConfiguration fconf, String queueId, TableInfo ti) {
+    Configuration appConf = fconf.getAppConfiguration();
     appConf.setProperty("recipes.accumuloExporter." + queueId + ".instance", ti.instanceName);
     appConf.setProperty("recipes.accumuloExporter." + queueId + ".zookeepers", ti.zookeepers);
     appConf.setProperty("recipes.accumuloExporter." + queueId + ".user", ti.user);
