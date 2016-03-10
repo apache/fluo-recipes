@@ -60,9 +60,9 @@ public class AccumuloReplicatorIT extends AccumuloExportITBase {
     getAccumuloConnector().tableOperations().create(et);
 
     MiniAccumuloCluster miniAccumulo = getMiniAccumuloCluster();
-    AccumuloExporter.setExportTableInfo(getFluoConfiguration().getAppConfiguration(), QUEUE_ID,
-        new TableInfo(miniAccumulo.getInstanceName(), miniAccumulo.getZooKeepers(), ACCUMULO_USER,
-            ACCUMULO_PASSWORD, et));
+    AccumuloExporter.setExportTableInfo(getFluoConfiguration(), QUEUE_ID, new TableInfo(
+        miniAccumulo.getInstanceName(), miniAccumulo.getZooKeepers(), ACCUMULO_USER,
+        ACCUMULO_PASSWORD, et));
   }
 
   @Test

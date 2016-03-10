@@ -40,7 +40,7 @@ public interface SimpleSerializer {
 
   public static SimpleSerializer getInstance(Configuration appConfig) {
     String serType =
-        appConfig.getString("recipes.serializer", KryoSimplerSerializer.class.getName());
+        appConfig.getString("recipes.serializer", "io.fluo.recipes.kryo.KryoSimplerSerializer");
     try {
       SimpleSerializer simplerSer =
           SimpleSerializer.class.getClassLoader().loadClass(serType)

@@ -17,6 +17,7 @@ package io.fluo.recipes.serialization;
 import com.esotericsoftware.kryo.pool.KryoFactory;
 import io.fluo.api.data.Bytes;
 import io.fluo.api.data.Column;
+import io.fluo.recipes.kryo.KryoSimplerSerializer;
 import org.junit.Assert;
 import org.junit.Test;
 

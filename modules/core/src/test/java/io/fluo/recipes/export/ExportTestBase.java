@@ -40,6 +40,7 @@ import io.fluo.api.data.Span;
 import io.fluo.api.iterator.ColumnIterator;
 import io.fluo.api.iterator.RowIterator;
 import io.fluo.api.mini.MiniFluo;
+import io.fluo.recipes.serialization.SimpleSerializer;
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -142,6 +143,8 @@ public class ExportTestBase {
 
     ObserverConfiguration doc = new ObserverConfiguration(DocumentObserver.class.getName());
     props.addObserver(doc);
+
+    SimpleSerializer.setSetserlializer(props, GsonSerializer.class);
 
     ExportQueue.Options exportQueueOpts =
         new ExportQueue.Options(RefExporter.QUEUE_ID, RefExporter.class, String.class,

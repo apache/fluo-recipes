@@ -21,9 +21,16 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 
+import org.apache.commons.io.FileUtils;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
+
 import io.fluo.api.client.FluoClient;
 import io.fluo.api.client.FluoFactory;
 import io.fluo.api.client.Transaction;
@@ -40,11 +47,7 @@ import io.fluo.api.types.StringEncoder;
 import io.fluo.api.types.TypeLayer;
 import io.fluo.api.types.TypedSnapshot;
 import io.fluo.api.types.TypedTransactionBase;
-import org.apache.commons.io.FileUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import io.fluo.recipes.serialization.SimpleSerializer;
 
 /**
  * This test configures a small buffer size and verifies that multiple passes are made to process
@@ -112,6 +115,8 @@ public class BigUpdateIT {
     props.setApplicationName("eqt");
     props.setWorkerThreads(20);
     props.setMiniDataDir("target/mini");
+
+    SimpleSerializer.setSetserlializer(props, TestSerializer.class);
 
     CollisionFreeMap.configure(props, new CollisionFreeMap.Options(MAP_ID, LongCombiner.class,
         MyObserver.class, String.class, Long.class, 2).setBufferSize(1 << 10));
