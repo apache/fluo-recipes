@@ -15,7 +15,6 @@
 package io.fluo.recipes.map;
 
 import java.io.Serializable;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -26,7 +25,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import java.util.regex.Pattern;
 
 import com.google.common.base.Preconditions;
@@ -103,7 +101,7 @@ public class CollisionFreeMap<K, V> {
   }
 
   private Bytes getKeyFromUpdateRow(Bytes prefix, Bytes row) {
-    return row.subSequence(prefix.length(), row.length() - 16);
+    return row.subSequence(prefix.length(), row.length() - 8);
   }
 
   void process(TransactionBase tx, Bytes ntfyRow, Column col) throws Exception {
@@ -309,13 +307,13 @@ public class CollisionFreeMap<K, V> {
   public void update(TransactionBase tx, Map<K, V> updates) {
     Preconditions.checkState(numBuckets > 0, "Not initialized");
 
-    UUID uuid = UUID.randomUUID();
-
     Set<String> buckets = new HashSet<>();
 
     BytesBuilder rowBuilder = Bytes.newBuilder();
     rowBuilder.append(mapId).append(":u:");
     int prefixLength = rowBuilder.getLength();
+
+    byte[] startTs = encSeq(tx.getStartTimestamp());
 
     for (Entry<K, V> entry : updates.entrySet()) {
       byte[] k = serializer.serialize(entry.getKey());
@@ -325,8 +323,7 @@ public class CollisionFreeMap<K, V> {
       // reset to the common row prefix
       rowBuilder.setLength(prefixLength);
 
-      Bytes row =
-          rowBuilder.append(bucketId).append(":").append(k).append(uuidToBytes(uuid)).toBytes();
+      Bytes row = rowBuilder.append(bucketId).append(":").append(k).append(startTs).toBytes();
       Bytes val = Bytes.of(serializer.serialize(entry.getValue()));
 
       // TODO set if not exists would be comforting here.... but
@@ -585,11 +582,16 @@ public class CollisionFreeMap<K, V> {
     return pirtos;
   }
 
-  private Bytes uuidToBytes(UUID uuid) {
-    ByteBuffer bb = ByteBuffer.wrap(new byte[16]);
-    bb.putLong(uuid.getMostSignificantBits());
-    bb.putLong(uuid.getLeastSignificantBits());
-    bb.rewind();
-    return Bytes.of(bb);
+  private static byte[] encSeq(long l) {
+    byte[] ret = new byte[8];
+    ret[0] = (byte) (l >>> 56);
+    ret[1] = (byte) (l >>> 48);
+    ret[2] = (byte) (l >>> 40);
+    ret[3] = (byte) (l >>> 32);
+    ret[4] = (byte) (l >>> 24);
+    ret[5] = (byte) (l >>> 16);
+    ret[6] = (byte) (l >>> 8);
+    ret[7] = (byte) (l >>> 0);
+    return ret;
   }
 }
