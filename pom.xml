@@ -7,7 +7,7 @@
     <version>2</version>
   </parent>
   <artifactId>fluo-recipes-parent</artifactId>
-  <version>1.0.0-beta-2-SNAPSHOT</version>
+  <version>1.0.0-beta-2</version>
   <packaging>pom</packaging>
   <name>Fluo Recipes Parent</name>
   <description>Implementation of Common Fluo patterns</description>
@@ -28,7 +28,7 @@
   <scm>
     <connection>scm:git:https://github.com/fluo-io/fluo-recipes.git</connection>
     <developerConnection>scm:git:git@github.com:fluo-io/fluo-recipes.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>fluo-recipes-parent-1.0.0-beta-2</tag>
     <url>https://github.com/fluo-io/fluo-recipes</url>
   </scm>
   <issueManagement>
