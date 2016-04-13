@@ -71,4 +71,3 @@ how to do this.
 [1]: https://github.com/EsotericSoftware/kryo
 [2]: ../modules/core/src/main/java/io/fluo/recipes/serialization/SimpleSerializer.java
 [3]: https://github.com/EsotericSoftware/kryo#registration
-

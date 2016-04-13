@@ -72,8 +72,8 @@ Below are Maven dependencies for Fluo Recipes.
   </dependencies>
 ```
 
-[cfm]:docs/cfm.md
-[export-q]:docs/export-queue.md
+[cfm]: docs/cfm.md
+[export-q]: docs/export-queue.md
 [recording-tx]: docs/recording-tx.md
 [serialization]: docs/serialization.md
 [transient]: docs/transient.md

@@ -105,5 +105,5 @@ Balancing config will spread the tablets evenly across the tablet servers,
 which will spread the computation evenly. See the [table optimizations][2]
 documentation for information on how to apply the optimizations.
  
-[1]:https://github.com/fluo-io/webindex
-[2]:/docs/table-optimization.md
+[1]: https://github.com/fluo-io/webindex
+[2]: /docs/table-optimization.md

@@ -60,5 +60,5 @@ If only `<interval>` is specied the command will loop forever calling
 `compactTransient()` sleeping `<interval>` seconds between calls.  If `<count>`
 is additionally specified then the command will only loop `<count>` times.
 
-[1]:../modules/core/src/main/java/io/fluo/recipes/common/TransientRegistry.java
-[2]:../modules/accumulo/src/main/java/io/fluo/recipes/accumulo/ops/TableOperations.java
+[1]: ../modules/core/src/main/java/io/fluo/recipes/common/TransientRegistry.java
+[2]: ../modules/accumulo/src/main/java/io/fluo/recipes/accumulo/ops/TableOperations.java

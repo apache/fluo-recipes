@@ -51,7 +51,7 @@ implements [AccumuloExport][2] can be added to the queue.  For the common
 pattern of deleting old data and inserting new data, consider extending
 [DifferenceExport][3].
 
-[1]:export-queue.md
-[2]:../modules/accumulo/src/main/java/io/fluo/recipes/accumulo/export/AccumuloExport.java
-[3]:../modules/accumulo/src/main/java/io/fluo/recipes/accumulo/export/DifferenceExport.java
+[1]: export-queue.md
+[2]: ../modules/accumulo/src/main/java/io/fluo/recipes/accumulo/export/AccumuloExport.java
+[3]: ../modules/accumulo/src/main/java/io/fluo/recipes/accumulo/export/DifferenceExport.java
 
