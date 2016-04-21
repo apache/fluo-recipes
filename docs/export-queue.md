@@ -108,7 +108,9 @@ should not be used by anything else.
 
 All data stored in an export queue is [transient](transient.md). When an export
 queue is configured, it will recommend split points using the [table
-optimization process](table-optimization.md).
+optimization process](table-optimization.md).  The number of splits generated
+by this process can be controlled by setting the number of buckets per tablet
+when configuring an export queue.
 
 ## Example Use
 
@@ -142,9 +144,12 @@ application.
    Class<Bytes> keyType = Bytes.class;
    Class<CountUpdate> valueType = CountUpdate.class;
    int numBuckets = 1009;
+   //the desired number of tablets to create when applying table optimizations
+   int numTablets = 100;
 
    ExportQueue.Options eqOptions =
-        new ExportQueue.Options(exportQueueId, exporterType, keyType, valueType, numBuckets);
+        new ExportQueue.Options(exportQueueId, exporterType, keyType, valueType, numBuckets)
+          .setsetBucketsPerTablet(numBuckets/numTablets);
    ExportQueue.configure(fluoConfig, eqOptions);
 
    //initialize Fluo using fluoConfig

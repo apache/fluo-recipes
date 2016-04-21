@@ -49,7 +49,7 @@ public class AccumuloExporterIT extends AccumuloExportITBase {
     FluoConfiguration fluoConfig = getFluoConfiguration();
     ExportQueue.configure(fluoConfig,
         new ExportQueue.Options(QUEUE_ID, AccumuloExporter.class.getName(), String.class.getName(),
-            TestExport.class.getName(), 5));
+            TestExport.class.getName(), 5).setBucketsPerTablet(1));
 
     // create and configure export table
     et = "export" + tableCounter.getAndIncrement();
