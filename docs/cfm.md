@@ -51,6 +51,10 @@ updates for the following reasons :
 Which bucket a key goes to is decided using hash and modulus so that multiple
 updates for the same key always go to the same bucket.
 
+The initial number of tablets to create when applying table optimizations can be
+controlled by setting the buckets per tablet option when configuring a Collision
+Free Map.  For example if you have 20 tablet servers and 1000 buckets and want
+2 tablets per tserver initially then set buckets per tablet to 1000/(2*20)=25.
 
 ## Example Use
 
@@ -165,10 +169,14 @@ public class WordCountMap {
 
   /**
    * A helper method for configuring the word count map.
+   *
+   * @param numTablets the desired number of tablets to create when applying table optimizations
    */
-  public static void configure(FluoConfiguration fluoConfig, int numBuckets) {
-    CollisionFreeMap.configure(fluoConfig, new Options(ID, WordCountCombiner.class, 
-        WordCountObserver.class, String.class, Long.class, numBuckets));
+  public static void configure(FluoConfiguration fluoConfig, int numBuckets, int numTablets) {
+    Options cfmOpts =
+      new Options(ID, WordCountCombiner.class,  WordCountObserver.class, String.class, Long.class, numBuckets)
+        .setBucketsPerTablet(numBuckets/numTablets);
+    CollisionFreeMap.configure(fluoConfig, cfmOpts);
   }
 
   public static class WordCountCombiner implements Combiner<String, Long> {

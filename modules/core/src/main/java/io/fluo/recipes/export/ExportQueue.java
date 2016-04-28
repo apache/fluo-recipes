@@ -149,7 +149,7 @@ public class ExportQueue<K, V> {
     splits.add(exportRangeStop);
 
     List<Bytes> exportSplits = new ArrayList<>();
-    for (int i = 1; i < opts.numBuckets; i++) {
+    for (int i = opts.getBucketsPerTablet(); i < opts.numBuckets; i += opts.getBucketsPerTablet()) {
       exportSplits.add(ExportBucket.generateBucketRow(opts.queueId, i, opts.numBuckets));
     }
     Collections.sort(exportSplits);
@@ -168,10 +168,12 @@ public class ExportQueue<K, V> {
   public static class Options {
 
     private static final String PREFIX = "recipes.exportQueue.";
-    private static final long DEFAULT_BUFFER_SIZE = 1 << 22;
+    static final long DEFAULT_BUFFER_SIZE = 1 << 22;
+    static final int DEFAULT_BUCKETS_PER_TABLET = 10;
 
     int numBuckets;
-    private Long bufferSize;
+    Integer bucketsPerTablet = null;
+    Long bufferSize;
 
     String keyType;
     String valueType;
@@ -186,6 +188,8 @@ public class ExportQueue<K, V> {
       this.keyType = appConfig.getString(PREFIX + queueId + ".key");
       this.valueType = appConfig.getString(PREFIX + queueId + ".val");
       this.bufferSize = appConfig.getLong(PREFIX + queueId + ".bufferSize", DEFAULT_BUFFER_SIZE);
+      this.bucketsPerTablet =
+          appConfig.getInteger(PREFIX + queueId + ".bucketsPerTablet", DEFAULT_BUCKETS_PER_TABLET);
     }
 
     public Options(String queueId, String exporterType, String keyType, String valueType,
@@ -231,6 +235,26 @@ public class ExportQueue<K, V> {
       return bufferSize;
     }
 
+    /**
+     * Sets the number of buckets per tablet to generate. This affects how many split points will be
+     * generated when optimizing the Accumulo table.
+     *
+     */
+    public Options setBucketsPerTablet(int bucketsPerTablet) {
+      Preconditions.checkArgument(bucketsPerTablet > 0, "bucketsPerTablet is <= 0 : "
+          + bucketsPerTablet);
+      this.bucketsPerTablet = bucketsPerTablet;
+      return this;
+    }
+
+    int getBucketsPerTablet() {
+      if (bucketsPerTablet == null) {
+        return DEFAULT_BUCKETS_PER_TABLET;
+      }
+
+      return bucketsPerTablet;
+    }
+
     void save(Configuration appConfig) {
       appConfig.setProperty(PREFIX + queueId + ".buckets", numBuckets + "");
       appConfig.setProperty(PREFIX + queueId + ".exporter", exporterType + "");
@@ -239,6 +263,9 @@ public class ExportQueue<K, V> {
 
       if (bufferSize != null) {
         appConfig.setProperty(PREFIX + queueId + ".bufferSize", bufferSize);
+      }
+      if (bucketsPerTablet != null) {
+        appConfig.setProperty(PREFIX + queueId + ".bucketsPerTablet", bucketsPerTablet);
       }
     }
   }

@@ -38,6 +38,7 @@ public class SplitsTest {
   public void testSplits() {
 
     Options opts = new Options("foo", WordCountCombiner.class, String.class, Long.class, 3);
+    opts.setBucketsPerTablet(1);
     FluoConfiguration fluoConfig = new FluoConfiguration();
     CollisionFreeMap.configure(fluoConfig, opts);
 
@@ -50,14 +51,16 @@ public class SplitsTest {
 
     Assert.assertEquals(expected1, sort(pirtos1.getSplits()));
 
-    Options opts2 = new Options("bar", WordCountCombiner.class, String.class, Long.class, 5);
+    Options opts2 = new Options("bar", WordCountCombiner.class, String.class, Long.class, 6);
+    opts2.setBucketsPerTablet(2);
     CollisionFreeMap.configure(fluoConfig, opts2);
 
     Pirtos pirtos2 =
         CollisionFreeMap.getTableOptimizations("bar", fluoConfig.getAppConfiguration());
     List<Bytes> expected2 =
-        Lists.transform(Arrays.asList("bar:d:1", "bar:d:2", "bar:d:3", "bar:d:4", "bar:d:~",
-            "bar:u:1", "bar:u:2", "bar:u:3", "bar:u:4", "bar:u:~"), Bytes::of);
+        Lists.transform(
+            Arrays.asList("bar:d:2", "bar:d:4", "bar:d:~", "bar:u:2", "bar:u:4", "bar:u:~"),
+            Bytes::of);
     Assert.assertEquals(expected2, sort(pirtos2.getSplits()));
 
     Pirtos pirtos3 = CollisionFreeMap.getTableOptimizations(fluoConfig.getAppConfiguration());

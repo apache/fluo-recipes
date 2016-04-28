@@ -401,10 +401,13 @@ public class CollisionFreeMap<K, V> {
 
   public static class Options {
 
-    private static final long DEFAULT_BUFFER_SIZE = 1 << 22;
+    static final long DEFAULT_BUFFER_SIZE = 1 << 22;
+    static final int DEFAULT_BUCKETS_PER_TABLET = 10;
 
     int numBuckets;
-    private Long bufferSize;
+    Integer bucketsPerTablet = null;
+
+    Long bufferSize;
 
     String keyType;
     String valueType;
@@ -423,6 +426,8 @@ public class CollisionFreeMap<K, V> {
       this.valueType = appConfig.getString(PREFIX + mapId + ".val");
       this.updateObserverType = appConfig.getString(PREFIX + mapId + ".updateObserver", null);
       this.bufferSize = appConfig.getLong(PREFIX + mapId + ".bufferSize", DEFAULT_BUFFER_SIZE);
+      this.bucketsPerTablet =
+          appConfig.getInteger(PREFIX + mapId + ".bucketsPerTablet", DEFAULT_BUCKETS_PER_TABLET);
     }
 
     public Options(String mapId, String combinerType, String keyType, String valType, int buckets) {
@@ -476,6 +481,26 @@ public class CollisionFreeMap<K, V> {
       return bufferSize;
     }
 
+    /**
+     * Sets the number of buckets per tablet to generate. This affects how many split points will be
+     * generated when optimizing the Accumulo table.
+     *
+     */
+    public Options setBucketsPerTablet(int bucketsPerTablet) {
+      Preconditions.checkArgument(bucketsPerTablet > 0, "bucketsPerTablet is <= 0 : "
+          + bucketsPerTablet);
+      this.bucketsPerTablet = bucketsPerTablet;
+      return this;
+    }
+
+    int getBucketsPerTablet() {
+      if (bucketsPerTablet == null) {
+        return DEFAULT_BUCKETS_PER_TABLET;
+      }
+
+      return bucketsPerTablet;
+    }
+
     public <K, V> Options(String mapId, Class<? extends Combiner<K, V>> combiner, Class<K> keyType,
         Class<V> valueType, int buckets) {
       this(mapId, combiner.getName(), keyType.getName(), valueType.getName(), buckets);
@@ -498,6 +523,9 @@ public class CollisionFreeMap<K, V> {
       }
       if (bufferSize != null) {
         appConfig.setProperty(PREFIX + mapId + ".bufferSize", bufferSize);
+      }
+      if (bucketsPerTablet != null) {
+        appConfig.setProperty(PREFIX + mapId + ".bucketsPerTablet", bucketsPerTablet);
       }
     }
   }
@@ -550,7 +578,7 @@ public class CollisionFreeMap<K, V> {
     rowBuilder.append(mapId);
 
     List<Bytes> dataSplits = new ArrayList<>();
-    for (int i = 1; i < opts.numBuckets; i++) {
+    for (int i = opts.getBucketsPerTablet(); i < opts.numBuckets; i += opts.getBucketsPerTablet()) {
       String bucketId = BucketUtil.genBucketId(i, opts.numBuckets);
       rowBuilder.setLength(mapId.length());
       dataSplits.add(rowBuilder.append(":d:").append(bucketId).toBytes());
@@ -558,7 +586,7 @@ public class CollisionFreeMap<K, V> {
     Collections.sort(dataSplits);
 
     List<Bytes> updateSplits = new ArrayList<>();
-    for (int i = 1; i < opts.numBuckets; i++) {
+    for (int i = opts.getBucketsPerTablet(); i < opts.numBuckets; i += opts.getBucketsPerTablet()) {
       String bucketId = BucketUtil.genBucketId(i, opts.numBuckets);
       rowBuilder.setLength(mapId.length());
       updateSplits.add(rowBuilder.append(":u:").append(bucketId).toBytes());
