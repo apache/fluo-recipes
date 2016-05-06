@@ -20,17 +20,11 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-
-import org.apache.commons.io.FileUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
-
 import io.fluo.api.client.FluoClient;
 import io.fluo.api.client.FluoFactory;
 import io.fluo.api.client.Transaction;
@@ -48,6 +42,11 @@ import io.fluo.api.types.TypeLayer;
 import io.fluo.api.types.TypedSnapshot;
 import io.fluo.api.types.TypedTransactionBase;
 import io.fluo.recipes.serialization.SimpleSerializer;
+import org.apache.commons.io.FileUtils;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * This test configures a small buffer size and verifies that multiple passes are made to process
@@ -73,6 +72,8 @@ public class BigUpdateIT {
   }
 
   static final Column DSCOL = new Column("debug", "sum");
+
+  private static AtomicInteger globalUpdates = new AtomicInteger(0);
 
   public static class MyObserver extends UpdateObserver<String, Long> {
 
@@ -103,7 +104,7 @@ public class BigUpdateIT {
 
       Assert.assertTrue(diff.toString(), diff.areEqual());
 
-      ttx.mutate().row("sideE01").fam("debug").qual("updates").increment(1);
+      globalUpdates.incrementAndGet();
     }
   }
 
@@ -124,6 +125,8 @@ public class BigUpdateIT {
     miniFluo = FluoFactory.newMiniFluo(props);
 
     wcMap = CollisionFreeMap.getInstance(MAP_ID, props.getAppConfiguration());
+
+    globalUpdates.set(0);
   }
 
   @After
@@ -144,7 +147,7 @@ public class BigUpdateIT {
 
       try (TypedSnapshot snap = tl.wrap(fc.newSnapshot())) {
         checkUpdates(snap, 1, 1000);
-        numUpdates = snap.get().row("sideE01").fam("debug").qual("updates").toInteger(0);
+        numUpdates = globalUpdates.get();
         // there are two buckets, expect update processing at least twice per bucket
         Assert.assertTrue(numUpdates >= 4);
       }
@@ -156,8 +159,7 @@ public class BigUpdateIT {
 
       try (TypedSnapshot snap = tl.wrap(fc.newSnapshot())) {
         checkUpdates(snap, 3, 1000);
-        numUpdates =
-            snap.get().row("sideE01").fam("debug").qual("updates").toInteger(0) - numUpdates;
+        numUpdates = globalUpdates.get() - numUpdates;
         Assert.assertTrue(numUpdates >= 4);
       }
 
@@ -169,8 +171,7 @@ public class BigUpdateIT {
 
       try (TypedSnapshot snap = tl.wrap(fc.newSnapshot())) {
         checkUpdates(snap, 13, 1000);
-        numUpdates =
-            snap.get().row("sideE01").fam("debug").qual("updates").toInteger(0) - numUpdates;
+        numUpdates = globalUpdates.get() - numUpdates;
         Assert.assertTrue(numUpdates >= 4);
       }
     }

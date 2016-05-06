@@ -23,6 +23,7 @@ import io.fluo.api.client.TransactionBase;
 import io.fluo.api.config.ScannerConfiguration;
 import io.fluo.api.data.Bytes;
 import io.fluo.api.data.Column;
+import io.fluo.api.data.RowColumn;
 import io.fluo.api.data.Span;
 import io.fluo.api.iterator.ColumnIterator;
 import io.fluo.api.iterator.RowIterator;
@@ -38,6 +39,7 @@ class ExportBucket {
   private static final String NOTIFICATION_CF = "fluoRecipes";
   private static final String NOTIFICATION_CQ_PREFIX = "eq:";
   private static final Column EXPORT_COL = new Column("e", "v");
+  private static final Column NEXT_COL = new Column("e", "next");
 
   static Column newNotificationColumn(String queueId) {
     return new Column(NOTIFICATION_CF, NOTIFICATION_CQ_PREFIX + queueId);
@@ -114,9 +116,19 @@ class ExportBucket {
     ttx.mutate().row(ntfyRow).col(newNotificationColumn(qid)).weaklyNotify();
   }
 
-  public Iterator<ExportEntry> getExportIterator() {
+  public Iterator<ExportEntry> getExportIterator(Bytes continueRow) {
     ScannerConfiguration sc = new ScannerConfiguration();
-    sc.setSpan(Span.prefix(bucketRow));
+
+    if (continueRow != null) {
+      Span tmpSpan = Span.prefix(bucketRow);
+      Span nextSpan =
+          new Span(new RowColumn(continueRow, EXPORT_COL), true, tmpSpan.getEnd(),
+              tmpSpan.isEndInclusive());
+      sc.setSpan(nextSpan);
+    } else {
+      sc.setSpan(Span.prefix(bucketRow));
+    }
+
     sc.fetchColumn(EXPORT_COL.getFamily(), EXPORT_COL.getQualifier());
     RowIterator iter = ttx.get(sc);
 
@@ -145,6 +157,7 @@ class ExportBucket {
     public ExportEntry next() {
       Entry<Bytes, ColumnIterator> rowCol = rowIter.next();
       Bytes row = rowCol.getKey();
+
       Bytes keyBytes = row.subSequence(bucketRow.length() + 1, row.length() - 8);
       Bytes seqBytes = row.subSequence(row.length() - 8, row.length());
 
@@ -164,5 +177,21 @@ class ExportBucket {
     public void remove() {
       ttx.mutate().row(lastRow).col(EXPORT_COL).delete();
     }
+  }
+
+  public Bytes getContinueRow() {
+    return ttx.get(bucketRow, NEXT_COL);
+  }
+
+  public void setContinueRow(ExportEntry ee) {
+    Bytes nextRow =
+        Bytes.newBuilder(bucketRow.length() + 1 + ee.key.length + 8).append(bucketRow).append(":")
+            .append(ee.key).append(encSeq(ee.seq)).toBytes();
+
+    ttx.set(bucketRow, NEXT_COL, nextRow);
+  }
+
+  public void clearContinueRow() {
+    ttx.delete(bucketRow, NEXT_COL);
   }
 }

@@ -30,11 +30,13 @@ public class ExportObserver<K, V> extends AbstractObserver {
 
     private long memConsumed = 0;
     private long memLimit;
+    private int extraPerKey;
     private Iterator<ExportEntry> source;
 
-    public MemLimitIterator(Iterator<ExportEntry> input, long limit) {
+    public MemLimitIterator(Iterator<ExportEntry> input, long limit, int extraPerKey) {
       this.source = input;
       this.memLimit = limit;
+      this.extraPerKey = extraPerKey;
     }
 
     @Override
@@ -48,7 +50,7 @@ public class ExportObserver<K, V> extends AbstractObserver {
         throw new NoSuchElementException();
       }
       ExportEntry ee = source.next();
-      memConsumed += ee.key.length + ee.value.length;
+      memConsumed += ee.key.length + extraPerKey + ee.value.length;
       return ee;
     }
 
@@ -104,8 +106,10 @@ public class ExportObserver<K, V> extends AbstractObserver {
   public void process(TransactionBase tx, Bytes row, Column column) throws Exception {
     ExportBucket bucket = new ExportBucket(tx, row);
 
-    Iterator<ExportEntry> input = bucket.getExportIterator();
-    MemLimitIterator memLimitIter = new MemLimitIterator(input, memLimit);
+    Bytes continueRow = bucket.getContinueRow();
+
+    Iterator<ExportEntry> input = bucket.getExportIterator(continueRow);
+    MemLimitIterator memLimitIter = new MemLimitIterator(input, memLimit, 8 + queueId.length());
 
     Iterator<SequencedExport<K, V>> exportIterator =
         Iterators.transform(
@@ -120,6 +124,16 @@ public class ExportObserver<K, V> extends AbstractObserver {
     if (input.hasNext()) {
       // not everything was processed so notify self
       bucket.notifyExportObserver();
+
+      if (!memLimitIter.hasNext()) {
+        // stopped because of mem limit... set continue key
+        bucket.setContinueRow(input.next());
+        continueRow = null;
+      }
+    }
+
+    if (continueRow != null) {
+      bucket.clearContinueRow();
     }
   }
 }
