@@ -110,9 +110,11 @@ public class TableOperations {
       List<RowRange> ranges = transientRegistry.getTransientRanges();
 
       for (RowRange r : ranges) {
-        logger.debug("Compacting {} {}", r.getStart(), r.getEnd());
+        long t1 = System.currentTimeMillis();
         conn.tableOperations().compact(fluoConfig.getAccumuloTable(),
             new Text(r.getStart().toArray()), new Text(r.getEnd().toArray()), true, true);
+        long t2 = System.currentTimeMillis();
+        logger.info("Compacted {} {} in {}ms", r.getStart(), r.getEnd(), (t2 - t1));
       }
     }
   }

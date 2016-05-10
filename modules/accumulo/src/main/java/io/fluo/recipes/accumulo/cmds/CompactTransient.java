@@ -18,6 +18,7 @@ import javax.inject.Inject;
 
 import io.fluo.api.config.FluoConfiguration;
 import io.fluo.recipes.accumulo.ops.TableOperations;
+import org.slf4j.LoggerFactory;
 
 public class CompactTransient {
 
@@ -46,16 +47,18 @@ public class CompactTransient {
       }
     }
 
-    System.out.print("Compacting transient ranges ... ");
+    long t1 = System.currentTimeMillis();
     TableOperations.compactTransient(fluoConfig);
-    System.out.println("done.");
+    long t2 = System.currentTimeMillis();
     count--;
 
     while (count > 0) {
-      Thread.sleep(interval * 1000);
-      System.out.print("Compacting transient ranges ... ");
+      long sleepTime = Math.max(3 * (t2 - t1), interval * 1000);
+      LoggerFactory.getLogger(CompactTransient.class).info("Sleeping {}ms", sleepTime);
+      Thread.sleep(sleepTime);
+      t1 = System.currentTimeMillis();
       TableOperations.compactTransient(fluoConfig);
-      System.out.println("done.");
+      t2 = System.currentTimeMillis();
       count--;
     }
   }
