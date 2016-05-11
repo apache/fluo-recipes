@@ -48,17 +48,33 @@ FluoConfiguration fluoConfig = ...;
 TableOperations.compactTransient(fluoConfig);
 ```
 
-Fluo recipes provides and easy way to call `compactTransient()` from the
-command line using the `fluo exec` command as follows:
+Fluo recipes provides an easy way to compact transient ranges from the command line using the `fluo exec` command as follows:
 
 ```
-fluo exec <app name> io.fluo.recipes.accumulo.cmds.CompactTransient [<interval> [<count>]]
+fluo exec <app name> io.fluo.recipes.accumulo.cmds.CompactTransient [<interval> [<multiplier>]]
 ```
 
 If no arguments are specified the command will call `compactTransient()` once.
-If only `<interval>` is specied the command will loop forever calling
-`compactTransient()` sleeping `<interval>` seconds between calls.  If `<count>`
-is additionally specified then the command will only loop `<count>` times.
+If `<interval>` is specified the command will run forever compacting transient
+ranges sleeping `<interval>` seconds between compacting each transient ranges.
+
+In the case where Fluo is backed up in processing data a transient range could
+have a lot of data queued and compacting it too frequently would be
+counterproductive.  To avoid this the `CompactTransient` command will consider
+the time it took to compact a range when deciding when to compact that range
+next.  This is where the `<multiplier>` argument comes in, the time to sleep
+between compactions of a range is determined as follows.  If not specified, the
+multiplier defaults to 3.
+
+```java
+   sleepTime = Math.max(compactTime * multiplier, interval);
+```
+
+For example assume a Fluo application has two transient ranges.  Also assume
+CompactTransient is run with an interval of 600 and a multiplier of 10.  If the
+first range takes 20 seconds to compact, then it will be compacted again in 600
+seconds.  If the second range takes 80 seconds to compact, then it will be
+compacted again in 800 seconds.
 
 [1]: ../modules/core/src/main/java/io/fluo/recipes/common/TransientRegistry.java
 [2]: ../modules/accumulo/src/main/java/io/fluo/recipes/accumulo/ops/TableOperations.java

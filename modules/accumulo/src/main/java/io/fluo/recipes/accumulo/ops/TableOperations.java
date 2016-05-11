@@ -114,8 +114,15 @@ public class TableOperations {
         conn.tableOperations().compact(fluoConfig.getAccumuloTable(),
             new Text(r.getStart().toArray()), new Text(r.getEnd().toArray()), true, true);
         long t2 = System.currentTimeMillis();
-        logger.info("Compacted {} {} in {}ms", r.getStart(), r.getEnd(), (t2 - t1));
+        logger.info("Compacted {} in {}ms", r, (t2 - t1));
       }
     }
+  }
+
+  public static void compactTransient(FluoConfiguration fluoConfig, RowRange tRange)
+      throws Exception {
+    Connector conn = getConnector(fluoConfig);
+    conn.tableOperations().compact(fluoConfig.getAccumuloTable(),
+        new Text(tRange.getStart().toArray()), new Text(tRange.getEnd().toArray()), true, true);
   }
 }

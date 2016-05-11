@@ -51,4 +51,31 @@ public class RowRange {
 
     return false;
   }
+
+  private static void encNonAscii(StringBuilder sb, Bytes bytes) {
+    if (bytes == null) {
+      sb.append("null");
+    } else {
+      for (int i = 0; i < bytes.length(); i++) {
+        byte b = bytes.byteAt(i);
+        if (b >= 32 && b <= 126 && b != '\\') {
+          sb.append((char) b);
+        } else {
+          sb.append(String.format("\\x%02x", b & 0xff));
+        }
+      }
+    }
+  }
+
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("(");
+    encNonAscii(sb, start);
+    sb.append(", ");
+    encNonAscii(sb, end);
+    sb.append("]");
+    return sb.toString();
+  }
 }
