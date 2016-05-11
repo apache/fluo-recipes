@@ -40,6 +40,7 @@ import io.fluo.api.config.ScannerConfiguration;
 import io.fluo.api.data.Bytes;
 import io.fluo.api.data.BytesBuilder;
 import io.fluo.api.data.Column;
+import io.fluo.api.data.RowColumn;
 import io.fluo.api.data.RowColumnValue;
 import io.fluo.api.data.Span;
 import io.fluo.api.iterator.ColumnIterator;
@@ -70,6 +71,7 @@ public class CollisionFreeMap<K, V> {
   private long bufferSize;
 
   static final Column UPDATE_COL = new Column("u", "v");
+  static final Column NEXT_COL = new Column("u", "next");
 
   private int numBuckets = -1;
 
@@ -105,7 +107,24 @@ public class CollisionFreeMap<K, V> {
   }
 
   void process(TransactionBase tx, Bytes ntfyRow, Column col) throws Exception {
+
+    Bytes nextKey = tx.get(ntfyRow, NEXT_COL);
+
     ScannerConfiguration sc = new ScannerConfiguration();
+
+    if (nextKey != null) {
+      Bytes startRow =
+          Bytes.newBuilder(ntfyRow.length() + nextKey.length()).append(ntfyRow).append(nextKey)
+              .toBytes();
+      Span tmpSpan = Span.prefix(ntfyRow);
+      Span nextSpan =
+          new Span(new RowColumn(startRow, UPDATE_COL), false, tmpSpan.getEnd(),
+              tmpSpan.isEndInclusive());
+      sc.setSpan(nextSpan);
+    } else {
+      sc.setSpan(Span.prefix(ntfyRow));
+    }
+
     sc.setSpan(Span.prefix(ntfyRow));
     sc.fetchColumn(UPDATE_COL.getFamily(), UPDATE_COL.getQualifier());
     RowIterator iter = tx.get(sc);
@@ -122,10 +141,6 @@ public class CollisionFreeMap<K, V> {
         Entry<Bytes, ColumnIterator> rowCol = iter.next();
         Bytes curRow = rowCol.getKey();
 
-        // TODO processing too many at once increases chance of
-        // collisions... may want to process a max # and notify self
-        // when stopping could set a continue key
-
         tx.delete(curRow, UPDATE_COL);
 
         Bytes serializedKey = getKeyFromUpdateRow(ntfyRow, curRow);
@@ -135,11 +150,12 @@ public class CollisionFreeMap<K, V> {
         if (updateList == null) {
           updateList = new ArrayList<>();
           updates.put(serializedKey, updateList);
-          approxMemUsed += serializedKey.length();
         }
 
         Bytes val = rowCol.getValue().next().getValue();
         updateList.add(val);
+
+        approxMemUsed += curRow.length();
         approxMemUsed += val.length();
       }
 
@@ -151,11 +167,25 @@ public class CollisionFreeMap<K, V> {
         if (getKeyFromUpdateRow(ntfyRow, curRow).equals(lastKey)) {
           // there are still more updates for this key
           partiallyReadKey = lastKey;
+
+          // start next time at the current key
+          tx.set(ntfyRow, NEXT_COL, partiallyReadKey);
+        } else {
+          // start next time at the next possible key
+          Bytes nextPossible =
+              Bytes.newBuilder(lastKey.length() + 1).append(lastKey).append(new byte[] {0})
+                  .toBytes();
+          tx.set(ntfyRow, NEXT_COL, nextPossible);
         }
 
         // may not read all data because of mem limit, so notify self
         tx.setWeakNotification(ntfyRow, col);
+      } else if (nextKey != null) {
+        // clear nextKey
+        tx.delete(ntfyRow, NEXT_COL);
       }
+    } else if (nextKey != null) {
+      tx.delete(ntfyRow, NEXT_COL);
     }
 
     byte[] dataPrefix = ntfyRow.toArray();

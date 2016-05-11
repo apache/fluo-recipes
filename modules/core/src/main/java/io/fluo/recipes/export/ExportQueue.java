@@ -168,7 +168,7 @@ public class ExportQueue<K, V> {
   public static class Options {
 
     private static final String PREFIX = "recipes.exportQueue.";
-    static final long DEFAULT_BUFFER_SIZE = 1 << 22;
+    static final long DEFAULT_BUFFER_SIZE = 1 << 20;
     static final int DEFAULT_BUCKETS_PER_TABLET = 10;
 
     int numBuckets;
