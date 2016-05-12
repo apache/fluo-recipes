@@ -110,10 +110,15 @@ class ExportBucket {
     ttx.set(row, EXPORT_COL, Bytes.of(value));
   }
 
+  /**
+   * Computes the minimial row for a bucket
+   */
+  private Bytes getMinimalRow() {
+    return Bytes.newBuilder(bucketRow.length() + 1).append(bucketRow).append(":").toBytes();
+  }
+
   public void notifyExportObserver() {
-    Bytes ntfyRow =
-        Bytes.newBuilder(bucketRow.length() + 1).append(bucketRow).append(":").toBytes();
-    ttx.mutate().row(ntfyRow).col(newNotificationColumn(qid)).weaklyNotify();
+    ttx.mutate().row(getMinimalRow()).col(newNotificationColumn(qid)).weaklyNotify();
   }
 
   public Iterator<ExportEntry> getExportIterator(Bytes continueRow) {
@@ -180,7 +185,7 @@ class ExportBucket {
   }
 
   public Bytes getContinueRow() {
-    return ttx.get(bucketRow, NEXT_COL);
+    return ttx.get(getMinimalRow(), NEXT_COL);
   }
 
   public void setContinueRow(ExportEntry ee) {
@@ -188,10 +193,10 @@ class ExportBucket {
         Bytes.newBuilder(bucketRow.length() + 1 + ee.key.length + 8).append(bucketRow).append(":")
             .append(ee.key).append(encSeq(ee.seq)).toBytes();
 
-    ttx.set(bucketRow, NEXT_COL, nextRow);
+    ttx.set(getMinimalRow(), NEXT_COL, nextRow);
   }
 
   public void clearContinueRow() {
-    ttx.delete(bucketRow, NEXT_COL);
+    ttx.delete(getMinimalRow(), NEXT_COL);
   }
 }
