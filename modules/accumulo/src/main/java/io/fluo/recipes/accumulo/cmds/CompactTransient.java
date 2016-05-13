@@ -57,25 +57,26 @@ public class CompactTransient {
     @Override
     public void run() {
 
+      long t1 = System.currentTimeMillis();
+
       try {
-        long t1 = System.currentTimeMillis();
         TableOperations.compactTransient(fluoConfig, transientRange);
-        long t2 = System.currentTimeMillis();
-
-        long sleepTime = Math.max((long) (multiplier * (t2 - t1)), requestedSleepTime);
-
-        if (requestedSleepTime > 0) {
-          log.info("Compacted {} in {}ms sleeping {}ms", transientRange, t2 - t1, sleepTime);
-          schedExecutor.schedule(new CompactTask(transientRange, requestedSleepTime, multiplier),
-              sleepTime, TimeUnit.MILLISECONDS);
-        } else {
-          log.info("Compacted {} in {}ms", transientRange, t2 - t1);
-        }
-
-
       } catch (Exception e) {
         log.warn("Compaction of " + transientRange + " failed ", e);
       }
+
+      long t2 = System.currentTimeMillis();
+
+      long sleepTime = Math.max((long) (multiplier * (t2 - t1)), requestedSleepTime);
+
+      if (requestedSleepTime > 0) {
+        log.info("Compacted {} in {}ms sleeping {}ms", transientRange, t2 - t1, sleepTime);
+        schedExecutor.schedule(new CompactTask(transientRange, requestedSleepTime, multiplier),
+            sleepTime, TimeUnit.MILLISECONDS);
+      } else {
+        log.info("Compacted {} in {}ms", transientRange, t2 - t1);
+      }
+
 
     }
 
