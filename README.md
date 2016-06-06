@@ -39,32 +39,32 @@ Below are Maven dependencies for Fluo Recipes.
   <dependencies>
     <!-- Recipes core only has a transitive dependency on the Fluo API -->
     <dependency>
-      <groupId>io.fluo</groupId>
+      <groupId>org.apache.fluo</groupId>
       <artifactId>fluo-recipes-core</artifactId>
       <version>${fluo-recipes.version}</version>
     </dependency>
     <!--optional dependency provides the default Fluo Recipes serialization
         mechanism, which is based on Kryo  -->
     <dependency>
-      <groupId>io.fluo</groupId>
+      <groupId>org.apache.fluo</groupId>
       <artifactId>fluo-recipes-kryo</artifactId>
       <version>${fluo-recipes.version}</version>
     </dependency>
     <!--optional dependency assist w/ intergrating Accumulo and Fluo  -->
     <dependency>
-      <groupId>io.fluo</groupId>
+      <groupId>org.apache.fluo</groupId>
       <artifactId>fluo-recipes-accumulo</artifactId>
       <version>${fluo-recipes.version}</version>
     </dependency>
     <!--optional dependency assist w/ intergrating Spark and Fluo -->
     <dependency>
-      <groupId>io.fluo</groupId>
+      <groupId>org.apache.fluo</groupId>
       <artifactId>fluo-recipes-spark</artifactId>
       <version>${fluo-recipes.version}</version>
     </dependency>
     <!--optional dependency helps when write Fluo intergeration test. -->
     <dependency>
-      <groupId>io.fluo</groupId>
+      <groupId>org.apache.fluo</groupId>
       <artifactId>fluo-recipes-test</artifactId>
       <version>${fluo-recipes.version}</version>
       <scope>test</scope>

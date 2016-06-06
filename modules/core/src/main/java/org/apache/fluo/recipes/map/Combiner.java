@@ -1,0 +1,30 @@
+/*
+ * Copyright 2014 Fluo authors (see AUTHORS)
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
+
+package org.apache.fluo.recipes.map;
+
+import java.util.Iterator;
+import java.util.Optional;
+
+public interface Combiner<K, V> {
+  /**
+   * This function is called to combine the current value of a key with updates that were queued for
+   * the key. See the collision free map project level documentation for more information.
+   *
+   * @return Then new value for the key. Returning Optional.absent() will cause the key to be
+   *         deleted.
+   */
+
+  Optional<V> combine(K key, Iterator<V> updates);
+}

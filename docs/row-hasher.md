@@ -30,9 +30,9 @@ balancing of the prefix.
 ## Example Use
 
 ```java
-import io.fluo.api.data.Bytes;
-import io.fluo.recipes.common.Pirtos;
-import io.fluo.recipes.data.RowHasher;
+import org.apache.fluo.api.data.Bytes;
+import org.apache.fluo.recipes.common.Pirtos;
+import org.apache.fluo.recipes.data.RowHasher;
 
 public class RowHasherExample {
 
