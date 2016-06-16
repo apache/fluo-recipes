@@ -53,6 +53,6 @@ fluo new app1
 fluo init app1
 
 #optimize table for all configured recipes
-fluo exec app1 io.fluo.recipes.accumulo.cmds.OptimizeTable
+fluo exec app1 org.apache.fluo.recipes.accumulo.cmds.OptimizeTable
 
 ```

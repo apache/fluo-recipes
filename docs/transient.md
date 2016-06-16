@@ -51,7 +51,7 @@ TableOperations.compactTransient(fluoConfig);
 Fluo recipes provides an easy way to compact transient ranges from the command line using the `fluo exec` command as follows:
 
 ```
-fluo exec <app name> io.fluo.recipes.accumulo.cmds.CompactTransient [<interval> [<multiplier>]]
+fluo exec <app name> org.apache.fluo.recipes.accumulo.cmds.CompactTransient [<interval> [<multiplier>]]
 ```
 
 If no arguments are specified the command will call `compactTransient()` once.
@@ -76,5 +76,5 @@ first range takes 20 seconds to compact, then it will be compacted again in 600
 seconds.  If the second range takes 80 seconds to compact, then it will be
 compacted again in 800 seconds.
 
-[1]: ../modules/core/src/main/java/io/fluo/recipes/common/TransientRegistry.java
-[2]: ../modules/accumulo/src/main/java/io/fluo/recipes/accumulo/ops/TableOperations.java
+[1]: ../modules/core/src/main/java/org/apache/fluo/recipes/common/TransientRegistry.java
+[2]: ../modules/accumulo/src/main/java/org/apache/fluo/recipes/accumulo/ops/TableOperations.java
