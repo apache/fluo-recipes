@@ -1,8 +1,8 @@
-# Fluo Recipes
+# Apache Fluo Recipes
 
-[![Build Status](https://travis-ci.org/fluo-io/fluo-recipes.svg?branch=master)](https://travis-ci.org/fluo-io/fluo-recipes)
+[![Build Status](https://travis-ci.org/apache/fluo-recipes.svg?branch=master)](https://travis-ci.org/apache/fluo-recipes)
 
-Common code for Fluo application developers.  
+Common code for [Apache Fluo][fluo] application developers.  
 
 ### Available Recipes
 
@@ -72,6 +72,7 @@ Below are Maven dependencies for Fluo Recipes.
   </dependencies>
 ```
 
+[fluo]: https://fluo.incubator.apache.org/
 [cfm]: docs/cfm.md
 [export-q]: docs/export-queue.md
 [recording-tx]: docs/recording-tx.md

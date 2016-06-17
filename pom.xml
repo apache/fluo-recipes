@@ -27,14 +27,14 @@
     <module>modules/test</module>
   </modules>
   <scm>
-    <connection>scm:git:https://github.com/fluo-io/fluo-recipes.git</connection>
-    <developerConnection>scm:git:git@github.com:fluo-io/fluo-recipes.git</developerConnection>
+    <connection>scm:git:https://git-wip-us.apache.org/repos/asf/incubator-fluo-recipes.git</connection>
+    <developerConnection>scm:git:https://git-wip-us.apache.org/repos/asf/incubator-fluo-recipes.git</developerConnection>
     <tag>HEAD</tag>
-    <url>https://github.com/fluo-io/fluo-recipes</url>
+    <url>https://git-wip-us.apache.org/repos/asf/incubator-fluo-recipes.git</url>
   </scm>
   <issueManagement>
     <system>GitHub</system>
-    <url>https://github.com/fluo-io/fluo-recipes/issues</url>
+    <url>https://github.com/apache/incubator-fluo-recipes/issues</url>
   </issueManagement>
   <properties>
     <accumulo.version>1.7.1</accumulo.version>
