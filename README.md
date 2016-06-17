@@ -72,7 +72,7 @@ Below are Maven dependencies for Fluo Recipes.
   </dependencies>
 ```
 
-[fluo]: https://fluo.incubator.apache.org/
+[fluo]: https://fluo.apache.org/
 [cfm]: docs/cfm.md
 [export-q]: docs/export-queue.md
 [recording-tx]: docs/recording-tx.md
