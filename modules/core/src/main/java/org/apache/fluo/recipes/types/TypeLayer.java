@@ -309,7 +309,7 @@ public class TypeLayer {
    */
   public abstract class SimpleFamilyMethods<R1> {
 
-    protected Data data;
+    Data data;
 
     SimpleFamilyMethods(Data data) {
       this.data = data;
@@ -367,7 +367,7 @@ public class TypeLayer {
    */
   public abstract class QualifierMethods<R> {
 
-    protected Data data;
+    private Data data;
 
     QualifierMethods(Data data) {
       this.data = data;
@@ -408,7 +408,7 @@ public class TypeLayer {
 
     private Data data;
 
-    public VisibilityMethods(Data data) {
+    VisibilityMethods(Data data) {
       this.data = data;
     }
 

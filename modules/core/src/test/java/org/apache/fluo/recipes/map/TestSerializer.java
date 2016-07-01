@@ -15,8 +15,8 @@
 
 package org.apache.fluo.recipes.map;
 
-import org.apache.fluo.recipes.serialization.SimpleSerializer;
 import org.apache.commons.configuration.Configuration;
+import org.apache.fluo.recipes.serialization.SimpleSerializer;
 
 public class TestSerializer implements SimpleSerializer {
 

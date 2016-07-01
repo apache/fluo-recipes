@@ -28,6 +28,7 @@ import java.util.Random;
 import java.util.Set;
 
 import com.google.common.collect.Iterators;
+import org.apache.commons.io.FileUtils;
 import org.apache.fluo.api.client.FluoClient;
 import org.apache.fluo.api.client.FluoFactory;
 import org.apache.fluo.api.client.LoaderExecutor;
@@ -42,7 +43,6 @@ import org.apache.fluo.api.iterator.ColumnIterator;
 import org.apache.fluo.api.iterator.RowIterator;
 import org.apache.fluo.api.mini.MiniFluo;
 import org.apache.fluo.recipes.serialization.SimpleSerializer;
-import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;

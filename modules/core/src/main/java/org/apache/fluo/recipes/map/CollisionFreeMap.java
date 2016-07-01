@@ -33,6 +33,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
+import org.apache.commons.configuration.Configuration;
 import org.apache.fluo.api.client.SnapshotBase;
 import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.config.FluoConfiguration;
@@ -51,7 +52,6 @@ import org.apache.fluo.recipes.common.RowRange;
 import org.apache.fluo.recipes.common.TransientRegistry;
 import org.apache.fluo.recipes.impl.BucketUtil;
 import org.apache.fluo.recipes.serialization.SimpleSerializer;
-import org.apache.commons.configuration.Configuration;
 
 /**
  * See the project level documentation for information about this recipe.

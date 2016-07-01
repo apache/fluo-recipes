@@ -25,6 +25,7 @@ import java.util.regex.Pattern;
 
 import com.google.common.base.Preconditions;
 import com.google.common.hash.Hashing;
+import org.apache.commons.configuration.Configuration;
 import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.config.ObserverConfiguration;
@@ -33,7 +34,6 @@ import org.apache.fluo.recipes.common.Pirtos;
 import org.apache.fluo.recipes.common.RowRange;
 import org.apache.fluo.recipes.common.TransientRegistry;
 import org.apache.fluo.recipes.serialization.SimpleSerializer;
-import org.apache.commons.configuration.Configuration;
 
 public class ExportQueue<K, V> {
 

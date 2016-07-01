@@ -18,8 +18,8 @@ package org.apache.fluo.recipes.test.export;
 import java.util.Collection;
 import java.util.Collections;
 
-import org.apache.fluo.recipes.accumulo.export.AccumuloExport;
 import org.apache.accumulo.core.data.Mutation;
+import org.apache.fluo.recipes.accumulo.export.AccumuloExport;
 
 public class TestExport implements AccumuloExport<String> {
 

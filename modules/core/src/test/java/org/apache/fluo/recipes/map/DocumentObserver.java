@@ -22,8 +22,8 @@ import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
-import org.apache.fluo.api.types.TypedObserver;
-import org.apache.fluo.api.types.TypedTransactionBase;
+import org.apache.fluo.recipes.types.TypedObserver;
+import org.apache.fluo.recipes.types.TypedTransactionBase;
 
 public class DocumentObserver extends TypedObserver {
 

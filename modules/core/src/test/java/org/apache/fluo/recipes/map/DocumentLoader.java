@@ -15,8 +15,8 @@
 
 package org.apache.fluo.recipes.map;
 
-import org.apache.fluo.api.types.TypedLoader;
-import org.apache.fluo.api.types.TypedTransactionBase;
+import org.apache.fluo.recipes.types.TypedLoader;
+import org.apache.fluo.recipes.types.TypedTransactionBase;
 
 public class DocumentLoader extends TypedLoader {
 

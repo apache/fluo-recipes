@@ -21,9 +21,9 @@ import java.util.Set;
 
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
-import org.apache.fluo.api.types.TypedObserver;
-import org.apache.fluo.api.types.TypedTransactionBase;
 import org.apache.fluo.recipes.export.ExportTestBase.RefExporter;
+import org.apache.fluo.recipes.types.TypedObserver;
+import org.apache.fluo.recipes.types.TypedTransactionBase;
 
 public class DocumentObserver extends TypedObserver {
 

@@ -22,10 +22,10 @@ import java.util.Objects;
 import java.util.Optional;
 
 import com.google.common.base.Preconditions;
+import org.apache.accumulo.core.data.Mutation;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
 import org.apache.fluo.api.data.RowColumn;
-import org.apache.accumulo.core.data.Mutation;
 
 /**
  * Implemented by users to export data to Accumulo by comparing the differences between a

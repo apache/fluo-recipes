@@ -28,9 +28,9 @@ import com.esotericsoftware.kryo.pool.KryoCallback;
 import com.esotericsoftware.kryo.pool.KryoFactory;
 import com.esotericsoftware.kryo.pool.KryoPool;
 import com.google.common.base.Preconditions;
+import org.apache.commons.configuration.Configuration;
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.recipes.serialization.SimpleSerializer;
-import org.apache.commons.configuration.Configuration;
 
 public class KryoSimplerSerializer implements SimpleSerializer, Serializable {
 

@@ -20,13 +20,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import org.apache.commons.configuration.Configuration;
 import org.apache.fluo.api.client.FluoClient;
 import org.apache.fluo.api.client.FluoFactory;
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.recipes.export.ExportQueue;
 import org.apache.fluo.recipes.map.CollisionFreeMap;
-import org.apache.commons.configuration.Configuration;
 
 /**
  * Post initialization recommended table optimizations.

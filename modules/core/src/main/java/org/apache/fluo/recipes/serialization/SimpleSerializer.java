@@ -15,8 +15,8 @@
 
 package org.apache.fluo.recipes.serialization;
 
-import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.commons.configuration.Configuration;
+import org.apache.fluo.api.config.FluoConfiguration;
 
 public interface SimpleSerializer {
 

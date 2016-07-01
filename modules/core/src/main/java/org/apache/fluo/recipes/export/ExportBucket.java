@@ -28,10 +28,10 @@ import org.apache.fluo.api.data.RowColumn;
 import org.apache.fluo.api.data.Span;
 import org.apache.fluo.api.iterator.ColumnIterator;
 import org.apache.fluo.api.iterator.RowIterator;
-import org.apache.fluo.api.types.StringEncoder;
-import org.apache.fluo.api.types.TypeLayer;
-import org.apache.fluo.api.types.TypedTransactionBase;
 import org.apache.fluo.recipes.impl.BucketUtil;
+import org.apache.fluo.recipes.types.StringEncoder;
+import org.apache.fluo.recipes.types.TypeLayer;
+import org.apache.fluo.recipes.types.TypedTransactionBase;
 
 /**
  * This class encapsulates a buckets serialization code.

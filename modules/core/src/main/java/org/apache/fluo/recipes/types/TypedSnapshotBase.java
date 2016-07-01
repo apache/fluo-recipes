@@ -58,7 +58,7 @@ public class TypedSnapshotBase implements SnapshotBase {
    */
   public class VisibilityMethods extends Value {
 
-    public VisibilityMethods(Data data) {
+    VisibilityMethods(Data data) {
       super(data);
     }
 
@@ -89,7 +89,7 @@ public class TypedSnapshotBase implements SnapshotBase {
   public class Value {
     private Bytes bytes;
     private boolean gotBytes = false;
-    protected Data data;
+    Data data;
 
     public Bytes getBytes() {
       if (!gotBytes) {
@@ -525,13 +525,7 @@ public class TypedSnapshotBase implements SnapshotBase {
 
   @SuppressWarnings({"unchecked"})
   private Map<Column, Value> wrap(Map<Column, Bytes> map) {
-    Map<Column, Value> ret = Maps.transformValues(map, new Function<Bytes, Value>() {
-      @Override
-      public Value apply(Bytes input) {
-        return new Value(input);
-      }
-    });
-
+    Map<Column, Value> ret = Maps.transformValues(map, input -> new Value(input));
     return Collections.unmodifiableMap(DefaultedMap.decorate(ret, new Value((Bytes) null)));
   }
 

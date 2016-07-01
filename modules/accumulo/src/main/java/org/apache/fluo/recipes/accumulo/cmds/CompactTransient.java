@@ -22,13 +22,13 @@ import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 
+import org.apache.commons.configuration.Configuration;
 import org.apache.fluo.api.client.FluoClient;
 import org.apache.fluo.api.client.FluoFactory;
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.recipes.accumulo.ops.TableOperations;
 import org.apache.fluo.recipes.common.RowRange;
 import org.apache.fluo.recipes.common.TransientRegistry;
-import org.apache.commons.configuration.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

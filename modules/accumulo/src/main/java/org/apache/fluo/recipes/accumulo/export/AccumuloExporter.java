@@ -18,12 +18,12 @@ package org.apache.fluo.recipes.accumulo.export;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import org.apache.accumulo.core.data.Mutation;
+import org.apache.commons.configuration.Configuration;
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.observer.Observer.Context;
 import org.apache.fluo.recipes.export.Exporter;
 import org.apache.fluo.recipes.export.SequencedExport;
-import org.apache.accumulo.core.data.Mutation;
-import org.apache.commons.configuration.Configuration;
 
 /**
  * An {@link Exporter} that takes {@link AccumuloExport} objects and writes mutations to Accumulo
