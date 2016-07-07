@@ -21,9 +21,9 @@ import java.util.List;
 
 import javax.xml.bind.DatatypeConverter;
 
-import org.apache.commons.configuration.Configuration;
 import org.apache.fluo.api.client.FluoClient;
 import org.apache.fluo.api.config.FluoConfiguration;
+import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
 
 /**
@@ -33,7 +33,7 @@ import org.apache.fluo.api.data.Bytes;
 
 public class TransientRegistry {
 
-  private Configuration appConfig;
+  private SimpleConfiguration appConfig;
   private static final String PREFIX = "recipes.transientRange.";
 
   /**
@@ -43,7 +43,7 @@ public class TransientRegistry {
    *        {@link FluoClient#getAppConfiguration()} or
    *        {@link org.apache.fluo.api.observer.Observer.Context#getAppConfiguration()}
    */
-  public TransientRegistry(Configuration appConfig) {
+  public TransientRegistry(SimpleConfiguration appConfig) {
     this.appConfig = appConfig;
   }
 
@@ -55,7 +55,7 @@ public class TransientRegistry {
     String start = DatatypeConverter.printHexBinary(range.getStart().toArray());
     String end = DatatypeConverter.printHexBinary(range.getEnd().toArray());
 
-    appConfig.addProperty(PREFIX + id, start + ":" + end);
+    appConfig.setProperty(PREFIX + id, start + ":" + end);
   }
 
   /**

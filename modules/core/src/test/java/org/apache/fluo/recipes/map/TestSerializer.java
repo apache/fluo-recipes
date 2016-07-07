@@ -15,7 +15,7 @@
 
 package org.apache.fluo.recipes.map;
 
-import org.apache.commons.configuration.Configuration;
+import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.recipes.serialization.SimpleSerializer;
 
 public class TestSerializer implements SimpleSerializer {
@@ -40,6 +40,6 @@ public class TestSerializer implements SimpleSerializer {
   }
 
   @Override
-  public void init(Configuration appConfig) {}
+  public void init(SimpleConfiguration appConfig) {}
 
 }

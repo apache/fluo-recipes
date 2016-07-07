@@ -25,10 +25,10 @@ import java.util.regex.Pattern;
 
 import com.google.common.base.Preconditions;
 import com.google.common.hash.Hashing;
-import org.apache.commons.configuration.Configuration;
 import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.config.ObserverConfiguration;
+import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.recipes.common.Pirtos;
 import org.apache.fluo.recipes.common.RowRange;
@@ -83,7 +83,7 @@ public class ExportQueue<K, V> {
   }
 
   public static <K2, V2> ExportQueue<K2, V2> getInstance(String exportQueueId,
-      Configuration appConfig) {
+      SimpleConfiguration appConfig) {
     Options opts = new Options(exportQueueId, appConfig);
     try {
       return new ExportQueue<>(opts, SimpleSerializer.getInstance(appConfig));
@@ -99,7 +99,7 @@ public class ExportQueue<K, V> {
    * @param fluoConfig The configuration that will be used to initialize fluo.
    */
   public static void configure(FluoConfiguration fluoConfig, Options opts) {
-    Configuration appConfig = fluoConfig.getAppConfiguration();
+    SimpleConfiguration appConfig = fluoConfig.getAppConfiguration();
     opts.save(appConfig);
 
     fluoConfig.addObserver(new ObserverConfiguration(ExportObserver.class.getName())
@@ -120,7 +120,7 @@ public class ExportQueue<K, V> {
    *        {@code FluoConfiguration.getAppConfiguration()}
    */
 
-  public static Pirtos getTableOptimizations(Configuration appConfig) {
+  public static Pirtos getTableOptimizations(SimpleConfiguration appConfig) {
     HashSet<String> queueIds = new HashSet<>();
     appConfig.getKeys(Options.PREFIX.substring(0, Options.PREFIX.length() - 1)).forEachRemaining(
         k -> queueIds.add(k.substring(Options.PREFIX.length()).split("\\.", 2)[0]));
@@ -138,7 +138,7 @@ public class ExportQueue<K, V> {
    *        {@code FluoClient.getAppConfiguration()} or
    *        {@code FluoConfiguration.getAppConfiguration()}
    */
-  public static Pirtos getTableOptimizations(String queueId, Configuration appConfig) {
+  public static Pirtos getTableOptimizations(String queueId, SimpleConfiguration appConfig) {
     Options opts = new Options(queueId, appConfig);
 
     List<Bytes> splits = new ArrayList<>();
@@ -181,7 +181,7 @@ public class ExportQueue<K, V> {
     String exporterType;
     String queueId;
 
-    Options(String queueId, Configuration appConfig) {
+    Options(String queueId, SimpleConfiguration appConfig) {
       this.queueId = queueId;
 
       this.numBuckets = appConfig.getInt(PREFIX + queueId + ".buckets");
@@ -190,7 +190,7 @@ public class ExportQueue<K, V> {
       this.valueType = appConfig.getString(PREFIX + queueId + ".val");
       this.bufferSize = appConfig.getLong(PREFIX + queueId + ".bufferSize", DEFAULT_BUFFER_SIZE);
       this.bucketsPerTablet =
-          appConfig.getInteger(PREFIX + queueId + ".bucketsPerTablet", DEFAULT_BUCKETS_PER_TABLET);
+          appConfig.getInt(PREFIX + queueId + ".bucketsPerTablet", DEFAULT_BUCKETS_PER_TABLET);
     }
 
     public Options(String queueId, String exporterType, String keyType, String valueType,
@@ -256,7 +256,7 @@ public class ExportQueue<K, V> {
       return bucketsPerTablet;
     }
 
-    void save(Configuration appConfig) {
+    void save(SimpleConfiguration appConfig) {
       appConfig.setProperty(PREFIX + queueId + ".buckets", numBuckets + "");
       appConfig.setProperty(PREFIX + queueId + ".exporter", exporterType + "");
       appConfig.setProperty(PREFIX + queueId + ".key", keyType);

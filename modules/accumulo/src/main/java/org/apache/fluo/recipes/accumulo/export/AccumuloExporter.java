@@ -19,8 +19,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 import org.apache.accumulo.core.data.Mutation;
-import org.apache.commons.configuration.Configuration;
 import org.apache.fluo.api.config.FluoConfiguration;
+import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.observer.Observer.Context;
 import org.apache.fluo.recipes.export.Exporter;
 import org.apache.fluo.recipes.export.SequencedExport;
@@ -37,7 +37,7 @@ public class AccumuloExporter<K> extends Exporter<K, AccumuloExport<K>> {
   @Override
   public void init(String queueId, Context context) throws Exception {
 
-    Configuration appConf = context.getAppConfiguration();
+    SimpleConfiguration appConf = context.getAppConfiguration();
 
     String instanceName = appConf.getString("recipes.accumuloExporter." + queueId + ".instance");
     String zookeepers = appConf.getString("recipes.accumuloExporter." + queueId + ".zookeepers");
@@ -50,7 +50,7 @@ public class AccumuloExporter<K> extends Exporter<K, AccumuloExport<K>> {
   }
 
   public static void setExportTableInfo(FluoConfiguration fconf, String queueId, TableInfo ti) {
-    Configuration appConf = fconf.getAppConfiguration();
+    SimpleConfiguration appConf = fconf.getAppConfiguration();
     appConf.setProperty("recipes.accumuloExporter." + queueId + ".instance", ti.instanceName);
     appConf.setProperty("recipes.accumuloExporter." + queueId + ".zookeepers", ti.zookeepers);
     appConf.setProperty("recipes.accumuloExporter." + queueId + ".user", ti.user);

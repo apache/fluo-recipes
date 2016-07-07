@@ -20,10 +20,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-import org.apache.commons.configuration.Configuration;
 import org.apache.fluo.api.client.FluoClient;
 import org.apache.fluo.api.client.FluoFactory;
 import org.apache.fluo.api.config.FluoConfiguration;
+import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.recipes.export.ExportQueue;
 import org.apache.fluo.recipes.map.CollisionFreeMap;
@@ -71,7 +71,7 @@ public class Pirtos {
    */
   public static Pirtos getConfiguredOptimizations(FluoConfiguration fluoConfig) {
     try (FluoClient client = FluoFactory.newClient(fluoConfig)) {
-      Configuration appConfig = client.getAppConfiguration();
+      SimpleConfiguration appConfig = client.getAppConfiguration();
       Pirtos pirtos = new Pirtos();
 
       pirtos.merge(ExportQueue.getTableOptimizations(appConfig));

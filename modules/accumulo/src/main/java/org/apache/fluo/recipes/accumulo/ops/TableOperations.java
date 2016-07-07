@@ -23,10 +23,10 @@ import org.apache.accumulo.core.client.ClientConfiguration;
 import org.apache.accumulo.core.client.Connector;
 import org.apache.accumulo.core.client.ZooKeeperInstance;
 import org.apache.accumulo.core.client.security.tokens.PasswordToken;
-import org.apache.commons.configuration.Configuration;
 import org.apache.fluo.api.client.FluoClient;
 import org.apache.fluo.api.client.FluoFactory;
 import org.apache.fluo.api.config.FluoConfiguration;
+import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.recipes.common.Pirtos;
 import org.apache.fluo.recipes.common.RowRange;
@@ -105,7 +105,7 @@ public class TableOperations {
     Connector conn = getConnector(fluoConfig);
 
     try (FluoClient client = FluoFactory.newClient(fluoConfig)) {
-      Configuration appConfig = client.getAppConfiguration();
+      SimpleConfiguration appConfig = client.getAppConfiguration();
 
       TransientRegistry transientRegistry = new TransientRegistry(appConfig);
       List<RowRange> ranges = transientRegistry.getTransientRanges();

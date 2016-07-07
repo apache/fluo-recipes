@@ -22,10 +22,10 @@ import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 
-import org.apache.commons.configuration.Configuration;
 import org.apache.fluo.api.client.FluoClient;
 import org.apache.fluo.api.client.FluoFactory;
 import org.apache.fluo.api.config.FluoConfiguration;
+import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.recipes.accumulo.ops.TableOperations;
 import org.apache.fluo.recipes.common.RowRange;
 import org.apache.fluo.recipes.common.TransientRegistry;
@@ -111,7 +111,7 @@ public class CompactTransient {
     List<RowRange> transientRanges;
 
     try (FluoClient client = FluoFactory.newClient(fluoConfig)) {
-      Configuration appConfig = client.getAppConfiguration();
+      SimpleConfiguration appConfig = client.getAppConfiguration();
 
       TransientRegistry tr = new TransientRegistry(appConfig);
 

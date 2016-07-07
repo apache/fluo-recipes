@@ -15,15 +15,15 @@
 
 package org.apache.fluo.recipes.serialization;
 
-import org.apache.commons.configuration.Configuration;
 import org.apache.fluo.api.config.FluoConfiguration;
+import org.apache.fluo.api.config.SimpleConfiguration;
 
 public interface SimpleSerializer {
 
   /**
    * Called immediately after construction and passed Fluo application configuration.
    */
-  public void init(Configuration appConfig);
+  public void init(SimpleConfiguration appConfig);
 
   // TODO refactor to support reuse of objects and byte arrays???
   public <T> byte[] serialize(T obj);
@@ -39,7 +39,7 @@ public interface SimpleSerializer {
     fluoConfig.getAppConfiguration().setProperty("recipes.serializer", serializerType);
   }
 
-  public static SimpleSerializer getInstance(Configuration appConfig) {
+  public static SimpleSerializer getInstance(SimpleConfiguration appConfig) {
     String serType =
         appConfig.getString("recipes.serializer",
             "org.apache.fluo.recipes.kryo.KryoSimplerSerializer");

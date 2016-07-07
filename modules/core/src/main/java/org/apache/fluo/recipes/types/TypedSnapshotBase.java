@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import org.apache.commons.collections.map.DefaultedMap;
 import org.apache.fluo.api.client.SnapshotBase;

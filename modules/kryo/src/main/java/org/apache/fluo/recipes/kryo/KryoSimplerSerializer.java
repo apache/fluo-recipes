@@ -28,8 +28,8 @@ import com.esotericsoftware.kryo.pool.KryoCallback;
 import com.esotericsoftware.kryo.pool.KryoFactory;
 import com.esotericsoftware.kryo.pool.KryoPool;
 import com.google.common.base.Preconditions;
-import org.apache.commons.configuration.Configuration;
 import org.apache.fluo.api.config.FluoConfiguration;
+import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.recipes.serialization.SimpleSerializer;
 
 public class KryoSimplerSerializer implements SimpleSerializer, Serializable {
@@ -96,7 +96,7 @@ public class KryoSimplerSerializer implements SimpleSerializer, Serializable {
   }
 
   @Override
-  public void init(Configuration appConfig) {
+  public void init(SimpleConfiguration appConfig) {
     Preconditions.checkArgument(factory == null && factoryType == null, "Already initialized");
     factoryType = appConfig.getString(KRYO_FACTORY_PROP, DefaultFactory.class.getName());
   }

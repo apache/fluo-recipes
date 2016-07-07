@@ -18,7 +18,7 @@ package org.apache.fluo.recipes.export;
 import java.nio.charset.StandardCharsets;
 
 import com.google.gson.Gson;
-import org.apache.commons.configuration.Configuration;
+import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.recipes.serialization.SimpleSerializer;
 
 public class GsonSerializer implements SimpleSerializer {
@@ -26,7 +26,7 @@ public class GsonSerializer implements SimpleSerializer {
   private Gson gson = new Gson();
 
   @Override
-  public void init(Configuration appConfig) {
+  public void init(SimpleConfiguration appConfig) {
 
   }
 

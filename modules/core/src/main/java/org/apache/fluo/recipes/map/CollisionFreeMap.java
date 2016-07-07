@@ -33,12 +33,12 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
-import org.apache.commons.configuration.Configuration;
 import org.apache.fluo.api.client.SnapshotBase;
 import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.config.ObserverConfiguration;
 import org.apache.fluo.api.config.ScannerConfiguration;
+import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.BytesBuilder;
 import org.apache.fluo.api.data.Column;
@@ -375,7 +375,8 @@ public class CollisionFreeMap<K, V> {
   }
 
 
-  public static <K2, V2> CollisionFreeMap<K2, V2> getInstance(String mapId, Configuration appConf) {
+  public static <K2, V2> CollisionFreeMap<K2, V2> getInstance(String mapId,
+      SimpleConfiguration appConf) {
     Options opts = new Options(mapId, appConf);
     try {
       return new CollisionFreeMap<>(opts, SimpleSerializer.getInstance(appConf));
@@ -448,7 +449,7 @@ public class CollisionFreeMap<K, V> {
 
     private static final String PREFIX = "recipes.cfm.";
 
-    Options(String mapId, Configuration appConfig) {
+    Options(String mapId, SimpleConfiguration appConfig) {
       this.mapId = mapId;
 
       this.numBuckets = appConfig.getInt(PREFIX + mapId + ".buckets");
@@ -458,7 +459,7 @@ public class CollisionFreeMap<K, V> {
       this.updateObserverType = appConfig.getString(PREFIX + mapId + ".updateObserver", null);
       this.bufferSize = appConfig.getLong(PREFIX + mapId + ".bufferSize", DEFAULT_BUFFER_SIZE);
       this.bucketsPerTablet =
-          appConfig.getInteger(PREFIX + mapId + ".bucketsPerTablet", DEFAULT_BUCKETS_PER_TABLET);
+          appConfig.getInt(PREFIX + mapId + ".bucketsPerTablet", DEFAULT_BUCKETS_PER_TABLET);
     }
 
     public Options(String mapId, String combinerType, String keyType, String valType, int buckets) {
@@ -544,7 +545,7 @@ public class CollisionFreeMap<K, V> {
           .getName(), buckets);
     }
 
-    void save(Configuration appConfig) {
+    void save(SimpleConfiguration appConfig) {
       appConfig.setProperty(PREFIX + mapId + ".buckets", numBuckets + "");
       appConfig.setProperty(PREFIX + mapId + ".combiner", combinerType + "");
       appConfig.setProperty(PREFIX + mapId + ".key", keyType);
@@ -584,7 +585,7 @@ public class CollisionFreeMap<K, V> {
    *        {@code FluoClient.getAppConfiguration()} or
    *        {@code FluoConfiguration.getAppConfiguration()}
    */
-  public static Pirtos getTableOptimizations(Configuration appConfig) {
+  public static Pirtos getTableOptimizations(SimpleConfiguration appConfig) {
     HashSet<String> mapIds = new HashSet<>();
     appConfig.getKeys(Options.PREFIX.substring(0, Options.PREFIX.length() - 1)).forEachRemaining(
         k -> mapIds.add(k.substring(Options.PREFIX.length()).split("\\.", 2)[0]));
@@ -602,7 +603,7 @@ public class CollisionFreeMap<K, V> {
    *        {@code FluoClient.getAppConfiguration()} or
    *        {@code FluoConfiguration.getAppConfiguration()}
    */
-  public static Pirtos getTableOptimizations(String mapId, Configuration appConfig) {
+  public static Pirtos getTableOptimizations(String mapId, SimpleConfiguration appConfig) {
     Options opts = new Options(mapId, appConfig);
 
     BytesBuilder rowBuilder = Bytes.newBuilder();
