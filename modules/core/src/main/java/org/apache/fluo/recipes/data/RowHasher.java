@@ -24,7 +24,7 @@ import com.google.common.base.Strings;
 import com.google.common.hash.Hashing;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.BytesBuilder;
-import org.apache.fluo.recipes.common.Pirtos;
+import org.apache.fluo.recipes.common.TableOptimizations;
 
 /**
  * This recipe provides code to help add a hash of the row as a prefix of the row. Using this recipe
@@ -44,7 +44,7 @@ public class RowHasher {
 
   private static final int HASH_LEN = 4;
 
-  public Pirtos getTableOptimizations(int numTablets) {
+  public TableOptimizations getTableOptimizations(int numTablets) {
 
     List<Bytes> splits = new ArrayList<>(numTablets - 1);
 
@@ -60,11 +60,11 @@ public class RowHasher {
     splits.add(Bytes.of(prefix + "~"));
 
 
-    Pirtos pirtos = new Pirtos();
-    pirtos.setSplits(splits);
-    pirtos.setTabletGroupingRegex(Pattern.quote(prefix.toString()));
+    TableOptimizations tableOptim = new TableOptimizations();
+    tableOptim.setSplits(splits);
+    tableOptim.setTabletGroupingRegex(Pattern.quote(prefix.toString()));
 
-    return pirtos;
+    return tableOptim;
   }
 
 

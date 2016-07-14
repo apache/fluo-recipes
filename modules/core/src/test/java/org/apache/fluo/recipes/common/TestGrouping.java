@@ -41,10 +41,11 @@ public class TestGrouping {
     ExportQueue.configure(conf, new org.apache.fluo.recipes.export.ExportQueue.Options("eq2", "et",
         "kt", "vt", 3));
 
-    Pirtos pirtos = CollisionFreeMap.getTableOptimizations(conf.getAppConfiguration());
-    pirtos.merge(ExportQueue.getTableOptimizations(conf.getAppConfiguration()));
+    TableOptimizations tableOptim =
+        CollisionFreeMap.getTableOptimizations(conf.getAppConfiguration());
+    tableOptim.merge(ExportQueue.getTableOptimizations(conf.getAppConfiguration()));
 
-    Pattern pattern = Pattern.compile(pirtos.getTabletGroupingRegex());
+    Pattern pattern = Pattern.compile(tableOptim.getTabletGroupingRegex());
 
     Assert.assertEquals("m1:u:", group(pattern, "m1:u:f0c"));
     Assert.assertEquals("m1:d:", group(pattern, "m1:d:f0c"));
@@ -57,20 +58,20 @@ public class TestGrouping {
     Assert.assertEquals("none", group(pattern, "eq3:f0c"));
 
     // validate the assumptions this test is making
-    Assert.assertTrue(pirtos.getSplits().contains(Bytes.of("eq1#")));
-    Assert.assertTrue(pirtos.getSplits().contains(Bytes.of("eq2#")));
-    Assert.assertTrue(pirtos.getSplits().contains(Bytes.of("eq1:~")));
-    Assert.assertTrue(pirtos.getSplits().contains(Bytes.of("eq2:~")));
-    Assert.assertTrue(pirtos.getSplits().contains(Bytes.of("m1:u:~")));
-    Assert.assertTrue(pirtos.getSplits().contains(Bytes.of("m1:d:~")));
-    Assert.assertTrue(pirtos.getSplits().contains(Bytes.of("m2:u:~")));
-    Assert.assertTrue(pirtos.getSplits().contains(Bytes.of("m2:d:~")));
+    Assert.assertTrue(tableOptim.getSplits().contains(Bytes.of("eq1#")));
+    Assert.assertTrue(tableOptim.getSplits().contains(Bytes.of("eq2#")));
+    Assert.assertTrue(tableOptim.getSplits().contains(Bytes.of("eq1:~")));
+    Assert.assertTrue(tableOptim.getSplits().contains(Bytes.of("eq2:~")));
+    Assert.assertTrue(tableOptim.getSplits().contains(Bytes.of("m1:u:~")));
+    Assert.assertTrue(tableOptim.getSplits().contains(Bytes.of("m1:d:~")));
+    Assert.assertTrue(tableOptim.getSplits().contains(Bytes.of("m2:u:~")));
+    Assert.assertTrue(tableOptim.getSplits().contains(Bytes.of("m2:d:~")));
 
     Set<String> expectedGroups =
         ImmutableSet.of("m1:u:", "m1:d:", "m2:u:", "m2:d:", "eq1:", "eq2:");
 
     // ensure all splits group as expected
-    for (Bytes split : pirtos.getSplits()) {
+    for (Bytes split : tableOptim.getSplits()) {
       String g = group(pattern, split.toString());
 
       if (expectedGroups.contains(g)) {

@@ -30,7 +30,7 @@ import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.config.ObserverConfiguration;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
-import org.apache.fluo.recipes.common.Pirtos;
+import org.apache.fluo.recipes.common.TableOptimizations;
 import org.apache.fluo.recipes.common.RowRange;
 import org.apache.fluo.recipes.common.TransientRegistry;
 import org.apache.fluo.recipes.serialization.SimpleSerializer;
@@ -120,15 +120,15 @@ public class ExportQueue<K, V> {
    *        {@code FluoConfiguration.getAppConfiguration()}
    */
 
-  public static Pirtos getTableOptimizations(SimpleConfiguration appConfig) {
+  public static TableOptimizations getTableOptimizations(SimpleConfiguration appConfig) {
     HashSet<String> queueIds = new HashSet<>();
     appConfig.getKeys(Options.PREFIX.substring(0, Options.PREFIX.length() - 1)).forEachRemaining(
         k -> queueIds.add(k.substring(Options.PREFIX.length()).split("\\.", 2)[0]));
 
-    Pirtos pirtos = new Pirtos();
-    queueIds.forEach(qid -> pirtos.merge(getTableOptimizations(qid, appConfig)));
+    TableOptimizations tableOptim = new TableOptimizations();
+    queueIds.forEach(qid -> tableOptim.merge(getTableOptimizations(qid, appConfig)));
 
-    return pirtos;
+    return tableOptim;
   }
 
   /**
@@ -138,7 +138,8 @@ public class ExportQueue<K, V> {
    *        {@code FluoClient.getAppConfiguration()} or
    *        {@code FluoConfiguration.getAppConfiguration()}
    */
-  public static Pirtos getTableOptimizations(String queueId, SimpleConfiguration appConfig) {
+  public static TableOptimizations getTableOptimizations(String queueId,
+      SimpleConfiguration appConfig) {
     Options opts = new Options(queueId, appConfig);
 
     List<Bytes> splits = new ArrayList<>();
@@ -156,14 +157,14 @@ public class ExportQueue<K, V> {
     Collections.sort(exportSplits);
     splits.addAll(exportSplits);
 
-    Pirtos pirtos = new Pirtos();
-    pirtos.setSplits(splits);
+    TableOptimizations tableOptim = new TableOptimizations();
+    tableOptim.setSplits(splits);
 
     // the tablet with end row <queueId># does not contain any data for the export queue and
     // should not be grouped with the export queue
-    pirtos.setTabletGroupingRegex(Pattern.quote(queueId + ":"));
+    tableOptim.setTabletGroupingRegex(Pattern.quote(queueId + ":"));
 
-    return pirtos;
+    return tableOptim;
   }
 
   public static class Options {

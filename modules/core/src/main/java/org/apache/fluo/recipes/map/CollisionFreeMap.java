@@ -47,7 +47,7 @@ import org.apache.fluo.api.data.RowColumnValue;
 import org.apache.fluo.api.data.Span;
 import org.apache.fluo.api.iterator.ColumnIterator;
 import org.apache.fluo.api.iterator.RowIterator;
-import org.apache.fluo.recipes.common.Pirtos;
+import org.apache.fluo.recipes.common.TableOptimizations;
 import org.apache.fluo.recipes.common.RowRange;
 import org.apache.fluo.recipes.common.TransientRegistry;
 import org.apache.fluo.recipes.impl.BucketUtil;
@@ -585,15 +585,15 @@ public class CollisionFreeMap<K, V> {
    *        {@code FluoClient.getAppConfiguration()} or
    *        {@code FluoConfiguration.getAppConfiguration()}
    */
-  public static Pirtos getTableOptimizations(SimpleConfiguration appConfig) {
+  public static TableOptimizations getTableOptimizations(SimpleConfiguration appConfig) {
     HashSet<String> mapIds = new HashSet<>();
     appConfig.getKeys(Options.PREFIX.substring(0, Options.PREFIX.length() - 1)).forEachRemaining(
         k -> mapIds.add(k.substring(Options.PREFIX.length()).split("\\.", 2)[0]));
 
-    Pirtos pirtos = new Pirtos();
-    mapIds.forEach(mid -> pirtos.merge(getTableOptimizations(mid, appConfig)));
+    TableOptimizations tableOptim = new TableOptimizations();
+    mapIds.forEach(mid -> tableOptim.merge(getTableOptimizations(mid, appConfig)));
 
-    return pirtos;
+    return tableOptim;
   }
 
   /**
@@ -603,7 +603,7 @@ public class CollisionFreeMap<K, V> {
    *        {@code FluoClient.getAppConfiguration()} or
    *        {@code FluoConfiguration.getAppConfiguration()}
    */
-  public static Pirtos getTableOptimizations(String mapId, SimpleConfiguration appConfig) {
+  public static TableOptimizations getTableOptimizations(String mapId, SimpleConfiguration appConfig) {
     Options opts = new Options(mapId, appConfig);
 
     BytesBuilder rowBuilder = Bytes.newBuilder();
@@ -634,12 +634,12 @@ public class CollisionFreeMap<K, V> {
     splits.addAll(dataSplits);
     splits.addAll(updateSplits);
 
-    Pirtos pirtos = new Pirtos();
-    pirtos.setSplits(splits);
+    TableOptimizations tableOptim = new TableOptimizations();
+    tableOptim.setSplits(splits);
 
-    pirtos.setTabletGroupingRegex(Pattern.quote(mapId + ":") + "[du]:");
+    tableOptim.setTabletGroupingRegex(Pattern.quote(mapId + ":") + "[du]:");
 
-    return pirtos;
+    return tableOptim;
   }
 
   private static byte[] encSeq(long l) {

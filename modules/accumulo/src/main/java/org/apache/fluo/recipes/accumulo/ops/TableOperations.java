@@ -28,7 +28,7 @@ import org.apache.fluo.api.client.FluoFactory;
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
-import org.apache.fluo.recipes.common.Pirtos;
+import org.apache.fluo.recipes.common.TableOptimizations;
 import org.apache.fluo.recipes.common.RowRange;
 import org.apache.fluo.recipes.common.TransientRegistry;
 import org.apache.hadoop.io.Text;
@@ -64,28 +64,30 @@ public class TableOperations {
   /**
    * This method will perform all post initialization recommended actions.
    */
-  public static void optimizeTable(FluoConfiguration fluoConfig, Pirtos pirtos) throws Exception {
+  public static void optimizeTable(FluoConfiguration fluoConfig, TableOptimizations tableOptim)
+      throws Exception {
 
     Connector conn = getConnector(fluoConfig);
 
     TreeSet<Text> splits = new TreeSet<>();
 
-    for (Bytes split : pirtos.getSplits()) {
+    for (Bytes split : tableOptim.getSplits()) {
       splits.add(new Text(split.toArray()));
     }
 
     String table = fluoConfig.getAccumuloTable();
     conn.tableOperations().addSplits(table, splits);
 
-    if (pirtos.getTabletGroupingRegex() != null && !pirtos.getTabletGroupingRegex().isEmpty()) {
+    if (tableOptim.getTabletGroupingRegex() != null
+        && !tableOptim.getTabletGroupingRegex().isEmpty()) {
       // was going to call :
       // conn.instanceOperations().testClassLoad(RGB_CLASS, TABLET_BALANCER_CLASS)
       // but that failed. See ACCUMULO-4068
 
       try {
         // setting this prop first intentionally because it should fail in 1.6
-        conn.tableOperations()
-            .setProperty(table, RGB_PATTERN_PROP, pirtos.getTabletGroupingRegex());
+        conn.tableOperations().setProperty(table, RGB_PATTERN_PROP,
+            tableOptim.getTabletGroupingRegex());
         conn.tableOperations().setProperty(table, RGB_DEFAULT_PROP, "none");
         conn.tableOperations().setProperty(table, TABLE_BALANCER_PROP, RGB_CLASS);
       } catch (AccumuloException e) {

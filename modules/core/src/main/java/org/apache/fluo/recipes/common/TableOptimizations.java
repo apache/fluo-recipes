@@ -31,8 +31,7 @@ import org.apache.fluo.recipes.map.CollisionFreeMap;
 /**
  * Post initialization recommended table optimizations.
  */
-
-public class Pirtos {
+public class TableOptimizations {
   private List<Bytes> splits = new ArrayList<>();
   private String tabletGroupingRegex = "";
 
@@ -57,7 +56,7 @@ public class Pirtos {
     return "(" + tabletGroupingRegex + ").*";
   }
 
-  public void merge(Pirtos other) {
+  public void merge(TableOptimizations other) {
     splits.addAll(other.splits);
     if (tabletGroupingRegex.length() > 0 && other.tabletGroupingRegex.length() > 0) {
       tabletGroupingRegex += "|" + other.tabletGroupingRegex;
@@ -69,15 +68,15 @@ public class Pirtos {
   /**
    * A utility method to get table optimizations for all configured recipes.
    */
-  public static Pirtos getConfiguredOptimizations(FluoConfiguration fluoConfig) {
+  public static TableOptimizations getConfiguredOptimizations(FluoConfiguration fluoConfig) {
     try (FluoClient client = FluoFactory.newClient(fluoConfig)) {
       SimpleConfiguration appConfig = client.getAppConfiguration();
-      Pirtos pirtos = new Pirtos();
+      TableOptimizations tableOptim = new TableOptimizations();
 
-      pirtos.merge(ExportQueue.getTableOptimizations(appConfig));
-      pirtos.merge(CollisionFreeMap.getTableOptimizations(appConfig));
+      tableOptim.merge(ExportQueue.getTableOptimizations(appConfig));
+      tableOptim.merge(CollisionFreeMap.getTableOptimizations(appConfig));
 
-      return pirtos;
+      return tableOptim;
     }
   }
 }
