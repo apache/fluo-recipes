@@ -25,6 +25,9 @@ import org.apache.fluo.api.data.RowColumn;
 import org.apache.hadoop.io.Text;
 import org.apache.spark.Partitioner;
 
+/**
+ * @since 1.0.0
+ */
 public class AccumuloRangePartitioner extends Partitioner {
 
   private static final long serialVersionUID = 1L;

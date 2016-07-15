@@ -15,6 +15,9 @@
 
 package org.apache.fluo.recipes.core.export;
 
+/**
+ * @since 1.0.0
+ */
 public class SequencedExport<K, V> extends Export<K, V> {
   private final long seq;
 

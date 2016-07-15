@@ -27,6 +27,8 @@ import org.apache.fluo.api.data.RowColumn;
 
 /**
  * Contains list of operations (GET, SET, DELETE) performed during a {@link RecordingTransaction}
+ *
+ * @since 1.0.0
  */
 public class TxLog {
 

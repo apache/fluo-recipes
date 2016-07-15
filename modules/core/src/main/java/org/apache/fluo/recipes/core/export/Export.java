@@ -17,6 +17,9 @@ package org.apache.fluo.recipes.core.export;
 
 import java.util.Objects;
 
+/**
+ * @since 1.0.0
+ */
 public class Export<K, V> {
   private final K key;
   private final V value;

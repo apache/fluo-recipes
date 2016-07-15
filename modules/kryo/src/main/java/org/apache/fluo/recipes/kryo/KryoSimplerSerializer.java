@@ -32,6 +32,9 @@ import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
 
+/***
+ * @since 1.0.0
+ */
 public class KryoSimplerSerializer implements SimpleSerializer, Serializable {
 
   private static final long serialVersionUID = 1L;

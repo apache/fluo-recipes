@@ -17,6 +17,9 @@ package org.apache.fluo.recipes.core.map;
 
 import java.util.Optional;
 
+/**
+ * @since 1.0.0
+ */
 public class Update<K, V> {
 
   private final K key;

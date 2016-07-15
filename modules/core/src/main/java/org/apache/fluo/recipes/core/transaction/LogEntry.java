@@ -23,6 +23,8 @@ import org.apache.fluo.api.data.Column;
 /**
  * Logs an operation (i.e GET, SET, or DELETE) in a Transaction. Multiple LogEntry objects make up a
  * {@link TxLog}.
+ *
+ * @since 1.0.0
  */
 public class LogEntry {
 

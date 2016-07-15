@@ -39,6 +39,8 @@ import org.apache.fluo.recipes.core.common.Pirtos;
  * 
  * <p>
  * The project documentation has more information.
+ *
+ * @since 1.0.0
  */
 public class RowHasher {
 

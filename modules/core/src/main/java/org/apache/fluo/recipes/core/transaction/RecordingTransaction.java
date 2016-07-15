@@ -23,6 +23,8 @@ import org.apache.fluo.api.exceptions.CommitException;
 /**
  * An implementation of {@link Transaction} that logs all transactions operations (GET, SET, or
  * DELETE) in a {@link TxLog} that can be used for exports
+ *
+ * @since 1.0.0
  */
 public class RecordingTransaction extends RecordingTransactionBase implements Transaction {
 

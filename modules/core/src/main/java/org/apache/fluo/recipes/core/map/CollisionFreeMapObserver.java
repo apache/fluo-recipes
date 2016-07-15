@@ -23,8 +23,9 @@ import org.apache.fluo.api.observer.AbstractObserver;
 /**
  * This class is configured for use by CollisionFreeMap.configure(FluoConfiguration,
  * CollisionFreeMap.Options) . This class should never have to be used directly.
+ *
+ * @since 1.0.0
  */
-
 public class CollisionFreeMapObserver extends AbstractObserver {
 
   @SuppressWarnings("rawtypes")

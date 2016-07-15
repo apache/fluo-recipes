@@ -33,6 +33,8 @@ import org.apache.fluo.api.iterator.RowIterator;
 /**
  * An implementation of {@link TransactionBase} that logs all transactions operations (GET, SET, or
  * DELETE) in a {@link TxLog} that can be used for exports
+ *
+ * @since 1.0.0
  */
 public class RecordingTransactionBase implements TransactionBase {
 

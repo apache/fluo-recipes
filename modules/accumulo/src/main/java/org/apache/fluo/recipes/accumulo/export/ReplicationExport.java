@@ -33,6 +33,7 @@ import org.apache.fluo.recipes.core.transaction.TxLog;
  * TxLog
  *
  * @param <K> Type of export queue key
+ * @since 1.0.0
  */
 public class ReplicationExport<K> implements AccumuloExport<K> {
 

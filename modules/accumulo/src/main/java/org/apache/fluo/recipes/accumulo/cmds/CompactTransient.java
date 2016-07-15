@@ -32,12 +32,14 @@ import org.apache.fluo.recipes.core.common.TransientRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * @since 1.0.0
+ */
 public class CompactTransient {
 
   // when run with fluo exec command, the applications fluo config will be injected
   @Inject
   private static FluoConfiguration fluoConfig;
-
 
   private static ScheduledExecutorService schedExecutor;
 
@@ -77,12 +79,7 @@ public class CompactTransient {
       } else {
         log.info("Compacted {} in {}ms", transientRange, t2 - t1);
       }
-
-
     }
-
-
-
   }
 
   public static void main(String[] args) throws Exception {

@@ -29,6 +29,7 @@ import org.apache.fluo.recipes.core.export.SequencedExport;
  * An {@link Exporter} that takes {@link AccumuloExport} objects and writes mutations to Accumulo
  *
  * @param <K> Export queue key type
+ * @since 1.0.0
  */
 public class AccumuloExporter<K> extends Exporter<K, AccumuloExport<K>> {
 

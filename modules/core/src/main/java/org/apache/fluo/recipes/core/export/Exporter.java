@@ -19,6 +19,9 @@ import java.util.Iterator;
 
 import org.apache.fluo.api.observer.Observer.Context;
 
+/**
+ * @since 1.0.0
+ */
 public abstract class Exporter<K, V> {
 
   public void init(String queueId, Context observerContext) throws Exception {}

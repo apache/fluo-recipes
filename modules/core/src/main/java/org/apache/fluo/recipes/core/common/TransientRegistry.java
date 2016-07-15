@@ -29,8 +29,9 @@ import org.apache.fluo.api.data.Bytes;
 /**
  * This class offers a standard way to register transient ranges. The project level documentation
  * provides a comprehensive overview.
+ *
+ * @since 1.0.0
  */
-
 public class TransientRegistry {
 
   private SimpleConfiguration appConfig;

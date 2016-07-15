@@ -25,6 +25,9 @@ import org.apache.fluo.api.data.Column;
 import org.apache.fluo.api.observer.AbstractObserver;
 import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
 
+/**
+ * @since 1.0.0
+ */
 public class ExportObserver<K, V> extends AbstractObserver {
 
   private static class MemLimitIterator implements Iterator<ExportEntry> {

@@ -19,6 +19,9 @@ import java.util.Objects;
 
 import org.apache.fluo.api.data.Bytes;
 
+/**
+ * @since 1.0.0
+ */
 public class RowRange {
   private final Bytes start;
   private final Bytes end;

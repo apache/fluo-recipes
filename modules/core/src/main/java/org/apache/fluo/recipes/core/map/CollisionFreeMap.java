@@ -55,6 +55,8 @@ import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
 
 /**
  * See the project level documentation for information about this recipe.
+ *
+ * @since 1.0.0
  */
 public class CollisionFreeMap<K, V> {
 
@@ -374,7 +376,6 @@ public class CollisionFreeMap<K, V> {
     }
   }
 
-
   public static <K2, V2> CollisionFreeMap<K2, V2> getInstance(String mapId,
       SimpleConfiguration appConf) {
     Options opts = new Options(mapId, appConf);
@@ -397,7 +398,6 @@ public class CollisionFreeMap<K, V> {
       SimpleSerializer serializer) {
     return new Initializer<>(mapId, numBuckets, serializer);
   }
-
 
   /**
    * @see CollisionFreeMap#getInitializer(String, int, SimpleSerializer)

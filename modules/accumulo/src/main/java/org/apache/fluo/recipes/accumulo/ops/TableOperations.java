@@ -37,8 +37,9 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Utility methods for operating on the Fluo table used by recipes.
+ *
+ * @since 1.0.0
  */
-
 public class TableOperations {
 
   private static final String RGB_CLASS =

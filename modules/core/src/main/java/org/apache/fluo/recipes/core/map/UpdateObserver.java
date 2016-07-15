@@ -23,8 +23,9 @@ import org.apache.fluo.api.observer.Observer.Context;
 /**
  * A {@link CollisionFreeMap} calls this to allow additional processing to be done when key values
  * are updated. See the project level documentation for more information.
+ *
+ * @since 1.0.0
  */
-
 public abstract class UpdateObserver<K, V> {
   public void init(String mapId, Context observerContext) throws Exception {}
 

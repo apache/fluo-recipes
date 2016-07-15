@@ -23,6 +23,7 @@ import org.apache.accumulo.core.data.Mutation;
  * Implemented by users to export data to Accumulo.
  * 
  * @param <K> Export queue key type
+ * @since 1.0.0
  */
 public interface AccumuloExport<K> {
 

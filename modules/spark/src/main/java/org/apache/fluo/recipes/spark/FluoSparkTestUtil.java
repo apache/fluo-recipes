@@ -21,6 +21,8 @@ import org.apache.spark.api.java.JavaSparkContext;
 
 /**
  * Utility code for Fluo/Spark testing
+ *
+ * @since 1.0.0
  */
 public class FluoSparkTestUtil {
 

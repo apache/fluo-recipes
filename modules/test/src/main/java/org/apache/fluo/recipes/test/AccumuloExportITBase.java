@@ -90,6 +90,8 @@ import org.junit.BeforeClass;
  *    }
  * </code>
  * </pre>
+ *
+ * @since 1.0.0
  */
 public class AccumuloExportITBase {
 

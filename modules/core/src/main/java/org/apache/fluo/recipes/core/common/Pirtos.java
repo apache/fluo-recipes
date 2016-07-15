@@ -30,8 +30,9 @@ import org.apache.fluo.recipes.core.map.CollisionFreeMap;
 
 /**
  * Post initialization recommended table optimizations.
+ *
+ * @since 1.0.0
  */
-
 public class Pirtos {
   private List<Bytes> splits = new ArrayList<>();
   private String tabletGroupingRegex = "";

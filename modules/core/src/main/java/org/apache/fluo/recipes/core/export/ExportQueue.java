@@ -35,6 +35,9 @@ import org.apache.fluo.recipes.core.common.RowRange;
 import org.apache.fluo.recipes.core.common.TransientRegistry;
 import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
 
+/**
+ * @since 1.0.0
+ */
 public class ExportQueue<K, V> {
 
   private static final String RANGE_BEGIN = "#";
