@@ -15,6 +15,9 @@
 
 package org.apache.fluo.recipes.accumulo.export;
 
+/**
+ * @since 1.0.0
+ */
 public class TableInfo {
   String instanceName;
   String zookeepers;

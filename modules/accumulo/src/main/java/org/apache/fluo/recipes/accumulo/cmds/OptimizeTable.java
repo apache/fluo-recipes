@@ -19,8 +19,11 @@ import javax.inject.Inject;
 
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.recipes.accumulo.ops.TableOperations;
-import org.apache.fluo.recipes.common.TableOptimizations;
+import org.apache.fluo.recipes.core.common.TableOptimizations;
 
+/**
+ * @since 1.0.0
+ */
 public class OptimizeTable {
 
   // when run with fluo exec command, the applications fluo config will be injected
@@ -32,7 +35,6 @@ public class OptimizeTable {
       System.out.println("Usage : " + OptimizeTable.class.getName());
       System.exit(-1);
     }
-
 
     TableOperations.optimizeTable(fluoConfig,
         TableOptimizations.getConfiguredOptimizations(fluoConfig));

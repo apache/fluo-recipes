@@ -44,6 +44,7 @@ import org.apache.fluo.api.data.RowColumn;
  *
  * @param <K> Export queue key type
  * @param <V> Type of export value object used to generate data
+ * @since 1.0.0
  */
 public abstract class DifferenceExport<K, V> implements AccumuloExport<K> {
 

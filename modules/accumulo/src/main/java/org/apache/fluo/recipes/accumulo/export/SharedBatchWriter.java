@@ -36,14 +36,14 @@ import org.apache.accumulo.core.client.ZooKeeperInstance;
 import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.data.Mutation;
 
-public class SharedBatchWriter {
+class SharedBatchWriter {
 
   private static class Mutations {
 
     List<Mutation> mutations;
     CountDownLatch cdl = new CountDownLatch(1);
 
-    public Mutations(Collection<Mutation> mutations) {
+    Mutations(Collection<Mutation> mutations) {
       this.mutations = new ArrayList<>(mutations);
     }
   }
@@ -52,8 +52,8 @@ public class SharedBatchWriter {
 
     private BatchWriter bw;
 
-    public ExportTask(String instanceName, String zookeepers, String user, String password,
-        String table) throws TableNotFoundException, AccumuloException, AccumuloSecurityException {
+    ExportTask(String instanceName, String zookeepers, String user, String password, String table)
+        throws TableNotFoundException, AccumuloException, AccumuloSecurityException {
       ZooKeeperInstance zki =
           new ZooKeeperInstance(new ClientConfiguration().withInstance(instanceName).withZkHosts(
               zookeepers));
@@ -107,7 +107,7 @@ public class SharedBatchWriter {
 
   private static LinkedBlockingQueue<Mutations> exportQueue = null;
 
-  public SharedBatchWriter(String instanceName, String zookeepers, String user, String password,
+  private SharedBatchWriter(String instanceName, String zookeepers, String user, String password,
       String table) throws Exception {
 
     // TODO: fix this write to static and remove findbugs max rank override in pom.xml
@@ -121,7 +121,7 @@ public class SharedBatchWriter {
 
   private static Map<String, SharedBatchWriter> exporters = new HashMap<>();
 
-  public static synchronized SharedBatchWriter getInstance(String instanceName, String zookeepers,
+  static synchronized SharedBatchWriter getInstance(String instanceName, String zookeepers,
       String user, String password, String table) throws Exception {
 
     String key =
@@ -137,7 +137,7 @@ public class SharedBatchWriter {
     return ret;
   }
 
-  public void write(Collection<Mutation> mutations) {
+  void write(Collection<Mutation> mutations) {
     Mutations work = new Mutations(mutations);
     exportQueue.add(work);
     try {

@@ -31,8 +31,8 @@ balancing of the prefix.
 
 ```java
 import org.apache.fluo.api.data.Bytes;
-import org.apache.fluo.recipes.common.TableOptimizations;
-import org.apache.fluo.recipes.data.RowHasher;
+import org.apache.fluo.recipes.core.common.TableOptimizations;
+import org.apache.fluo.recipes.core.data.RowHasher;
 
 public class RowHasherExample {
 

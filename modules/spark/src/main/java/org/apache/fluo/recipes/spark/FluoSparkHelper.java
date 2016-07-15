@@ -54,6 +54,8 @@ import scala.Tuple2;
 
 /**
  * Helper methods for using Fluo with Spark
+ *
+ * @since 1.0.0
  */
 public class FluoSparkHelper {
 

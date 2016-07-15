@@ -28,17 +28,18 @@ import org.apache.fluo.api.client.FluoFactory;
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
-import org.apache.fluo.recipes.common.TableOptimizations;
-import org.apache.fluo.recipes.common.RowRange;
-import org.apache.fluo.recipes.common.TransientRegistry;
+import org.apache.fluo.recipes.core.common.TableOptimizations;
+import org.apache.fluo.recipes.core.common.RowRange;
+import org.apache.fluo.recipes.core.common.TransientRegistry;
 import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Utility methods for operating on the Fluo table used by recipes.
+ *
+ * @since 1.0.0
  */
-
 public class TableOperations {
 
   private static final String RGB_CLASS =

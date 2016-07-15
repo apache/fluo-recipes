@@ -22,13 +22,14 @@ import org.apache.accumulo.core.data.Mutation;
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.observer.Observer.Context;
-import org.apache.fluo.recipes.export.Exporter;
-import org.apache.fluo.recipes.export.SequencedExport;
+import org.apache.fluo.recipes.core.export.Exporter;
+import org.apache.fluo.recipes.core.export.SequencedExport;
 
 /**
  * An {@link Exporter} that takes {@link AccumuloExport} objects and writes mutations to Accumulo
  *
  * @param <K> Export queue key type
+ * @since 1.0.0
  */
 public class AccumuloExporter<K> extends Exporter<K, AccumuloExport<K>> {
 

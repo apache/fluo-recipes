@@ -45,6 +45,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Helper for creating integration tests that connect to a MiniFluo/MiniAccumuloCluster instance.
+ *
+ * @since 1.0.0
  */
 public class FluoITHelper {
 

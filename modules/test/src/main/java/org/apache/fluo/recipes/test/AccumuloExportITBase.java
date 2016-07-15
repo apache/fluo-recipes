@@ -31,7 +31,7 @@ import org.apache.fluo.api.client.FluoFactory;
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.mini.MiniFluo;
 import org.apache.fluo.recipes.accumulo.ops.TableOperations;
-import org.apache.fluo.recipes.common.TableOptimizations;
+import org.apache.fluo.recipes.core.common.TableOptimizations;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -90,6 +90,8 @@ import org.junit.BeforeClass;
  *    }
  * </code>
  * </pre>
+ *
+ * @since 1.0.0
  */
 public class AccumuloExportITBase {
 

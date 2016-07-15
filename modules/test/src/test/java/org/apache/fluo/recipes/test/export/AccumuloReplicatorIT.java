@@ -33,12 +33,12 @@ import org.apache.fluo.recipes.accumulo.export.AccumuloExport;
 import org.apache.fluo.recipes.accumulo.export.AccumuloExporter;
 import org.apache.fluo.recipes.accumulo.export.ReplicationExport;
 import org.apache.fluo.recipes.accumulo.export.TableInfo;
-import org.apache.fluo.recipes.export.ExportQueue;
+import org.apache.fluo.recipes.core.export.ExportQueue;
 import org.apache.fluo.recipes.test.AccumuloExportITBase;
-import org.apache.fluo.recipes.transaction.RecordingTransaction;
-import org.apache.fluo.recipes.types.StringEncoder;
-import org.apache.fluo.recipes.types.TypeLayer;
-import org.apache.fluo.recipes.types.TypedTransaction;
+import org.apache.fluo.recipes.core.transaction.RecordingTransaction;
+import org.apache.fluo.recipes.core.types.StringEncoder;
+import org.apache.fluo.recipes.core.types.TypeLayer;
+import org.apache.fluo.recipes.core.types.TypedTransaction;
 import org.junit.Assert;
 import org.junit.Test;
 
