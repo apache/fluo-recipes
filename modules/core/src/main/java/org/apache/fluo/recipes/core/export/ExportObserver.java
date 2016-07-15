@@ -125,10 +125,13 @@ public class ExportObserver<K, V> extends AbstractObserver {
 
     exporter.processExports(exportIterator);
 
-    if (input.hasNext()) {
-      // not everything was processed so notify self
+    if (input.hasNext() || continueRow != null) {
+      // not everything was processed so notify self OR new data may have been inserted above the
+      // continue row
       bucket.notifyExportObserver();
+    }
 
+    if (input.hasNext()) {
       if (!memLimitIter.hasNext()) {
         // stopped because of mem limit... set continue key
         bucket.setContinueRow(input.next());

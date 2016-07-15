@@ -177,7 +177,6 @@ public class BigUpdateIT {
   }
 
   private void checkUpdates(TypedSnapshot snap, long expectedVal, long expectedRows) {
-
     RowScanner rows = snap.scanner().over(Span.prefix("side:")).byRow().build();
 
     int row = 0;

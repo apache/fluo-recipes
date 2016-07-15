@@ -125,8 +125,6 @@ public class CollisionFreeMap<K, V> {
       span = Span.prefix(ntfyRow);
     }
 
-    // TODO
-    span = Span.prefix(ntfyRow);
     Iterator<RowColumnValue> iter = tx.scanner().over(span).fetch(UPDATE_COL).build().iterator();
 
     Map<Bytes, List<Bytes>> updates = new HashMap<>();
@@ -134,6 +132,7 @@ public class CollisionFreeMap<K, V> {
     long approxMemUsed = 0;
 
     Bytes partiallyReadKey = null;
+    boolean setNextKey = false;
 
     if (iter.hasNext()) {
       Bytes lastKey = null;
@@ -178,14 +177,21 @@ public class CollisionFreeMap<K, V> {
           tx.set(ntfyRow, NEXT_COL, nextPossible);
         }
 
-        // may not read all data because of mem limit, so notify self
-        tx.setWeakNotification(ntfyRow, col);
+        setNextKey = true;
       } else if (nextKey != null) {
         // clear nextKey
         tx.delete(ntfyRow, NEXT_COL);
       }
     } else if (nextKey != null) {
       tx.delete(ntfyRow, NEXT_COL);
+    }
+
+    if (nextKey != null || setNextKey) {
+      // If not all data was read need to run again in the future. If scanning was started in the
+      // middle of the bucket, its possible there is new data before nextKey that still needs to be
+      // processed. If scanning stopped before reading the entire bucket there may be data after the
+      // stop point.
+      tx.setWeakNotification(ntfyRow, col);
     }
 
     byte[] dataPrefix = ntfyRow.toArray();
