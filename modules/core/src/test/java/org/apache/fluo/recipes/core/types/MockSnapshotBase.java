@@ -22,11 +22,10 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.fluo.api.client.SnapshotBase;
-import org.apache.fluo.api.config.ScannerConfiguration;
+import org.apache.fluo.api.client.scanner.ScannerBuilder;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
 import org.apache.fluo.api.data.RowColumn;
-import org.apache.fluo.api.iterator.RowIterator;
 import org.apache.fluo.core.impl.TxStringUtil;
 
 public class MockSnapshotBase implements SnapshotBase {
@@ -81,7 +80,7 @@ public class MockSnapshotBase implements SnapshotBase {
   }
 
   @Override
-  public RowIterator get(ScannerConfiguration config) {
+  public ScannerBuilder scanner() {
     throw new UnsupportedOperationException();
   }
 

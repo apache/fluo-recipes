@@ -15,17 +15,21 @@
 
 package org.apache.fluo.recipes.core.transaction;
 
-import java.util.AbstractMap;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
+import com.google.common.collect.Iterators;
 import org.apache.fluo.api.client.Transaction;
-import org.apache.fluo.api.config.ScannerConfiguration;
+import org.apache.fluo.api.client.scanner.CellScanner;
+import org.apache.fluo.api.client.scanner.ColumnScanner;
+import org.apache.fluo.api.client.scanner.RowScanner;
+import org.apache.fluo.api.client.scanner.RowScannerBuilder;
+import org.apache.fluo.api.client.scanner.ScannerBuilder;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
-import org.apache.fluo.api.iterator.ColumnIterator;
-import org.apache.fluo.api.iterator.RowIterator;
+import org.apache.fluo.api.data.ColumnValue;
+import org.apache.fluo.api.data.RowColumnValue;
 import org.apache.fluo.recipes.core.types.StringEncoder;
 import org.apache.fluo.recipes.core.types.TypeLayer;
 import org.apache.fluo.recipes.core.types.TypedTransaction;
@@ -154,67 +158,64 @@ public class RecordingTransactionTest {
   }
 
   @Test
-  public void testGetScanNull() {
-    ScannerConfiguration scanConfig = new ScannerConfiguration();
-    expect(tx.get(scanConfig)).andReturn(null);
-    replay(tx);
-    Assert.assertNull(rtx.get(scanConfig));
-    verify(tx);
-  }
-
-  @Test
   public void testGetScanIter() {
-    ScannerConfiguration scanConfig = new ScannerConfiguration();
-    expect(tx.get(scanConfig)).andReturn(new RowIterator() {
-
-      private boolean hasNextRow = true;
-
+    ScannerBuilder sb = mock(ScannerBuilder.class);
+    expect(sb.build()).andReturn(new CellScanner() {
       @Override
-      public boolean hasNext() {
-        return hasNextRow;
-      }
-
-      @Override
-      public Map.Entry<Bytes, ColumnIterator> next() {
-        hasNextRow = false;
-        return new AbstractMap.SimpleEntry<>(Bytes.of("r7"), new ColumnIterator() {
-
-          private boolean hasNextCol = true;
-
-          @Override
-          public boolean hasNext() {
-            return hasNextCol;
-          }
-
-          @Override
-          public Map.Entry<Column, Bytes> next() {
-            hasNextCol = false;
-            return new AbstractMap.SimpleEntry<>(new Column("cf7", "cq7"), Bytes.of("v7"));
-          }
-        });
+      public Iterator<RowColumnValue> iterator() {
+        return Iterators
+            .singletonIterator(new RowColumnValue("r7", new Column("cf7", "cq7"), "v7"));
       }
     });
-    replay(tx);
-    RowIterator rowIter = rtx.get(scanConfig);
-    Assert.assertNotNull(rowIter);
+
+    expect(tx.scanner()).andReturn(sb);
+
+    replay(tx, sb);
+
+    Iterator<RowColumnValue> iter = rtx.scanner().build().iterator();
     Assert.assertTrue(rtx.getTxLog().isEmpty());
-    Assert.assertTrue(rowIter.hasNext());
-    Map.Entry<Bytes, ColumnIterator> rowEntry = rowIter.next();
-    Assert.assertFalse(rowIter.hasNext());
-    Assert.assertEquals(Bytes.of("r7"), rowEntry.getKey());
-    ColumnIterator colIter = rowEntry.getValue();
-    Assert.assertTrue(colIter.hasNext());
-    Assert.assertTrue(rtx.getTxLog().isEmpty());
-    Map.Entry<Column, Bytes> colEntry = colIter.next();
+    Assert.assertTrue(iter.hasNext());
+    Assert.assertEquals(new RowColumnValue("r7", new Column("cf7", "cq7"), "v7"), iter.next());
     Assert.assertFalse(rtx.getTxLog().isEmpty());
-    Assert.assertFalse(colIter.hasNext());
-    Assert.assertEquals(new Column("cf7", "cq7"), colEntry.getKey());
-    Assert.assertEquals(Bytes.of("v7"), colEntry.getValue());
     List<LogEntry> entries = rtx.getTxLog().getLogEntries();
     Assert.assertEquals(1, entries.size());
     Assert.assertEquals("LogEntry{op=GET, row=r7, col=cf7 cq7 , value=v7}", entries.get(0)
         .toString());
-    verify(tx);
+
+    verify(tx, sb);
+  }
+
+  @Test
+  public void testGetRowScanner() {
+    ColumnScanner cs = mock(ColumnScanner.class);
+    RowScanner rs = mock(RowScanner.class);
+    RowScannerBuilder rsb = mock(RowScannerBuilder.class);
+    ScannerBuilder sb = mock(ScannerBuilder.class);
+
+    expect(cs.getRow()).andReturn(Bytes.of("r7")).times(2);
+    expect(cs.iterator()).andReturn(
+        Iterators.singletonIterator(new ColumnValue(new Column("cf7", "cq7"), "v7")));
+    expect(rs.iterator()).andReturn(Iterators.singletonIterator(cs));
+    expect(rsb.build()).andReturn(rs);
+    expect(sb.byRow()).andReturn(rsb);
+    expect(tx.scanner()).andReturn(sb);
+
+    replay(tx, sb, rsb, rs, cs);
+
+    Iterator<ColumnScanner> riter = rtx.scanner().byRow().build().iterator();
+    Assert.assertTrue(riter.hasNext());
+    ColumnScanner cscanner = riter.next();
+    Assert.assertEquals(Bytes.of("r7"), cscanner.getRow());
+    Iterator<ColumnValue> citer = cscanner.iterator();
+    Assert.assertTrue(citer.hasNext());
+    Assert.assertTrue(rtx.getTxLog().isEmpty());
+    Assert.assertEquals(new ColumnValue(new Column("cf7", "cq7"), "v7"), citer.next());
+    List<LogEntry> entries = rtx.getTxLog().getLogEntries();
+    Assert.assertEquals(1, entries.size());
+    Assert.assertEquals("LogEntry{op=GET, row=r7, col=cf7 cq7 , value=v7}", entries.get(0)
+        .toString());
+
+    verify(tx, sb, rsb, rs, cs);
   }
 
   @Test

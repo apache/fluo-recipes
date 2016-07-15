@@ -15,20 +15,26 @@
 
 package org.apache.fluo.recipes.core.transaction;
 
-import java.util.AbstractMap;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 
+import com.google.common.collect.Iterators;
 import org.apache.fluo.api.client.TransactionBase;
-import org.apache.fluo.api.config.ScannerConfiguration;
+import org.apache.fluo.api.client.scanner.CellScanner;
+import org.apache.fluo.api.client.scanner.ColumnScanner;
+import org.apache.fluo.api.client.scanner.RowScanner;
+import org.apache.fluo.api.client.scanner.RowScannerBuilder;
+import org.apache.fluo.api.client.scanner.ScannerBuilder;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
+import org.apache.fluo.api.data.ColumnValue;
 import org.apache.fluo.api.data.RowColumn;
+import org.apache.fluo.api.data.RowColumnValue;
+import org.apache.fluo.api.data.Span;
 import org.apache.fluo.api.exceptions.AlreadySetException;
-import org.apache.fluo.api.iterator.ColumnIterator;
-import org.apache.fluo.api.iterator.RowIterator;
 
 /**
  * An implementation of {@link TransactionBase} that logs all transactions operations (GET, SET, or
@@ -136,50 +142,167 @@ public class RecordingTransactionBase implements TransactionBase {
     return rowColVal;
   }
 
+  private class RtxIterator implements Iterator<RowColumnValue> {
+
+    private Iterator<RowColumnValue> iter;
+
+    public RtxIterator(Iterator<RowColumnValue> iterator) {
+      this.iter = iterator;
+    }
+
+    @Override
+    public boolean hasNext() {
+      return iter.hasNext();
+    }
+
+    @Override
+    public RowColumnValue next() {
+      RowColumnValue rcv = iter.next();
+      txLog.filteredAdd(LogEntry.newGet(rcv.getRow(), rcv.getColumn(), rcv.getValue()), filter);
+      return rcv;
+    }
+
+  }
+
+  private class RtxCellSanner implements CellScanner {
+
+    private CellScanner scanner;
+
+    public RtxCellSanner(CellScanner scanner) {
+      this.scanner = scanner;
+    }
+
+    @Override
+    public Iterator<RowColumnValue> iterator() {
+      return new RtxIterator(scanner.iterator());
+    }
+
+  }
+
+  private class RtxCVIterator implements Iterator<ColumnValue> {
+
+    private Iterator<ColumnValue> iter;
+    private Bytes row;
+
+    public RtxCVIterator(Bytes row, Iterator<ColumnValue> iterator) {
+      this.row = row;
+      this.iter = iterator;
+    }
+
+    @Override
+    public boolean hasNext() {
+      return iter.hasNext();
+    }
+
+    @Override
+    public ColumnValue next() {
+      ColumnValue cv = iter.next();
+      txLog.filteredAdd(LogEntry.newGet(row, cv.getColumn(), cv.getValue()), filter);
+      return cv;
+    }
+
+  }
+
+  private class RtxColumnScanner implements ColumnScanner {
+
+    private ColumnScanner cs;
+
+    public RtxColumnScanner(ColumnScanner cs) {
+      this.cs = cs;
+    }
+
+    @Override
+    public Iterator<ColumnValue> iterator() {
+      return new RtxCVIterator(cs.getRow(), cs.iterator());
+    }
+
+    @Override
+    public Bytes getRow() {
+      return cs.getRow();
+    }
+
+    @Override
+    public String getsRow() {
+      return cs.getsRow();
+    }
+
+  }
+
+  private class RtxRowScanner implements RowScanner {
+
+    private RowScanner scanner;
+
+    public RtxRowScanner(RowScanner scanner) {
+      this.scanner = scanner;
+    }
+
+    @Override
+    public Iterator<ColumnScanner> iterator() {
+      return Iterators.transform(scanner.iterator(), cs -> new RtxColumnScanner(cs));
+    }
+
+  }
+
+  private class RtxRowScannerBuilder implements RowScannerBuilder {
+
+    private RowScannerBuilder rsb;
+
+    public RtxRowScannerBuilder(RowScannerBuilder rsb) {
+      this.rsb = rsb;
+    }
+
+    @Override
+    public RowScanner build() {
+      return new RtxRowScanner(rsb.build());
+    }
+
+  }
+
+  private class RtxScannerBuilder implements ScannerBuilder {
+
+    private ScannerBuilder sb;
+
+    public RtxScannerBuilder(ScannerBuilder sb) {
+      this.sb = sb;
+    }
+
+    @Override
+    public ScannerBuilder over(Span span) {
+      sb = sb.over(span);
+      return this;
+    }
+
+    @Override
+    public ScannerBuilder fetch(Column... columns) {
+      sb = sb.fetch(columns);
+      return this;
+    }
+
+    @Override
+    public ScannerBuilder fetch(Collection<Column> columns) {
+      sb = sb.fetch(columns);
+      return this;
+    }
+
+    @Override
+    public CellScanner build() {
+      return new RtxCellSanner(sb.build());
+    }
+
+    @Override
+    public RowScannerBuilder byRow() {
+      return new RtxRowScannerBuilder(sb.byRow());
+    }
+
+  }
+
   /**
    * Logs GETs for Row/Columns returned by iterators. Requests that return no data will not be
    * logged.
    */
   @Override
-  public RowIterator get(ScannerConfiguration config) {
-    final RowIterator rowIter = txb.get(config);
-    if (rowIter != null) {
-      return new RowIterator() {
-
-        @Override
-        public boolean hasNext() {
-          return rowIter.hasNext();
-        }
-
-        @Override
-        public Map.Entry<Bytes, ColumnIterator> next() {
-          final Map.Entry<Bytes, ColumnIterator> rowEntry = rowIter.next();
-          if ((rowEntry != null) && (rowEntry.getValue() != null)) {
-            final ColumnIterator colIter = rowEntry.getValue();
-            return new AbstractMap.SimpleEntry<>(rowEntry.getKey(), new ColumnIterator() {
-
-              @Override
-              public boolean hasNext() {
-                return colIter.hasNext();
-              }
-
-              @Override
-              public Map.Entry<Column, Bytes> next() {
-                Map.Entry<Column, Bytes> colEntry = colIter.next();
-                if (colEntry != null) {
-                  txLog.filteredAdd(
-                      LogEntry.newGet(rowEntry.getKey(), colEntry.getKey(), colEntry.getValue()),
-                      filter);
-                }
-                return colEntry;
-              }
-            });
-          }
-          return rowEntry;
-        }
-      };
-    }
-    return rowIter;
+  public ScannerBuilder scanner() {
+    return new RtxScannerBuilder(txb.scanner());
   }
 
   @Override

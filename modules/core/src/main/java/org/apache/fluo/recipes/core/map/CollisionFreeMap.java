@@ -37,7 +37,6 @@ import org.apache.fluo.api.client.SnapshotBase;
 import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.config.ObserverConfiguration;
-import org.apache.fluo.api.config.ScannerConfiguration;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.BytesBuilder;
@@ -45,8 +44,6 @@ import org.apache.fluo.api.data.Column;
 import org.apache.fluo.api.data.RowColumn;
 import org.apache.fluo.api.data.RowColumnValue;
 import org.apache.fluo.api.data.Span;
-import org.apache.fluo.api.iterator.ColumnIterator;
-import org.apache.fluo.api.iterator.RowIterator;
 import org.apache.fluo.recipes.core.common.TableOptimizations;
 import org.apache.fluo.recipes.core.common.RowRange;
 import org.apache.fluo.recipes.core.common.TransientRegistry;
@@ -113,7 +110,7 @@ public class CollisionFreeMap<K, V> {
 
     Bytes nextKey = tx.get(ntfyRow, NEXT_COL);
 
-    ScannerConfiguration sc = new ScannerConfiguration();
+    Span span;
 
     if (nextKey != null) {
       Bytes startRow =
@@ -123,14 +120,14 @@ public class CollisionFreeMap<K, V> {
       Span nextSpan =
           new Span(new RowColumn(startRow, UPDATE_COL), false, tmpSpan.getEnd(),
               tmpSpan.isEndInclusive());
-      sc.setSpan(nextSpan);
+      span = nextSpan;
     } else {
-      sc.setSpan(Span.prefix(ntfyRow));
+      span = Span.prefix(ntfyRow);
     }
 
-    sc.setSpan(Span.prefix(ntfyRow));
-    sc.fetchColumn(UPDATE_COL.getFamily(), UPDATE_COL.getQualifier());
-    RowIterator iter = tx.get(sc);
+    // TODO
+    span = Span.prefix(ntfyRow);
+    Iterator<RowColumnValue> iter = tx.scanner().over(span).fetch(UPDATE_COL).build().iterator();
 
     Map<Bytes, List<Bytes>> updates = new HashMap<>();
 
@@ -141,8 +138,8 @@ public class CollisionFreeMap<K, V> {
     if (iter.hasNext()) {
       Bytes lastKey = null;
       while (iter.hasNext() && approxMemUsed < bufferSize) {
-        Entry<Bytes, ColumnIterator> rowCol = iter.next();
-        Bytes curRow = rowCol.getKey();
+        RowColumnValue rcv = iter.next();
+        Bytes curRow = rcv.getRow();
 
         tx.delete(curRow, UPDATE_COL);
 
@@ -155,7 +152,7 @@ public class CollisionFreeMap<K, V> {
           updates.put(serializedKey, updateList);
         }
 
-        Bytes val = rowCol.getValue().next().getValue();
+        Bytes val = rcv.getValue();
         updateList.add(val);
 
         approxMemUsed += curRow.length();
@@ -163,8 +160,8 @@ public class CollisionFreeMap<K, V> {
       }
 
       if (iter.hasNext()) {
-        Entry<Bytes, ColumnIterator> rowCol = iter.next();
-        Bytes curRow = rowCol.getKey();
+        RowColumnValue rcv = iter.next();
+        Bytes curRow = rcv.getRow();
 
         // check if more updates for last key
         if (getKeyFromUpdateRow(ntfyRow, curRow).equals(lastKey)) {
@@ -293,15 +290,13 @@ public class CollisionFreeMap<K, V> {
     BytesBuilder rowBuilder = Bytes.newBuilder();
     rowBuilder.append(mapId).append(":u:").append(bucketId).append(":").append(k);
 
-    ScannerConfiguration sc = new ScannerConfiguration();
-    sc.setSpan(Span.prefix(rowBuilder.toBytes()));
-
-    RowIterator iter = tx.get(sc);
+    Iterator<RowColumnValue> iter =
+        tx.scanner().over(Span.prefix(rowBuilder.toBytes())).build().iterator();
 
     Iterator<V> ui;
 
     if (iter.hasNext()) {
-      ui = Iterators.transform(iter, e -> deserVal(e.getValue().next().getValue()));
+      ui = Iterators.transform(iter, rcv -> deserVal(rcv.getValue()));
     } else {
       ui = Collections.<V>emptyList().iterator();
     }

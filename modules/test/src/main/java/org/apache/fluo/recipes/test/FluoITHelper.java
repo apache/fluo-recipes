@@ -34,12 +34,9 @@ import org.apache.fluo.api.client.FluoClient;
 import org.apache.fluo.api.client.FluoFactory;
 import org.apache.fluo.api.client.Snapshot;
 import org.apache.fluo.api.config.FluoConfiguration;
-import org.apache.fluo.api.config.ScannerConfiguration;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
 import org.apache.fluo.api.data.RowColumnValue;
-import org.apache.fluo.api.iterator.ColumnIterator;
-import org.apache.fluo.api.iterator.RowIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,24 +73,16 @@ public class FluoITHelper {
    */
   public static void printFluoTable(FluoClient client) {
     try (Snapshot s = client.newSnapshot()) {
-      RowIterator iter = s.get(new ScannerConfiguration());
-
       System.out.println("== fluo start ==");
-      while (iter.hasNext()) {
-        Map.Entry<Bytes, ColumnIterator> rowEntry = iter.next();
-        ColumnIterator citer = rowEntry.getValue();
-        while (citer.hasNext()) {
-          Map.Entry<Column, Bytes> colEntry = citer.next();
+      for (RowColumnValue rcv : s.scanner().build()) {
+        StringBuilder sb = new StringBuilder();
+        Hex.encNonAscii(sb, rcv.getRow());
+        sb.append(" ");
+        Hex.encNonAscii(sb, rcv.getColumn(), " ");
+        sb.append("\t");
+        Hex.encNonAscii(sb, rcv.getValue());
 
-          StringBuilder sb = new StringBuilder();
-          Hex.encNonAscii(sb, rowEntry.getKey());
-          sb.append(" ");
-          Hex.encNonAscii(sb, colEntry.getKey(), " ");
-          sb.append("\t");
-          Hex.encNonAscii(sb, colEntry.getValue());
-
-          System.out.println(sb.toString());
-        }
+        System.out.println(sb.toString());
       }
       System.out.println("=== fluo end ===");
     }
@@ -120,37 +109,29 @@ public class FluoITHelper {
     expected = sort(expected);
 
     try (Snapshot s = client.newSnapshot()) {
-      RowIterator rowIter = s.get(new ScannerConfiguration());
+      Iterator<RowColumnValue> fluoIter = s.scanner().build().iterator();
       Iterator<RowColumnValue> rcvIter = expected.iterator();
 
-      while (rowIter.hasNext()) {
-        Map.Entry<Bytes, ColumnIterator> rowEntry = rowIter.next();
-        ColumnIterator citer = rowEntry.getValue();
-        while (citer.hasNext() && rcvIter.hasNext()) {
-          Map.Entry<Column, Bytes> colEntry = citer.next();
-          RowColumnValue rcv = rcvIter.next();
-          Column col = colEntry.getKey();
+      while (fluoIter.hasNext() && rcvIter.hasNext()) {
+        RowColumnValue actualRcv = fluoIter.next();
+        RowColumnValue rcv = rcvIter.next();
 
-          boolean retval = diff("fluo row", rcv.getRow(), rowEntry.getKey());
-          retval |= diff("fluo fam", rcv.getColumn().getFamily(), col.getFamily());
-          retval |= diff("fluo qual", rcv.getColumn().getQualifier(), col.getQualifier());
-          retval |= diff("fluo val", rcv.getValue(), colEntry.getValue());
+        boolean retval = diff("fluo row", rcv.getRow(), actualRcv.getRow());
+        retval |= diff("fluo fam", rcv.getColumn().getFamily(), actualRcv.getColumn().getFamily());
+        retval |=
+            diff("fluo qual", rcv.getColumn().getQualifier(), actualRcv.getColumn().getQualifier());
+        retval |= diff("fluo val", rcv.getValue(), actualRcv.getValue());
 
-          if (retval) {
-            log.error("Difference found - row {} cf {} cq {} val {}", rcv.getRow().toString(), rcv
-                .getColumn().getFamily().toString(), rcv.getColumn().getQualifier().toString(), rcv
-                .getValue().toString());
-            return false;
-          }
-
-          log.debug("Verified {}", Hex.encNonAscii(rcv, " "));
-        }
-        if (citer.hasNext()) {
-          log.error("An column iterator still has more data");
+        if (retval) {
+          log.error("Difference found - row {} cf {} cq {} val {}", rcv.getsRow(), rcv.getColumn()
+              .getsFamily(), rcv.getColumn().getsQualifier(), rcv.getsValue());
           return false;
         }
+
+        log.debug("Verified {}", Hex.encNonAscii(rcv, " "));
       }
-      if (rowIter.hasNext() || rcvIter.hasNext()) {
+
+      if (fluoIter.hasNext() || rcvIter.hasNext()) {
         log.error("An iterator still has more data");
         return false;
       }

@@ -19,7 +19,6 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -31,13 +30,12 @@ import org.apache.fluo.api.client.FluoClient;
 import org.apache.fluo.api.client.FluoFactory;
 import org.apache.fluo.api.client.Transaction;
 import org.apache.fluo.api.client.TransactionBase;
+import org.apache.fluo.api.client.scanner.ColumnScanner;
+import org.apache.fluo.api.client.scanner.RowScanner;
 import org.apache.fluo.api.config.FluoConfiguration;
-import org.apache.fluo.api.config.ScannerConfiguration;
-import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
+import org.apache.fluo.api.data.ColumnValue;
 import org.apache.fluo.api.data.Span;
-import org.apache.fluo.api.iterator.ColumnIterator;
-import org.apache.fluo.api.iterator.RowIterator;
 import org.apache.fluo.api.mini.MiniFluo;
 import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
 import org.apache.fluo.recipes.core.types.StringEncoder;
@@ -179,21 +177,18 @@ public class BigUpdateIT {
   }
 
   private void checkUpdates(TypedSnapshot snap, long expectedVal, long expectedRows) {
-    RowIterator iter = snap.get(new ScannerConfiguration().setSpan(Span.prefix("side:")));
+
+    RowScanner rows = snap.scanner().over(Span.prefix("side:")).byRow().build();
 
     int row = 0;
 
-    while (iter.hasNext()) {
-      Entry<Bytes, ColumnIterator> entry = iter.next();
+    for (ColumnScanner columns : rows) {
+      Assert.assertEquals(String.format("side:%06d", row++), columns.getsRow());
 
-      Assert.assertEquals(String.format("side:%06d", row++), entry.getKey().toString());
-
-      ColumnIterator colITer = entry.getValue();
-      while (colITer.hasNext()) {
-        Entry<Column, Bytes> entry2 = colITer.next();
-        Assert.assertEquals(new Column("debug", "sum"), entry2.getKey());
-        Assert.assertEquals("row : " + entry.getKey(), "" + expectedVal, entry2.getValue()
-            .toString());
+      for (ColumnValue columnValue : columns) {
+        Assert.assertEquals(new Column("debug", "sum"), columnValue.getColumn());
+        Assert
+            .assertEquals("row : " + columns.getsRow(), "" + expectedVal, columnValue.getsValue());
       }
     }
 

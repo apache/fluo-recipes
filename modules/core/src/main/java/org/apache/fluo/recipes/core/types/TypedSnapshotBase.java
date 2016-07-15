@@ -29,11 +29,10 @@ import java.util.Set;
 import com.google.common.collect.Maps;
 import org.apache.commons.collections.map.DefaultedMap;
 import org.apache.fluo.api.client.SnapshotBase;
-import org.apache.fluo.api.config.ScannerConfiguration;
+import org.apache.fluo.api.client.scanner.ScannerBuilder;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
 import org.apache.fluo.api.data.RowColumn;
-import org.apache.fluo.api.iterator.RowIterator;
 import org.apache.fluo.recipes.core.types.TypeLayer.Data;
 import org.apache.fluo.recipes.core.types.TypeLayer.FamilyMethods;
 import org.apache.fluo.recipes.core.types.TypeLayer.QualifierMethods;
@@ -509,17 +508,17 @@ public class TypedSnapshotBase implements SnapshotBase {
   }
 
   @Override
-  public RowIterator get(ScannerConfiguration config) {
-    return snapshot.get(config);
-  }
-
-  @Override
   public Map<Bytes, Map<Column, Bytes>> get(Collection<Bytes> rows, Set<Column> columns) {
     return snapshot.get(rows, columns);
   }
 
   public ValueRowMethods get() {
     return new ValueRowMethods();
+  }
+
+  @Override
+  public ScannerBuilder scanner() {
+    return snapshot.scanner();
   }
 
   @SuppressWarnings({"unchecked"})

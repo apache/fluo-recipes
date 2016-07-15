@@ -18,7 +18,6 @@ package org.apache.fluo.recipes.core.map;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Random;
 
 import com.google.common.collect.ImmutableMap;
@@ -28,14 +27,12 @@ import org.apache.fluo.api.client.FluoFactory;
 import org.apache.fluo.api.client.LoaderExecutor;
 import org.apache.fluo.api.client.Snapshot;
 import org.apache.fluo.api.client.Transaction;
+import org.apache.fluo.api.client.scanner.CellScanner;
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.config.ObserverConfiguration;
-import org.apache.fluo.api.config.ScannerConfiguration;
-import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
+import org.apache.fluo.api.data.RowColumnValue;
 import org.apache.fluo.api.data.Span;
-import org.apache.fluo.api.iterator.ColumnIterator;
-import org.apache.fluo.api.iterator.RowIterator;
 import org.apache.fluo.api.mini.MiniFluo;
 import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
 import org.junit.After;
@@ -83,11 +80,11 @@ public class CollisionFreeMapIT {
     Map<String, Long> counts = new HashMap<>();
 
     try (Snapshot snap = fc.newSnapshot()) {
-      RowIterator scanner = snap.get(new ScannerConfiguration().setSpan(Span.prefix("iwc:")));
-      while (scanner.hasNext()) {
-        Entry<Bytes, ColumnIterator> row = scanner.next();
 
-        String[] tokens = row.getKey().toString().split(":");
+      CellScanner scanner = snap.scanner().over(Span.prefix("iwc:")).build();
+
+      for (RowColumnValue rcv : scanner) {
+        String[] tokens = rcv.getsRow().split(":");
         String word = tokens[2];
         Long count = Long.valueOf(tokens[1]);
 
@@ -104,25 +101,19 @@ public class CollisionFreeMapIT {
     Map<String, Long> counts = new HashMap<>();
 
     try (Snapshot snap = fc.newSnapshot()) {
-      RowIterator scanner =
-          snap.get(new ScannerConfiguration().setSpan(Span.prefix("d:")).fetchColumn(
-              Bytes.of("content"), Bytes.of("current")));
-      while (scanner.hasNext()) {
-        Entry<Bytes, ColumnIterator> row = scanner.next();
 
-        ColumnIterator colIter = row.getValue();
 
-        while (colIter.hasNext()) {
-          Entry<Column, Bytes> entry = colIter.next();
+      CellScanner scanner =
+          snap.scanner().over(Span.prefix("d:")).fetch(new Column("content", "current")).build();
 
-          String[] words = entry.getValue().toString().split("\\s+");
-          for (String word : words) {
-            if (word.isEmpty()) {
-              continue;
-            }
-
-            counts.merge(word, 1L, Long::sum);
+      for (RowColumnValue rcv : scanner) {
+        String[] words = rcv.getsValue().split("\\s+");
+        for (String word : words) {
+          if (word.isEmpty()) {
+            continue;
           }
+
+          counts.merge(word, 1L, Long::sum);
         }
       }
     }

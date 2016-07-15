@@ -23,7 +23,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 
@@ -33,14 +32,14 @@ import org.apache.fluo.api.client.FluoClient;
 import org.apache.fluo.api.client.FluoFactory;
 import org.apache.fluo.api.client.LoaderExecutor;
 import org.apache.fluo.api.client.Snapshot;
+import org.apache.fluo.api.client.scanner.CellScanner;
+import org.apache.fluo.api.client.scanner.ColumnScanner;
+import org.apache.fluo.api.client.scanner.RowScanner;
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.config.ObserverConfiguration;
-import org.apache.fluo.api.config.ScannerConfiguration;
-import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
+import org.apache.fluo.api.data.ColumnValue;
 import org.apache.fluo.api.data.Span;
-import org.apache.fluo.api.iterator.ColumnIterator;
-import org.apache.fluo.api.iterator.RowIterator;
 import org.apache.fluo.api.mini.MiniFluo;
 import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
 import org.junit.After;
@@ -240,20 +239,15 @@ public class ExportTestBase {
     Map<String, Set<String>> fluoReferees = new HashMap<>();
 
     try (Snapshot snap = fc.newSnapshot()) {
-      ScannerConfiguration scannerConfig = new ScannerConfiguration();
-      scannerConfig.fetchColumn(Bytes.of("content"), Bytes.of("current"));
-      scannerConfig.setSpan(Span.prefix("d:"));
-      RowIterator scanner = snap.get(scannerConfig);
-      while (scanner.hasNext()) {
-        Entry<Bytes, ColumnIterator> row = scanner.next();
-        ColumnIterator colIter = row.getValue();
 
-        String docid = row.getKey().toString().substring(2);
+      Column currCol = new Column("content", "current");
+      RowScanner rowScanner = snap.scanner().over(Span.prefix("d:")).fetch(currCol).byRow().build();
 
-        while (colIter.hasNext()) {
-          Entry<Column, Bytes> entry = colIter.next();
+      for (ColumnScanner columnScanner : rowScanner) {
+        String docid = columnScanner.getsRow().substring(2);
 
-          String[] refs = entry.getValue().toString().split(" ");
+        for (ColumnValue columnValue : columnScanner) {
+          String[] refs = columnValue.getsValue().split(" ");
 
           for (String ref : refs) {
             if (ref.isEmpty())
@@ -269,18 +263,9 @@ public class ExportTestBase {
 
   public static void dump(FluoClient fc) {
     try (Snapshot snap = fc.newSnapshot()) {
-      RowIterator scanner = snap.get(new ScannerConfiguration());
-      while (scanner.hasNext()) {
-        Entry<Bytes, ColumnIterator> row = scanner.next();
-        ColumnIterator colIter = row.getValue();
-
-        while (colIter.hasNext()) {
-          Entry<Column, Bytes> entry = colIter.next();
-
-          System.out.println("row:[" + row.getKey() + "]  col:[" + entry.getKey() + "]  val:["
-              + entry.getValue() + "]");
-        }
-      }
+      CellScanner scanner = snap.scanner().build();
+      scanner.forEach(rcv -> System.out.println("row:[" + rcv.getRow() + "]  col:["
+          + rcv.getColumn() + "]  val:[" + rcv.getValue() + "]"));
     }
   }
 }

@@ -15,19 +15,16 @@
 
 package org.apache.fluo.recipes.core.export;
 
-import java.util.Collections;
 import java.util.Iterator;
-import java.util.Map.Entry;
 
 import com.google.common.base.Preconditions;
 import org.apache.fluo.api.client.TransactionBase;
-import org.apache.fluo.api.config.ScannerConfiguration;
+import org.apache.fluo.api.client.scanner.CellScanner;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
 import org.apache.fluo.api.data.RowColumn;
+import org.apache.fluo.api.data.RowColumnValue;
 import org.apache.fluo.api.data.Span;
-import org.apache.fluo.api.iterator.ColumnIterator;
-import org.apache.fluo.api.iterator.RowIterator;
 import org.apache.fluo.recipes.core.impl.BucketUtil;
 import org.apache.fluo.recipes.core.types.StringEncoder;
 import org.apache.fluo.recipes.core.types.TypeLayer;
@@ -123,35 +120,29 @@ class ExportBucket {
   }
 
   public Iterator<ExportEntry> getExportIterator(Bytes continueRow) {
-    ScannerConfiguration sc = new ScannerConfiguration();
-
+    Span span;
     if (continueRow != null) {
       Span tmpSpan = Span.prefix(bucketRow);
       Span nextSpan =
           new Span(new RowColumn(continueRow, EXPORT_COL), true, tmpSpan.getEnd(),
               tmpSpan.isEndInclusive());
-      sc.setSpan(nextSpan);
+      span = nextSpan;
     } else {
-      sc.setSpan(Span.prefix(bucketRow));
+      span = Span.prefix(bucketRow);
     }
 
-    sc.fetchColumn(EXPORT_COL.getFamily(), EXPORT_COL.getQualifier());
-    RowIterator iter = ttx.get(sc);
+    CellScanner scanner = ttx.scanner().over(span).fetch(EXPORT_COL).build();
 
-    if (iter.hasNext()) {
-      return new ExportIterator(iter);
-    } else {
-      return Collections.<ExportEntry>emptySet().iterator();
-    }
+    return new ExportIterator(scanner);
   }
 
   private class ExportIterator implements Iterator<ExportEntry> {
 
-    private RowIterator rowIter;
+    private Iterator<RowColumnValue> rowIter;
     private Bytes lastRow;
 
-    public ExportIterator(RowIterator rowIter) {
-      this.rowIter = rowIter;
+    public ExportIterator(CellScanner scanner) {
+      this.rowIter = scanner.iterator();
     }
 
     @Override
@@ -161,8 +152,8 @@ class ExportBucket {
 
     @Override
     public ExportEntry next() {
-      Entry<Bytes, ColumnIterator> rowCol = rowIter.next();
-      Bytes row = rowCol.getKey();
+      RowColumnValue rowColVal = rowIter.next();
+      Bytes row = rowColVal.getRow();
 
       Bytes keyBytes = row.subSequence(bucketRow.length() + 1, row.length() - 8);
       Bytes seqBytes = row.subSequence(row.length() - 8, row.length());
@@ -172,7 +163,7 @@ class ExportBucket {
       ee.key = keyBytes.toArray();
       ee.seq = decodeSeq(seqBytes);
       // TODO maybe leave as Bytes?
-      ee.value = rowCol.getValue().next().getValue().toArray();
+      ee.value = rowColVal.getValue().toArray();
 
       lastRow = row;
 
