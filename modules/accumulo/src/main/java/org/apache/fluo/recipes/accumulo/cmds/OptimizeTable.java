@@ -19,7 +19,7 @@ import javax.inject.Inject;
 
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.recipes.accumulo.ops.TableOperations;
-import org.apache.fluo.recipes.common.Pirtos;
+import org.apache.fluo.recipes.common.TableOptimizations;
 
 public class OptimizeTable {
 
@@ -34,7 +34,8 @@ public class OptimizeTable {
     }
 
 
-    TableOperations.optimizeTable(fluoConfig, Pirtos.getConfiguredOptimizations(fluoConfig));
+    TableOperations.optimizeTable(fluoConfig,
+        TableOptimizations.getConfiguredOptimizations(fluoConfig));
     System.out.println("Finished optimizing table");
   }
 }

@@ -31,7 +31,7 @@ balancing of the prefix.
 
 ```java
 import org.apache.fluo.api.data.Bytes;
-import org.apache.fluo.recipes.common.Pirtos;
+import org.apache.fluo.recipes.common.TableOptimizations;
 import org.apache.fluo.recipes.data.RowHasher;
 
 public class RowHasherExample {
@@ -60,7 +60,7 @@ public class RowHasherExample {
     // Generate table optimizations for the recipe. This can be called when setting up an
     // application that uses a hashed row.
     int numTablets = 20;
-    Pirtos tableOptimizations = pageRowHasher.getTableOptimizations(numTablets);
+    TableOptimizations tableOptimizations = pageRowHasher.getTableOptimizations(numTablets);
     System.out.println("Balance config : " + tableOptimizations.getTabletGroupingRegex());
     System.out.println("Splits         : ");
     tableOptimizations.getSplits().forEach(System.out::println);
