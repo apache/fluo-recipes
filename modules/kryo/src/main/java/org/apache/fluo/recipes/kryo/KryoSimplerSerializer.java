@@ -30,7 +30,7 @@ import com.esotericsoftware.kryo.pool.KryoPool;
 import com.google.common.base.Preconditions;
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.config.SimpleConfiguration;
-import org.apache.fluo.recipes.serialization.SimpleSerializer;
+import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
 
 public class KryoSimplerSerializer implements SimpleSerializer, Serializable {
 

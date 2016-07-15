@@ -25,8 +25,8 @@ import org.apache.accumulo.core.data.Mutation;
 import org.apache.accumulo.core.security.ColumnVisibility;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
-import org.apache.fluo.recipes.transaction.LogEntry;
-import org.apache.fluo.recipes.transaction.TxLog;
+import org.apache.fluo.recipes.core.transaction.LogEntry;
+import org.apache.fluo.recipes.core.transaction.TxLog;
 
 /**
  * An implementation of {@link AccumuloExport} that replicates a Fluo table to Accumulo using a

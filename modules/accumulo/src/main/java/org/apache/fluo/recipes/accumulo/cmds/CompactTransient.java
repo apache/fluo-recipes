@@ -27,8 +27,8 @@ import org.apache.fluo.api.client.FluoFactory;
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.recipes.accumulo.ops.TableOperations;
-import org.apache.fluo.recipes.common.RowRange;
-import org.apache.fluo.recipes.common.TransientRegistry;
+import org.apache.fluo.recipes.core.common.RowRange;
+import org.apache.fluo.recipes.core.common.TransientRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

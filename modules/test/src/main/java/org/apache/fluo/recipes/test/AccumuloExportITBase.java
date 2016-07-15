@@ -31,7 +31,7 @@ import org.apache.fluo.api.client.FluoFactory;
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.mini.MiniFluo;
 import org.apache.fluo.recipes.accumulo.ops.TableOperations;
-import org.apache.fluo.recipes.common.Pirtos;
+import org.apache.fluo.recipes.core.common.Pirtos;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
