@@ -402,6 +402,8 @@ public class CollisionFreeMap<K, V> {
 
   /**
    * @see CollisionFreeMap#getInitializer(String, int, SimpleSerializer)
+   *
+   * @since 1.0.0
    */
   public static class Initializer<K2, V2> implements Serializable {
 
@@ -432,6 +434,9 @@ public class CollisionFreeMap<K, V> {
     }
   }
 
+  /**
+   * @since 1.0.0
+   */
   public static class Options {
 
     static final long DEFAULT_BUFFER_SIZE = 1 << 22;

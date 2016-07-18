@@ -18,7 +18,6 @@ package org.apache.fluo.recipes.spark;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
 
-
 /**
  * Utility code for Fluo/Spark testing
  *
@@ -40,5 +39,4 @@ public class FluoSparkTestUtil {
     sparkConf.set("spark.ui.port", "4444");
     return new JavaSparkContext(sparkConf);
   }
-
 }

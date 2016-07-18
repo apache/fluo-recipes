@@ -33,7 +33,7 @@ Below are Maven dependencies for Fluo Recipes.
 
 ```xml
   <properties>
-    <fluo-recipes.version>1.0.0-beta-2</fluo-recipes.version>
+    <fluo-recipes.version>1.0.0-incubating</fluo-recipes.version>
   </properties>
 
   <dependencies>

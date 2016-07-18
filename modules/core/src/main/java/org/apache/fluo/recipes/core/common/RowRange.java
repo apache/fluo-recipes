@@ -71,7 +71,6 @@ public class RowRange {
     }
   }
 
-
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();

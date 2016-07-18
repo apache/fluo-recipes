@@ -170,6 +170,9 @@ public class ExportQueue<K, V> {
     return tableOptim;
   }
 
+  /**
+   * @since 1.0.0
+   */
   public static class Options {
 
     private static final String PREFIX = "recipes.exportQueue.";
@@ -207,7 +210,6 @@ public class ExportQueue<K, V> {
       this.keyType = keyType;
       this.valueType = valueType;
     }
-
 
     public <K, V> Options(String queueId, Class<? extends Exporter<K, V>> exporter,
         Class<K> keyType, Class<V> valueType, int buckets) {

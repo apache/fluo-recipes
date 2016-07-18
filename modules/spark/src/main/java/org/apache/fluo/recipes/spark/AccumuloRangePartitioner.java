@@ -52,5 +52,4 @@ public class AccumuloRangePartitioner extends Partitioner {
   public int numPartitions() {
     return splits.size() + 1;
   }
-
 }

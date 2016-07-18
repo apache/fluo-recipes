@@ -26,23 +26,23 @@ public interface SimpleSerializer {
   /**
    * Called immediately after construction and passed Fluo application configuration.
    */
-  public void init(SimpleConfiguration appConfig);
+  void init(SimpleConfiguration appConfig);
 
   // TODO refactor to support reuse of objects and byte arrays???
-  public <T> byte[] serialize(T obj);
+  <T> byte[] serialize(T obj);
 
-  public <T> T deserialize(byte[] serObj, Class<T> clazz);
+  <T> T deserialize(byte[] serObj, Class<T> clazz);
 
-  public static void setSetserlializer(FluoConfiguration fluoConfig,
+  static void setSerializer(FluoConfiguration fluoConfig,
       Class<? extends SimpleSerializer> serializerType) {
-    setSetserlializer(fluoConfig, serializerType.getName());
+    setSerializer(fluoConfig, serializerType.getName());
   }
 
-  public static void setSetserlializer(FluoConfiguration fluoConfig, String serializerType) {
+  static void setSerializer(FluoConfiguration fluoConfig, String serializerType) {
     fluoConfig.getAppConfiguration().setProperty("recipes.serializer", serializerType);
   }
 
-  public static SimpleSerializer getInstance(SimpleConfiguration appConfig) {
+  static SimpleSerializer getInstance(SimpleConfiguration appConfig) {
     String serType =
         appConfig.getString("recipes.serializer",
             "org.apache.fluo.recipes.kryo.KryoSimplerSerializer");

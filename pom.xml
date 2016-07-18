@@ -22,7 +22,7 @@
   </parent>
   <groupId>org.apache.fluo</groupId>
   <artifactId>fluo-recipes-parent</artifactId>
-  <version>1.0.0-beta-3-SNAPSHOT</version>
+  <version>1.0.0-incubating-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Fluo Recipes Parent</name>
   <description>Implementation of Common Fluo patterns</description>
@@ -51,7 +51,7 @@
     <url>https://github.com/apache/incubator-fluo-recipes/issues</url>
   </issueManagement>
   <properties>
-    <accumulo.version>1.7.1</accumulo.version>
+    <accumulo.version>1.6.5</accumulo.version>
     <findbugs.maxRank>13</findbugs.maxRank>
     <fluo.version>1.0.0-incubating-SNAPSHOT</fluo.version>
     <hadoop.version>2.6.3</hadoop.version>
@@ -202,6 +202,13 @@
                 <Sealed>false</Sealed>
               </manifestEntries>
             </archive>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <configuration>
+            <excludePackageNames>*.impl.*</excludePackageNames>
           </configuration>
         </plugin>
       </plugins>

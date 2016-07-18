@@ -64,6 +64,9 @@ public class KryoSimplerSerializer implements SimpleSerializer, Serializable {
     }
   }
 
+  /**
+   * @since 1.0.0
+   */
   public static class DefaultFactory implements KryoFactory {
     @Override
     public Kryo create() {
@@ -117,7 +120,6 @@ public class KryoSimplerSerializer implements SimpleSerializer, Serializable {
   /**
    * Call this to configure a KryoFactory type before initializing Fluo.
    */
-
   public static void setKryoFactory(FluoConfiguration config, String factoryType) {
     config.getAppConfiguration().setProperty(KRYO_FACTORY_PROP, factoryType);
   }
@@ -125,7 +127,6 @@ public class KryoSimplerSerializer implements SimpleSerializer, Serializable {
   /**
    * Call this to configure a KryoFactory type before initializing Fluo.
    */
-
   public static void setKryoFactory(FluoConfiguration config,
       Class<? extends KryoFactory> factoryType) {
     config.getAppConfiguration().setProperty(KRYO_FACTORY_PROP, factoryType.getName());

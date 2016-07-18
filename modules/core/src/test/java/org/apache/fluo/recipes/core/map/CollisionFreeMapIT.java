@@ -59,7 +59,7 @@ public class CollisionFreeMapIT {
 
     props.addObserver(new ObserverConfiguration(DocumentObserver.class.getName()));
 
-    SimpleSerializer.setSetserlializer(props, TestSerializer.class);
+    SimpleSerializer.setSerializer(props, TestSerializer.class);
 
     CollisionFreeMap.configure(props, new CollisionFreeMap.Options(MAP_ID, WordCountCombiner.class,
         WordCountObserver.class, String.class, Long.class, 17));

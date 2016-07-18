@@ -292,7 +292,6 @@ public class FluoITHelper {
    * A helper method for parsing test data. Each string passed in is split using the specified
    * splitter into four fields for row, family, qualifier, and value.
    */
-
   public static List<RowColumnValue> parse(Splitter splitter, String... data) {
     ArrayList<RowColumnValue> ret = new ArrayList<>();
 
@@ -312,6 +311,4 @@ public class FluoITHelper {
 
     return ret;
   }
-
-
 }

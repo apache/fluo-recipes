@@ -116,7 +116,7 @@ public class BigUpdateIT {
     props.setWorkerThreads(20);
     props.setMiniDataDir("target/mini");
 
-    SimpleSerializer.setSetserlializer(props, TestSerializer.class);
+    SimpleSerializer.setSerializer(props, TestSerializer.class);
 
     CollisionFreeMap.configure(props, new CollisionFreeMap.Options(MAP_ID, LongCombiner.class,
         MyObserver.class, String.class, Long.class, 2).setBufferSize(1 << 10));

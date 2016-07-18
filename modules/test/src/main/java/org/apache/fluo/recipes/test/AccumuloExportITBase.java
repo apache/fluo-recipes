@@ -175,7 +175,6 @@ public class AccumuloExportITBase {
 
   }
 
-
   /**
    * This method is intended to be overridden. The method is called before each test after Fluo is
    * initialized before MiniFluo is started.

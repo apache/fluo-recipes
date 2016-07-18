@@ -250,6 +250,8 @@ public class FluoSparkHelper {
 
   /**
    * Optional settings for Bulk Imports
+   *
+   * @since 1.0.0
    */
   public static class BulkImportOptions {
 

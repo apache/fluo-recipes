@@ -100,7 +100,6 @@ class ExportBucket {
         + ((seq.byteAt(6) & 255) << 8) + ((seq.byteAt(7) & 255) << 0));
   }
 
-
   public void add(long seq, byte[] key, byte[] value) {
     Bytes row =
         Bytes.newBuilder(bucketRow.length() + 1 + key.length + 8).append(bucketRow).append(":")

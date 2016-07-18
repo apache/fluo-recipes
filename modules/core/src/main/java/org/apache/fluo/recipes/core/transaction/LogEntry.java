@@ -28,6 +28,9 @@ import org.apache.fluo.api.data.Column;
  */
 public class LogEntry {
 
+  /**
+   * @since 1.0.0
+   */
   public enum Operation {
     GET, SET, DELETE
   }

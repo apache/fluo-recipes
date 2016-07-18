@@ -69,7 +69,6 @@ public class RowHasher {
     return tableOptim;
   }
 
-
   private Bytes prefix;
 
   public RowHasher(String prefix) {

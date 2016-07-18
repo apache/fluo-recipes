@@ -144,7 +144,7 @@ public class ExportTestBase {
     ObserverConfiguration doc = new ObserverConfiguration(DocumentObserver.class.getName());
     props.addObserver(doc);
 
-    SimpleSerializer.setSetserlializer(props, GsonSerializer.class);
+    SimpleSerializer.setSerializer(props, GsonSerializer.class);
 
     ExportQueue.Options exportQueueOpts =
         new ExportQueue.Options(RefExporter.QUEUE_ID, RefExporter.class, String.class,
