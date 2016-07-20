@@ -18,7 +18,7 @@
   <parent>
     <groupId>org.apache.fluo</groupId>
     <artifactId>fluo-recipes-parent</artifactId>
-    <version>1.0.0-beta-3-SNAPSHOT</version>
+    <version>1.0.0-incubating-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>fluo-recipes-core</artifactId>
@@ -28,6 +28,10 @@
       <groupId>com.esotericsoftware</groupId>
       <artifactId>kryo</artifactId>
       <version>3.0.3</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-collections</groupId>
+      <artifactId>commons-collections</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.fluo</groupId>
