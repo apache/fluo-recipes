@@ -15,7 +15,6 @@
 
 package org.apache.fluo.recipes.core.export;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.fluo.recipes.core.types.TypedLoader;
 import org.apache.fluo.recipes.core.types.TypedTransactionBase;
 
@@ -31,6 +30,6 @@ public class DocumentLoader extends TypedLoader {
 
   @Override
   public void load(TypedTransactionBase tx, Context context) throws Exception {
-    tx.mutate().row("d:" + docid).fam("content").qual("new").set(StringUtils.join(refs, " "));
+    tx.mutate().row("d:" + docid).fam("content").qual("new").set(String.join(" ", refs));
   }
 }
