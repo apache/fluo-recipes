@@ -150,7 +150,7 @@ public class AccumuloExportITBase {
     resetFluoConfig();
     preFluoInitHook();
     FluoFactory.newAdmin(fluoConfig).initialize(
-        new FluoAdmin.InitOpts().setClearTable(true).setClearZookeeper(true));
+        new FluoAdmin.InitializationOptions().setClearTable(true).setClearZookeeper(true));
     postFluoInitHook();
     if (startMiniFluo) {
       miniFluo = FluoFactory.newMiniFluo(fluoConfig);
