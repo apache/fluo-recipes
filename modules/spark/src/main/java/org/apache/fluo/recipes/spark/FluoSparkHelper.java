@@ -275,13 +275,18 @@ public class FluoSparkHelper {
     }
   }
 
+  private Path getPossibleTempDir() {
+    return new Path(tempBaseDir.toString() + "/" + tempDirCounter.getAndIncrement());
+  }
+
   private Path getTempDir(BulkImportOptions opts) {
     Path tempDir;
     if (opts.tempDir == null) {
       try {
-        do {
-          tempDir = new Path(tempBaseDir.toString() + "/" + tempDirCounter.getAndIncrement());
-        } while (hdfs.exists(tempDir));
+        tempDir = getPossibleTempDir();
+        while (hdfs.exists(tempDir)) {
+          tempDir = getPossibleTempDir();
+        }
       } catch (IOException e) {
         throw new IllegalStateException(e);
       }
