@@ -18,6 +18,7 @@ package org.apache.fluo.recipes.core.transaction;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.TreeMap;
 
 import com.google.common.collect.Iterators;
 import org.apache.fluo.api.client.Transaction;
@@ -73,8 +74,8 @@ public class RecordingTransactionTest {
     Assert.assertEquals("LogEntry{op=GET, row=r4, col=cf4  , value=v4}", entries.get(3).toString());
     Assert.assertEquals("{r4 cf4  =v4}", rtx.getTxLog().getOperationMap(LogEntry.Operation.GET)
         .toString());
-    Assert.assertEquals("{r2 cf2 cq2 =v2, r1 cf1  =v1}",
-        rtx.getTxLog().getOperationMap(LogEntry.Operation.SET).toString());
+    Assert.assertEquals("{r1 cf1  =v1, r2 cf2 cq2 =v2}", new TreeMap<>(rtx.getTxLog()
+        .getOperationMap(LogEntry.Operation.SET)).toString());
     Assert.assertEquals("{r3 cf3  =}", rtx.getTxLog().getOperationMap(LogEntry.Operation.DELETE)
         .toString());
   }

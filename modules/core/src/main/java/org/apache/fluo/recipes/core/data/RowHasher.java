@@ -23,7 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.hash.Hashing;
 import org.apache.fluo.api.data.Bytes;
-import org.apache.fluo.api.data.BytesBuilder;
+import org.apache.fluo.api.data.Bytes.BytesBuilder;
 import org.apache.fluo.recipes.core.common.TableOptimizations;
 
 /**

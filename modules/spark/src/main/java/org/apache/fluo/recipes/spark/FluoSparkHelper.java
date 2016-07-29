@@ -89,7 +89,7 @@ public class FluoSparkHelper {
    * @return RowColumn/Bytes PairRDD
    */
   public static JavaPairRDD<RowColumn, Bytes> toPairRDD(JavaRDD<RowColumnValue> rcvRDD) {
-    return rcvRDD.mapToPair(rcv -> new Tuple2<>((RowColumn) rcv, rcv.getValue()));
+    return rcvRDD.mapToPair(rcv -> new Tuple2<>(rcv.getRowColumn(), rcv.getValue()));
   }
 
   /**
