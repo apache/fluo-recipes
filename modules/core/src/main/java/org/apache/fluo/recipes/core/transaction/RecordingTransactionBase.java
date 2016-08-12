@@ -131,13 +131,11 @@ public class RecordingTransactionBase implements TransactionBase {
   }
 
   @Override
-  public Map<Bytes, Map<Column, Bytes>> get(Collection<RowColumn> rowColumns) {
-    Map<Bytes, Map<Column, Bytes>> rowColVal = txb.get(rowColumns);
-    for (Map.Entry<Bytes, Map<Column, Bytes>> rowEntry : rowColVal.entrySet()) {
-      for (Map.Entry<Column, Bytes> colEntry : rowEntry.getValue().entrySet()) {
-        txLog.filteredAdd(
-            LogEntry.newGet(rowEntry.getKey(), colEntry.getKey(), colEntry.getValue()), filter);
-      }
+  public Map<RowColumn, Bytes> get(Collection<RowColumn> rowColumns) {
+    Map<RowColumn, Bytes> rowColVal = txb.get(rowColumns);
+    for (Map.Entry<RowColumn, Bytes> rce : rowColVal.entrySet()) {
+      txLog.filteredAdd(
+          LogEntry.newGet(rce.getKey().getRow(), rce.getKey().getColumn(), rce.getValue()), filter);
     }
     return rowColVal;
   }
@@ -330,13 +328,13 @@ public class RecordingTransactionBase implements TransactionBase {
   }
 
   @Override
-  public Map<String, Map<Column, String>> gets(Collection<RowColumn> rowColumns) {
-    Map<String, Map<Column, String>> rowColVal = txb.gets(rowColumns);
-    for (Map.Entry<String, Map<Column, String>> rowEntry : rowColVal.entrySet()) {
-      for (Map.Entry<Column, String> colEntry : rowEntry.getValue().entrySet()) {
-        txLog.filteredAdd(
-            LogEntry.newGet(rowEntry.getKey(), colEntry.getKey(), colEntry.getValue()), filter);
-      }
+  public Map<RowColumn, String> gets(Collection<RowColumn> rowColumns) {
+    Map<RowColumn, String> rowColVal = txb.gets(rowColumns);
+    for (Map.Entry<RowColumn, String> rce : rowColVal.entrySet()) {
+      txLog
+          .filteredAdd(
+              LogEntry.newGet(rce.getKey().getsRow(), rce.getKey().getColumn(), rce.getValue()),
+              filter);
     }
     return rowColVal;
   }

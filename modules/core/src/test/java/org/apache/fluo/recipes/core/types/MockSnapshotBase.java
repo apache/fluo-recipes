@@ -190,12 +190,12 @@ public class MockSnapshotBase implements SnapshotBase {
   }
 
   @Override
-  public Map<String, Map<Column, String>> gets(Collection<RowColumn> rowColumns) {
+  public Map<RowColumn, String> gets(Collection<RowColumn> rowColumns) {
     return TxStringUtil.gets(this, rowColumns);
   }
 
   @Override
-  public Map<Bytes, Map<Column, Bytes>> get(Collection<RowColumn> rowColumns) {
+  public Map<RowColumn, Bytes> get(Collection<RowColumn> rowColumns) {
     throw new UnsupportedOperationException();
   }
 }
