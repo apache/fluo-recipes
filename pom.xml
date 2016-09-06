@@ -59,6 +59,7 @@
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
     <spark.version>1.5.2</spark.version>
+    <thrift.version>0.9.1</thrift.version>
     <zookeeper.version>3.4.8</zookeeper.version>
   </properties>
   <dependencyManagement>
@@ -192,6 +193,11 @@
         <groupId>org.apache.spark</groupId>
         <artifactId>spark-core_2.10</artifactId>
         <version>${spark.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.thrift</groupId>
+        <artifactId>libthrift</artifactId>
+        <version>${thrift.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.zookeeper</groupId>
