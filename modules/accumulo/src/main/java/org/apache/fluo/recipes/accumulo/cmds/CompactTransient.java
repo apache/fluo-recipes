@@ -94,7 +94,7 @@ public class CompactTransient {
     int interval = 0;
     double multiplier = 3;
 
-    if (args.length > 1) {
+    if (args.length >= 1) {
       interval = Integer.parseInt(args[0]);
       if (args.length == 2) {
         multiplier = Double.parseDouble(args[1]);
