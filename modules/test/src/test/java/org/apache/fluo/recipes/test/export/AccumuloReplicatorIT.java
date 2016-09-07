@@ -27,13 +27,11 @@ import org.apache.accumulo.minicluster.MiniAccumuloCluster;
 import org.apache.fluo.api.client.FluoClient;
 import org.apache.fluo.api.client.FluoFactory;
 import org.apache.fluo.api.client.Transaction;
-import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.mini.MiniFluo;
-import org.apache.fluo.recipes.accumulo.export.AccumuloExport;
-import org.apache.fluo.recipes.accumulo.export.AccumuloExporter;
-import org.apache.fluo.recipes.accumulo.export.ReplicationExport;
-import org.apache.fluo.recipes.accumulo.export.TableInfo;
+import org.apache.fluo.recipes.accumulo.export.AccumuloExportQueue;
+import org.apache.fluo.recipes.accumulo.export.AccumuloReplicator;
 import org.apache.fluo.recipes.core.export.ExportQueue;
+import org.apache.fluo.recipes.core.transaction.TxLog;
 import org.apache.fluo.recipes.test.AccumuloExportITBase;
 import org.apache.fluo.recipes.core.transaction.RecordingTransaction;
 import org.apache.fluo.recipes.core.types.StringEncoder;
@@ -44,32 +42,31 @@ import org.junit.Test;
 
 public class AccumuloReplicatorIT extends AccumuloExportITBase {
 
-  private String et;
-  public static final String QUEUE_ID = "aeqt";
+  private String exportTable;
+  public static final String QUEUE_ID = "repq";
   private TypeLayer tl = new TypeLayer(new StringEncoder());
 
   @Override
   public void preFluoInitHook() throws Exception {
-    ExportQueue
-        .configure(
-            getFluoConfiguration(),
-            new ExportQueue.Options(QUEUE_ID, AccumuloExporter.class.getName(), Bytes.class
-                .getName(), AccumuloExport.class.getName(), 5));
 
     // create and configure export table
-    et = "export" + tableCounter.getAndIncrement();
-    getAccumuloConnector().tableOperations().create(et);
+    exportTable = "export" + tableCounter.getAndIncrement();
+    getAccumuloConnector().tableOperations().create(exportTable);
 
     MiniAccumuloCluster miniAccumulo = getMiniAccumuloCluster();
-    AccumuloExporter.setExportTableInfo(getFluoConfiguration(), QUEUE_ID, new TableInfo(
-        miniAccumulo.getInstanceName(), miniAccumulo.getZooKeepers(), ACCUMULO_USER,
-        ACCUMULO_PASSWORD, et));
+
+    AccumuloExportQueue.configure(
+        getFluoConfiguration(),
+        new ExportQueue.Options(QUEUE_ID, AccumuloReplicator.class.getName(), String.class
+            .getName(), TxLog.class.getName(), 5),
+        new AccumuloExportQueue.Options(miniAccumulo.getInstanceName(), miniAccumulo
+            .getZooKeepers(), ACCUMULO_USER, ACCUMULO_PASSWORD, exportTable));
   }
 
   @Test
   public void testAccumuloReplicator() throws Exception {
 
-    ExportQueue<Bytes, AccumuloExport<?>> eq =
+    ExportQueue<String, TxLog> eq =
         ExportQueue.getInstance(QUEUE_ID, getFluoConfiguration().getAppConfiguration());
 
     MiniFluo miniFluo = getMiniFluo();
@@ -78,12 +75,12 @@ public class AccumuloReplicatorIT extends AccumuloExportITBase {
       Map<String, String> expected = new HashMap<>();
 
       try (Transaction tx = fc.newTransaction()) {
-        RecordingTransaction rtx = RecordingTransaction.wrap(tx, ReplicationExport.getFilter());
+        RecordingTransaction rtx = RecordingTransaction.wrap(tx, AccumuloReplicator.getFilter());
         TypedTransaction ttx = tl.wrap(rtx);
         write(ttx, expected, "k1", "v1");
         write(ttx, expected, "k2", "v2");
         write(ttx, expected, "k3", "v3");
-        eq.add(tx, Bytes.of("q1"), new ReplicationExport<>(rtx.getTxLog()));
+        eq.add(tx, "q1", rtx.getTxLog());
         tx.commit();
       }
 
@@ -91,13 +88,13 @@ public class AccumuloReplicatorIT extends AccumuloExportITBase {
       Assert.assertEquals(expected, getExports());
 
       try (Transaction tx = fc.newTransaction()) {
-        RecordingTransaction rtx = RecordingTransaction.wrap(tx, ReplicationExport.getFilter());
+        RecordingTransaction rtx = RecordingTransaction.wrap(tx, AccumuloReplicator.getFilter());
         TypedTransaction ttx = tl.wrap(rtx);
         write(ttx, expected, "k1", "v4");
         delete(ttx, expected, "k3");
         write(ttx, expected, "k2", "v5");
         write(ttx, expected, "k4", "v6");
-        eq.add(tx, Bytes.of("q1"), new ReplicationExport<>(rtx.getTxLog()));
+        eq.add(tx, "q1", rtx.getTxLog());
         tx.commit();
       }
 
@@ -105,13 +102,13 @@ public class AccumuloReplicatorIT extends AccumuloExportITBase {
       Assert.assertEquals(expected, getExports());
 
       try (Transaction tx = fc.newTransaction()) {
-        RecordingTransaction rtx = RecordingTransaction.wrap(tx, ReplicationExport.getFilter());
+        RecordingTransaction rtx = RecordingTransaction.wrap(tx, AccumuloReplicator.getFilter());
         TypedTransaction ttx = tl.wrap(rtx);
         write(ttx, expected, "k2", "v7");
         write(ttx, expected, "k3", "v8");
         delete(ttx, expected, "k1");
         delete(ttx, expected, "k4");
-        eq.add(tx, Bytes.of("q1"), new ReplicationExport<>(rtx.getTxLog()));
+        eq.add(tx, "q1", rtx.getTxLog());
         tx.commit();
       }
 
@@ -131,7 +128,7 @@ public class AccumuloReplicatorIT extends AccumuloExportITBase {
   }
 
   private Map<String, String> getExports() throws Exception {
-    Scanner scanner = getAccumuloConnector().createScanner(et, Authorizations.EMPTY);
+    Scanner scanner = getAccumuloConnector().createScanner(exportTable, Authorizations.EMPTY);
     Map<String, String> ret = new HashMap<>();
 
     for (Entry<Key, Value> entry : scanner) {

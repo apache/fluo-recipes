@@ -19,22 +19,15 @@ import java.util.Collection;
 import java.util.Collections;
 
 import org.apache.accumulo.core.data.Mutation;
-import org.apache.fluo.recipes.accumulo.export.AccumuloExport;
+import org.apache.fluo.recipes.accumulo.export.AccumuloExporter;
+import org.apache.fluo.recipes.core.export.SequencedExport;
 
-public class TestExport implements AccumuloExport<String> {
-
-  private String value;
-
-  public TestExport() {}
-
-  public TestExport(String value) {
-    this.value = value;
-  }
+public class SimpleExporter extends AccumuloExporter<String, String> {
 
   @Override
-  public Collection<Mutation> toMutations(String key, long seq) {
-    Mutation m = new Mutation(key);
-    m.put("cf", "cq", seq, value);
-    return Collections.singletonList(m);
+  protected Collection<Mutation> processExport(SequencedExport<String, String> export) {
+    Mutation m = new Mutation(export.getKey());
+    m.put("cf", "cq", export.getSequence(), export.getValue());
+    return Collections.singleton(m);
   }
 }

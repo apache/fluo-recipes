@@ -281,5 +281,5 @@ example of write skew mentioned in the Percolater paper.
 
 [1]: ../modules/core/src/main/java/org/apache/fluo/recipes/core/export/Exporter.java
 [2]: https://en.wikipedia.org/wiki/Serializability
-[3]: accumulo-export.md
+[3]: accumulo-export-queue.md
 

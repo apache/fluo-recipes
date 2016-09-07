@@ -18,41 +18,42 @@ package org.apache.fluo.recipes.accumulo.export;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.Predicate;
 
 import org.apache.accumulo.core.data.Mutation;
 import org.apache.accumulo.core.security.ColumnVisibility;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
+import org.apache.fluo.recipes.core.export.SequencedExport;
 import org.apache.fluo.recipes.core.transaction.LogEntry;
 import org.apache.fluo.recipes.core.transaction.TxLog;
 
 /**
- * An implementation of {@link AccumuloExport} that replicates a Fluo table to Accumulo using a
- * TxLog
- *
- * @param <K> Type of export queue key
- * @since 1.0.0
+ * An {@link AccumuloExporter} that replicates data to Accumulo using a {@link TxLog}
  */
-public class ReplicationExport<K> implements AccumuloExport<K> {
+public class AccumuloReplicator extends AccumuloExporter<String, TxLog> {
 
-  private TxLog txLog;
-
-  public ReplicationExport() {}
-
-  public ReplicationExport(TxLog txLog) {
-    Objects.requireNonNull(txLog);
-    this.txLog = txLog;
+  @Override
+  protected Collection<Mutation> processExport(SequencedExport<String, TxLog> export) {
+    return generateMutations(export.getSequence(), export.getValue());
   }
 
+  /**
+   * Returns LogEntry filter for Accumulo replication
+   */
   public static Predicate<LogEntry> getFilter() {
     return le -> le.getOp().equals(LogEntry.Operation.DELETE)
         || le.getOp().equals(LogEntry.Operation.SET);
   }
 
-  @Override
-  public Collection<Mutation> toMutations(K key, long seq) {
+  /**
+   * Generates Accumulo mutations from a Transaction log. Used to Replicate Fluo table to Accumulo.
+   *
+   * @param txLog Transaction log
+   * @param seq Export sequence number
+   * @return Collection of mutations
+   */
+  public static Collection<Mutation> generateMutations(long seq, TxLog txLog) {
     Map<Bytes, Mutation> mutationMap = new HashMap<>();
     for (LogEntry le : txLog.getLogEntries()) {
       LogEntry.Operation op = le.getOp();

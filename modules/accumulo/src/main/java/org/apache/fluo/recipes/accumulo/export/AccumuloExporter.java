@@ -16,60 +16,45 @@
 package org.apache.fluo.recipes.accumulo.export;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 
 import org.apache.accumulo.core.data.Mutation;
-import org.apache.fluo.api.config.FluoConfiguration;
-import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.observer.Observer.Context;
 import org.apache.fluo.recipes.core.export.Exporter;
 import org.apache.fluo.recipes.core.export.SequencedExport;
 
 /**
- * An {@link Exporter} that takes {@link AccumuloExport} objects and writes mutations to Accumulo
+ * An Accumulo-specific {@link Exporter} that writes mutations to Accumulo using a
+ * {@link AccumuloExportQueue.AccumuloWriter}
  *
- * @param <K> Export queue key type
  * @since 1.0.0
  */
-public class AccumuloExporter<K> extends Exporter<K, AccumuloExport<K>> {
+public abstract class AccumuloExporter<K, V> extends Exporter<K, V> {
 
-  private SharedBatchWriter sbw;
+  private AccumuloExportQueue.AccumuloWriter accumuloWriter;
 
   @Override
   public void init(String queueId, Context context) throws Exception {
-
-    SimpleConfiguration appConf = context.getAppConfiguration();
-
-    String instanceName = appConf.getString("recipes.accumuloExporter." + queueId + ".instance");
-    String zookeepers = appConf.getString("recipes.accumuloExporter." + queueId + ".zookeepers");
-    String user = appConf.getString("recipes.accumuloExporter." + queueId + ".user");
-    // TODO look into using delegation token
-    String password = appConf.getString("recipes.accumuloExporter." + queueId + ".password");
-    String table = appConf.getString("recipes.accumuloExporter." + queueId + ".table");
-
-    sbw = SharedBatchWriter.getInstance(instanceName, zookeepers, user, password, table);
-  }
-
-  public static void setExportTableInfo(FluoConfiguration fconf, String queueId, TableInfo ti) {
-    SimpleConfiguration appConf = fconf.getAppConfiguration();
-    appConf.setProperty("recipes.accumuloExporter." + queueId + ".instance", ti.instanceName);
-    appConf.setProperty("recipes.accumuloExporter." + queueId + ".zookeepers", ti.zookeepers);
-    appConf.setProperty("recipes.accumuloExporter." + queueId + ".user", ti.user);
-    appConf.setProperty("recipes.accumuloExporter." + queueId + ".password", ti.password);
-    appConf.setProperty("recipes.accumuloExporter." + queueId + ".table", ti.table);
+    accumuloWriter =
+        AccumuloExportQueue.AccumuloWriter.getInstance(context.getAppConfiguration(), queueId);
   }
 
   @Override
-  protected void processExports(Iterator<SequencedExport<K, AccumuloExport<K>>> exports) {
+  protected void processExports(Iterator<SequencedExport<K, V>> exports) {
+
     ArrayList<Mutation> buffer = new ArrayList<>();
 
     while (exports.hasNext()) {
-      SequencedExport<K, AccumuloExport<K>> export = exports.next();
-      buffer.addAll(export.getValue().toMutations(export.getKey(), export.getSequence()));
+      SequencedExport<K, V> export = exports.next();
+      buffer.addAll(processExport(export));
     }
 
     if (buffer.size() > 0) {
-      sbw.write(buffer);
+      accumuloWriter.write(buffer);
     }
   }
+
+  protected abstract Collection<Mutation> processExport(SequencedExport<K, V> export);
+
 }

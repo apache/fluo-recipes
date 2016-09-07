@@ -262,6 +262,10 @@ public class ExportQueue<K, V> {
       return bucketsPerTablet;
     }
 
+    public String getQueueId() {
+      return queueId;
+    }
+
     void save(SimpleConfiguration appConfig) {
       appConfig.setProperty(PREFIX + queueId + ".buckets", numBuckets + "");
       appConfig.setProperty(PREFIX + queueId + ".exporter", exporterType + "");
