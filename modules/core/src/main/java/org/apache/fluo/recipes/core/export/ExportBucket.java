@@ -102,7 +102,7 @@ class ExportBucket {
 
   public void add(long seq, byte[] key, byte[] value) {
     Bytes row =
-        Bytes.newBuilder(bucketRow.length() + 1 + key.length + 8).append(bucketRow).append(":")
+        Bytes.builder(bucketRow.length() + 1 + key.length + 8).append(bucketRow).append(":")
             .append(key).append(encSeq(seq)).toBytes();
     ttx.set(row, EXPORT_COL, Bytes.of(value));
   }
@@ -111,7 +111,7 @@ class ExportBucket {
    * Computes the minimial row for a bucket
    */
   private Bytes getMinimalRow() {
-    return Bytes.newBuilder(bucketRow.length() + 1).append(bucketRow).append(":").toBytes();
+    return Bytes.builder(bucketRow.length() + 1).append(bucketRow).append(":").toBytes();
   }
 
   public void notifyExportObserver() {
@@ -181,7 +181,7 @@ class ExportBucket {
 
   public void setContinueRow(ExportEntry ee) {
     Bytes nextRow =
-        Bytes.newBuilder(bucketRow.length() + 1 + ee.key.length + 8).append(bucketRow).append(":")
+        Bytes.builder(bucketRow.length() + 1 + ee.key.length + 8).append(bucketRow).append(":")
             .append(ee.key).append(encSeq(ee.seq)).toBytes();
 
     ttx.set(getMinimalRow(), NEXT_COL, nextRow);

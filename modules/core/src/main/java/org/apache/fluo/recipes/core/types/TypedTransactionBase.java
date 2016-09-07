@@ -252,7 +252,7 @@ public class TypedTransactionBase extends TypedSnapshotBase implements Transacti
   }
 
   @Override
-  public void set(String row, Column col, String value) throws AlreadySetException {
+  public void set(CharSequence row, Column col, CharSequence value) throws AlreadySetException {
     tx.set(row, col, value);
   }
 
@@ -262,7 +262,7 @@ public class TypedTransactionBase extends TypedSnapshotBase implements Transacti
   }
 
   @Override
-  public void setWeakNotification(String row, Column col) {
+  public void setWeakNotification(CharSequence row, Column col) {
     tx.setWeakNotification(row, col);
   }
 
@@ -272,7 +272,7 @@ public class TypedTransactionBase extends TypedSnapshotBase implements Transacti
   }
 
   @Override
-  public void delete(String row, Column col) {
+  public void delete(CharSequence row, Column col) {
     tx.delete(row, col);
   }
 }

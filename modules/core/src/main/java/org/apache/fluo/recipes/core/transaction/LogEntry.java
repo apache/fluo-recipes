@@ -93,7 +93,7 @@ public class LogEntry {
     return "LogEntry{op=" + op + ", row=" + row + ", col=" + col + ", value=" + value + "}";
   }
 
-  public static LogEntry newGet(String row, Column col, String value) {
+  public static LogEntry newGet(CharSequence row, Column col, CharSequence value) {
     return newGet(Bytes.of(row), col, Bytes.of(value));
   }
 
@@ -101,7 +101,7 @@ public class LogEntry {
     return new LogEntry(Operation.GET, row, col, value);
   }
 
-  public static LogEntry newSet(String row, Column col, String value) {
+  public static LogEntry newSet(CharSequence row, Column col, CharSequence value) {
     return newSet(Bytes.of(row), col, Bytes.of(value));
   }
 
@@ -109,7 +109,7 @@ public class LogEntry {
     return new LogEntry(Operation.SET, row, col, value);
   }
 
-  public static LogEntry newDelete(String row, Column col) {
+  public static LogEntry newDelete(CharSequence row, Column col) {
     return newDelete(Bytes.of(row), col);
   }
 

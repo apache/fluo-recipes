@@ -86,7 +86,7 @@ public class RowHasher {
    * @return Returns input with prefix and hash of input prepended.
    */
   public Bytes addHash(Bytes row) {
-    BytesBuilder builder = Bytes.newBuilder(prefix.length() + 5 + row.length());
+    BytesBuilder builder = Bytes.builder(prefix.length() + 5 + row.length());
     builder.append(prefix);
     builder.append(genHash(row));
     builder.append(":");

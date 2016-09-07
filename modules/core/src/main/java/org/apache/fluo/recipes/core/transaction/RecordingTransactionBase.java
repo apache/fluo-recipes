@@ -63,7 +63,7 @@ public class RecordingTransactionBase implements TransactionBase {
   }
 
   @Override
-  public void setWeakNotification(String row, Column col) {
+  public void setWeakNotification(CharSequence row, Column col) {
     txb.setWeakNotification(row, col);
   }
 
@@ -74,7 +74,7 @@ public class RecordingTransactionBase implements TransactionBase {
   }
 
   @Override
-  public void set(String row, Column col, String value) throws AlreadySetException {
+  public void set(CharSequence row, Column col, CharSequence value) throws AlreadySetException {
     txLog.filteredAdd(LogEntry.newSet(row, col, value), filter);
     txb.set(row, col, value);
   }
@@ -86,7 +86,7 @@ public class RecordingTransactionBase implements TransactionBase {
   }
 
   @Override
-  public void delete(String row, Column col) {
+  public void delete(CharSequence row, Column col) {
     txLog.filteredAdd(LogEntry.newDelete(row, col), filter);
     txb.delete(row, col);
   }
@@ -342,7 +342,8 @@ public class RecordingTransactionBase implements TransactionBase {
   // TODO alot of these String methods may be more efficient if called the Byte version in this
   // class... this would avoid conversion from Byte->String->Byte
   @Override
-  public Map<String, Map<Column, String>> gets(Collection<String> rows, Set<Column> columns) {
+  public Map<String, Map<Column, String>> gets(Collection<? extends CharSequence> rows,
+      Set<Column> columns) {
     Map<String, Map<Column, String>> rowColVal = txb.gets(rows, columns);
     for (Map.Entry<String, Map<Column, String>> rowEntry : rowColVal.entrySet()) {
       for (Map.Entry<Column, String> colEntry : rowEntry.getValue().entrySet()) {
@@ -354,7 +355,7 @@ public class RecordingTransactionBase implements TransactionBase {
   }
 
   @Override
-  public String gets(String row, Column col) {
+  public String gets(CharSequence row, Column col) {
     String val = txb.gets(row, col);
     if (val != null) {
       txLog.filteredAdd(LogEntry.newGet(row, col, val), filter);
@@ -363,7 +364,7 @@ public class RecordingTransactionBase implements TransactionBase {
   }
 
   @Override
-  public Map<Column, String> gets(String row, Set<Column> columns) {
+  public Map<Column, String> gets(CharSequence row, Set<Column> columns) {
     Map<Column, String> colVal = txb.gets(row, columns);
     for (Map.Entry<Column, String> entry : colVal.entrySet()) {
       txLog.filteredAdd(LogEntry.newGet(row, entry.getKey(), entry.getValue()), filter);

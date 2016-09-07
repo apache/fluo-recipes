@@ -175,17 +175,18 @@ public class MockSnapshotBase implements SnapshotBase {
 
 
   @Override
-  public String gets(String row, Column column) {
+  public String gets(CharSequence row, Column column) {
     return TxStringUtil.gets(this, row, column);
   }
 
   @Override
-  public Map<Column, String> gets(String row, Set<Column> columns) {
+  public Map<Column, String> gets(CharSequence row, Set<Column> columns) {
     return TxStringUtil.gets(this, row, columns);
   }
 
   @Override
-  public Map<String, Map<Column, String>> gets(Collection<String> rows, Set<Column> columns) {
+  public Map<String, Map<Column, String>> gets(Collection<? extends CharSequence> rows,
+      Set<Column> columns) {
     return TxStringUtil.gets(this, rows, columns);
   }
 

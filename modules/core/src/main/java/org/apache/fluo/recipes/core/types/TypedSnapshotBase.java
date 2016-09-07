@@ -533,17 +533,18 @@ public class TypedSnapshotBase implements SnapshotBase {
   }
 
   @Override
-  public String gets(String row, Column column) {
+  public String gets(CharSequence row, Column column) {
     return snapshot.gets(row, column);
   }
 
   @Override
-  public Map<Column, String> gets(String row, Set<Column> columns) {
+  public Map<Column, String> gets(CharSequence row, Set<Column> columns) {
     return snapshot.gets(row, columns);
   }
 
   @Override
-  public Map<String, Map<Column, String>> gets(Collection<String> rows, Set<Column> columns) {
+  public Map<String, Map<Column, String>> gets(Collection<? extends CharSequence> rows,
+      Set<Column> columns) {
     return snapshot.gets(rows, columns);
   }
 

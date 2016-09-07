@@ -114,7 +114,7 @@ public class CollisionFreeMap<K, V> {
 
     if (nextKey != null) {
       Bytes startRow =
-          Bytes.newBuilder(ntfyRow.length() + nextKey.length()).append(ntfyRow).append(nextKey)
+          Bytes.builder(ntfyRow.length() + nextKey.length()).append(ntfyRow).append(nextKey)
               .toBytes();
       Span tmpSpan = Span.prefix(ntfyRow);
       Span nextSpan =
@@ -172,8 +172,7 @@ public class CollisionFreeMap<K, V> {
         } else {
           // start next time at the next possible key
           Bytes nextPossible =
-              Bytes.newBuilder(lastKey.length() + 1).append(lastKey).append(new byte[] {0})
-                  .toBytes();
+              Bytes.builder(lastKey.length() + 1).append(lastKey).append(new byte[] {0}).toBytes();
           tx.set(ntfyRow, NEXT_COL, nextPossible);
         }
 
@@ -198,7 +197,7 @@ public class CollisionFreeMap<K, V> {
     // TODO this is awful... no sanity check... hard to read
     dataPrefix[Bytes.of(mapId).length() + 1] = 'd';
 
-    BytesBuilder rowBuilder = Bytes.newBuilder();
+    BytesBuilder rowBuilder = Bytes.builder();
     rowBuilder.append(dataPrefix);
     int rowPrefixLen = rowBuilder.getLength();
 
@@ -293,7 +292,7 @@ public class CollisionFreeMap<K, V> {
     String bucketId = BucketUtil.genBucketId(Math.abs(hash % numBuckets), numBuckets);
 
 
-    BytesBuilder rowBuilder = Bytes.newBuilder();
+    BytesBuilder rowBuilder = Bytes.builder();
     rowBuilder.append(mapId).append(":u:").append(bucketId).append(":").append(k);
 
     Iterator<RowColumnValue> iter =
@@ -343,7 +342,7 @@ public class CollisionFreeMap<K, V> {
 
     Set<String> buckets = new HashSet<>();
 
-    BytesBuilder rowBuilder = Bytes.newBuilder();
+    BytesBuilder rowBuilder = Bytes.builder();
     rowBuilder.append(mapId).append(":u:");
     int prefixLength = rowBuilder.getLength();
 
@@ -426,7 +425,7 @@ public class CollisionFreeMap<K, V> {
       int hash = Hashing.murmur3_32().hashBytes(k).asInt();
       String bucketId = BucketUtil.genBucketId(Math.abs(hash % numBuckets), numBuckets);
 
-      BytesBuilder bb = Bytes.newBuilder();
+      BytesBuilder bb = Bytes.builder();
       Bytes row = bb.append(mapId).append(":d:").append(bucketId).append(":").append(k).toBytes();
       byte[] v = serializer.serialize(val);
 
@@ -612,7 +611,7 @@ public class CollisionFreeMap<K, V> {
   public static TableOptimizations getTableOptimizations(String mapId, SimpleConfiguration appConfig) {
     Options opts = new Options(mapId, appConfig);
 
-    BytesBuilder rowBuilder = Bytes.newBuilder();
+    BytesBuilder rowBuilder = Bytes.builder();
     rowBuilder.append(mapId);
 
     List<Bytes> dataSplits = new ArrayList<>();
