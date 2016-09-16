@@ -36,7 +36,7 @@ import org.apache.fluo.api.client.scanner.CellScanner;
 import org.apache.fluo.api.client.scanner.ColumnScanner;
 import org.apache.fluo.api.client.scanner.RowScanner;
 import org.apache.fluo.api.config.FluoConfiguration;
-import org.apache.fluo.api.config.ObserverConfiguration;
+import org.apache.fluo.api.config.ObserverSpecification;
 import org.apache.fluo.api.data.Column;
 import org.apache.fluo.api.data.ColumnValue;
 import org.apache.fluo.api.data.Span;
@@ -141,7 +141,7 @@ public class ExportTestBase {
     props.setWorkerThreads(20);
     props.setMiniDataDir("target/mini");
 
-    ObserverConfiguration doc = new ObserverConfiguration(DocumentObserver.class.getName());
+    ObserverSpecification doc = new ObserverSpecification(DocumentObserver.class.getName());
     props.addObserver(doc);
 
     SimpleSerializer.setSerializer(props, GsonSerializer.class);

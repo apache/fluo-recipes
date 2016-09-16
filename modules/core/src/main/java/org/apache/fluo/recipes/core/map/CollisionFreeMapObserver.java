@@ -36,7 +36,7 @@ public class CollisionFreeMapObserver extends AbstractObserver {
 
   @Override
   public void init(Context context) throws Exception {
-    this.mapId = context.getParameters().get("mapId");
+    this.mapId = context.getObserverConfiguration().getString("mapId");
     cfm = CollisionFreeMap.getInstance(mapId, context.getAppConfiguration());
     cfm.updateObserver.init(mapId, context);
   }

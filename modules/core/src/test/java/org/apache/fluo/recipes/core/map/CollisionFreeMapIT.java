@@ -29,7 +29,7 @@ import org.apache.fluo.api.client.Snapshot;
 import org.apache.fluo.api.client.Transaction;
 import org.apache.fluo.api.client.scanner.CellScanner;
 import org.apache.fluo.api.config.FluoConfiguration;
-import org.apache.fluo.api.config.ObserverConfiguration;
+import org.apache.fluo.api.config.ObserverSpecification;
 import org.apache.fluo.api.data.Column;
 import org.apache.fluo.api.data.RowColumnValue;
 import org.apache.fluo.api.data.Span;
@@ -57,7 +57,7 @@ public class CollisionFreeMapIT {
     props.setWorkerThreads(20);
     props.setMiniDataDir("target/mini");
 
-    props.addObserver(new ObserverConfiguration(DocumentObserver.class.getName()));
+    props.addObserver(new ObserverSpecification(DocumentObserver.class.getName()));
 
     SimpleSerializer.setSerializer(props, TestSerializer.class);
 

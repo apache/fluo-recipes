@@ -36,7 +36,7 @@ import com.google.common.hash.Hashing;
 import org.apache.fluo.api.client.SnapshotBase;
 import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.config.FluoConfiguration;
-import org.apache.fluo.api.config.ObserverConfiguration;
+import org.apache.fluo.api.config.ObserverSpecification;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Bytes.BytesBuilder;
@@ -573,8 +573,8 @@ public class CollisionFreeMap<K, V> {
    */
   public static void configure(FluoConfiguration fluoConfig, Options opts) {
     opts.save(fluoConfig.getAppConfiguration());
-    fluoConfig.addObserver(new ObserverConfiguration(CollisionFreeMapObserver.class.getName())
-        .setParameters(ImmutableMap.of("mapId", opts.mapId)));
+    fluoConfig.addObserver(new ObserverSpecification(CollisionFreeMapObserver.class.getName(),
+        ImmutableMap.of("mapId", opts.mapId)));
 
     Bytes dataRangeEnd = Bytes.of(opts.mapId + DATA_RANGE_END);
     Bytes updateRangeEnd = Bytes.of(opts.mapId + UPDATE_RANGE_END);

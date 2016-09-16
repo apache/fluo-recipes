@@ -21,14 +21,14 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.fluo.api.client.AbstractSnapshotBase;
 import org.apache.fluo.api.client.SnapshotBase;
 import org.apache.fluo.api.client.scanner.ScannerBuilder;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
 import org.apache.fluo.api.data.RowColumn;
-import org.apache.fluo.core.impl.TxStringUtil;
 
-public class MockSnapshotBase implements SnapshotBase {
+public class MockSnapshotBase extends AbstractSnapshotBase implements SnapshotBase {
 
   final Map<Bytes, Map<Column, Bytes>> getData;
 
@@ -171,28 +171,6 @@ public class MockSnapshotBase implements SnapshotBase {
   @Override
   public long getStartTimestamp() {
     throw new UnsupportedOperationException();
-  }
-
-
-  @Override
-  public String gets(CharSequence row, Column column) {
-    return TxStringUtil.gets(this, row, column);
-  }
-
-  @Override
-  public Map<Column, String> gets(CharSequence row, Set<Column> columns) {
-    return TxStringUtil.gets(this, row, columns);
-  }
-
-  @Override
-  public Map<String, Map<Column, String>> gets(Collection<? extends CharSequence> rows,
-      Set<Column> columns) {
-    return TxStringUtil.gets(this, rows, columns);
-  }
-
-  @Override
-  public Map<RowColumn, String> gets(Collection<RowColumn> rowColumns) {
-    return TxStringUtil.gets(this, rowColumns);
   }
 
   @Override

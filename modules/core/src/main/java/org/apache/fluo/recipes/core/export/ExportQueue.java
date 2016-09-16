@@ -27,7 +27,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.hash.Hashing;
 import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.config.FluoConfiguration;
-import org.apache.fluo.api.config.ObserverConfiguration;
+import org.apache.fluo.api.config.ObserverSpecification;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.recipes.core.common.TableOptimizations;
@@ -105,8 +105,8 @@ public class ExportQueue<K, V> {
     SimpleConfiguration appConfig = fluoConfig.getAppConfiguration();
     opts.save(appConfig);
 
-    fluoConfig.addObserver(new ObserverConfiguration(ExportObserver.class.getName())
-        .setParameters(Collections.singletonMap("queueId", opts.queueId)));
+    fluoConfig.addObserver(new ObserverSpecification(ExportObserver.class.getName(), Collections
+        .singletonMap("queueId", opts.queueId)));
 
     Bytes exportRangeStart = Bytes.of(opts.queueId + RANGE_BEGIN);
     Bytes exportRangeStop = Bytes.of(opts.queueId + RANGE_END);

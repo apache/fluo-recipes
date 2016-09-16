@@ -28,6 +28,7 @@ import java.util.Set;
 
 import com.google.common.collect.Maps;
 import org.apache.commons.collections.map.DefaultedMap;
+import org.apache.fluo.api.client.AbstractSnapshotBase;
 import org.apache.fluo.api.client.SnapshotBase;
 import org.apache.fluo.api.client.scanner.ScannerBuilder;
 import org.apache.fluo.api.data.Bytes;
@@ -45,7 +46,7 @@ import org.apache.fluo.recipes.core.types.TypeLayer.RowMethods;
  *
  * @since 1.0.0
  */
-public class TypedSnapshotBase implements SnapshotBase {
+public class TypedSnapshotBase extends AbstractSnapshotBase implements SnapshotBase {
 
   private SnapshotBase snapshot;
   private Encoder encoder;

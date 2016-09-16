@@ -83,7 +83,7 @@ public class ExportObserver<K, V> extends AbstractObserver {
   @SuppressWarnings("unchecked")
   @Override
   public void init(Context context) throws Exception {
-    queueId = context.getParameters().get("queueId");
+    queueId = context.getObserverConfiguration().getString("queueId");
     ExportQueue.Options opts = new ExportQueue.Options(queueId, context.getAppConfiguration());
 
     // TODO defer loading classes... so that not done during fluo init

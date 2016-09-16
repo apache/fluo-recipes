@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 
 import com.google.common.collect.Iterators;
+import org.apache.fluo.api.client.AbstractTransactionBase;
 import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.client.scanner.CellScanner;
 import org.apache.fluo.api.client.scanner.ColumnScanner;
@@ -42,7 +43,7 @@ import org.apache.fluo.api.exceptions.AlreadySetException;
  *
  * @since 1.0.0
  */
-public class RecordingTransactionBase implements TransactionBase {
+public class RecordingTransactionBase extends AbstractTransactionBase implements TransactionBase {
 
   private final TransactionBase txb;
   private final TxLog txLog = new TxLog();
@@ -63,30 +64,13 @@ public class RecordingTransactionBase implements TransactionBase {
   }
 
   @Override
-  public void setWeakNotification(CharSequence row, Column col) {
-    txb.setWeakNotification(row, col);
-  }
-
-  @Override
   public void set(Bytes row, Column col, Bytes value) throws AlreadySetException {
     txLog.filteredAdd(LogEntry.newSet(row, col, value), filter);
     txb.set(row, col, value);
   }
 
   @Override
-  public void set(CharSequence row, Column col, CharSequence value) throws AlreadySetException {
-    txLog.filteredAdd(LogEntry.newSet(row, col, value), filter);
-    txb.set(row, col, value);
-  }
-
-  @Override
   public void delete(Bytes row, Column col) {
-    txLog.filteredAdd(LogEntry.newDelete(row, col), filter);
-    txb.delete(row, col);
-  }
-
-  @Override
-  public void delete(CharSequence row, Column col) {
     txLog.filteredAdd(LogEntry.newDelete(row, col), filter);
     txb.delete(row, col);
   }
@@ -325,50 +309,5 @@ public class RecordingTransactionBase implements TransactionBase {
    */
   public static RecordingTransactionBase wrap(TransactionBase txb, Predicate<LogEntry> filter) {
     return new RecordingTransactionBase(txb, filter);
-  }
-
-  @Override
-  public Map<RowColumn, String> gets(Collection<RowColumn> rowColumns) {
-    Map<RowColumn, String> rowColVal = txb.gets(rowColumns);
-    for (Map.Entry<RowColumn, String> rce : rowColVal.entrySet()) {
-      txLog
-          .filteredAdd(
-              LogEntry.newGet(rce.getKey().getsRow(), rce.getKey().getColumn(), rce.getValue()),
-              filter);
-    }
-    return rowColVal;
-  }
-
-  // TODO alot of these String methods may be more efficient if called the Byte version in this
-  // class... this would avoid conversion from Byte->String->Byte
-  @Override
-  public Map<String, Map<Column, String>> gets(Collection<? extends CharSequence> rows,
-      Set<Column> columns) {
-    Map<String, Map<Column, String>> rowColVal = txb.gets(rows, columns);
-    for (Map.Entry<String, Map<Column, String>> rowEntry : rowColVal.entrySet()) {
-      for (Map.Entry<Column, String> colEntry : rowEntry.getValue().entrySet()) {
-        txLog.filteredAdd(
-            LogEntry.newGet(rowEntry.getKey(), colEntry.getKey(), colEntry.getValue()), filter);
-      }
-    }
-    return rowColVal;
-  }
-
-  @Override
-  public String gets(CharSequence row, Column col) {
-    String val = txb.gets(row, col);
-    if (val != null) {
-      txLog.filteredAdd(LogEntry.newGet(row, col, val), filter);
-    }
-    return val;
-  }
-
-  @Override
-  public Map<Column, String> gets(CharSequence row, Set<Column> columns) {
-    Map<Column, String> colVal = txb.gets(row, columns);
-    for (Map.Entry<Column, String> entry : colVal.entrySet()) {
-      txLog.filteredAdd(LogEntry.newGet(row, entry.getKey(), entry.getValue()), filter);
-    }
-    return colVal;
   }
 }

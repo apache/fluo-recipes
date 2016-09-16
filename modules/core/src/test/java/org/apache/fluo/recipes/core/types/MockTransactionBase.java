@@ -74,8 +74,9 @@ public class MockTransactionBase extends MockSnapshotBase implements Transaction
   }
 
   @Override
-  public void setWeakNotification(CharSequence row, Column col) {
-    setWeakNotification(Bytes.of(row), col);
+  public void delete(CharSequence row, Column col) {
+    delete(Bytes.of(row), col);
+
   }
 
   @Override
@@ -84,7 +85,7 @@ public class MockTransactionBase extends MockSnapshotBase implements Transaction
   }
 
   @Override
-  public void delete(CharSequence row, Column col) {
-    delete(Bytes.of(row), col);
+  public void setWeakNotification(CharSequence row, Column col) {
+    setWeakNotification(Bytes.of(row), col);
   }
 }
