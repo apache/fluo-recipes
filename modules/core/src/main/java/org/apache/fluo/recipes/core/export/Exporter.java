@@ -17,14 +17,23 @@ package org.apache.fluo.recipes.core.export;
 
 import java.util.Iterator;
 
-import org.apache.fluo.api.observer.Observer.Context;
+import org.apache.fluo.api.config.SimpleConfiguration;
+import org.apache.fluo.api.observer.Observer;
 
 /**
  * @since 1.0.0
  */
 public abstract class Exporter<K, V> {
 
-  public void init(String queueId, Context observerContext) throws Exception {}
+  public interface Context {
+    String getQueueId();
+
+    SimpleConfiguration getExporterConfiguration();
+
+    Observer.Context getObserverContext();
+  }
+
+  public void init(Exporter.Context exporterContext) throws Exception {}
 
   /**
    * Must be able to handle same key being exported multiple times and key being exported out of

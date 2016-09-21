@@ -25,7 +25,7 @@ import org.apache.fluo.recipes.core.export.SequencedExport;
 public class SimpleExporter extends AccumuloExporter<String, String> {
 
   @Override
-  protected Collection<Mutation> processExport(SequencedExport<String, String> export) {
+  protected Collection<Mutation> translate(SequencedExport<String, String> export) {
     Mutation m = new Mutation(export.getKey());
     m.put("cf", "cq", export.getSequence(), export.getValue());
     return Collections.singleton(m);

@@ -20,6 +20,7 @@ import java.util.NoSuchElementException;
 
 import com.google.common.collect.Iterators;
 import org.apache.fluo.api.client.TransactionBase;
+import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
 import org.apache.fluo.api.observer.AbstractObserver;
@@ -98,7 +99,23 @@ public class ExportObserver<K, V> extends AbstractObserver {
 
     memLimit = opts.getBufferSize();
 
-    exporter.init(queueId, context);
+    exporter.init(new Exporter.Context() {
+
+      @Override
+      public String getQueueId() {
+        return queueId;
+      }
+
+      @Override
+      public SimpleConfiguration getExporterConfiguration() {
+        return opts.getExporterConfiguration();
+      }
+
+      @Override
+      public Context getObserverContext() {
+        return context;
+      }
+    });
   }
 
   @Override

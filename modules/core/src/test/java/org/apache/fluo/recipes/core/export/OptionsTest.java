@@ -16,6 +16,7 @@
 package org.apache.fluo.recipes.core.export;
 
 import org.apache.fluo.api.config.FluoConfiguration;
+import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.recipes.core.export.ExportQueue.Options;
 import org.junit.Assert;
 import org.junit.Test;
@@ -25,9 +26,13 @@ public class OptionsTest {
   public void testExportQueueOptions() {
     FluoConfiguration conf = new FluoConfiguration();
 
+    SimpleConfiguration ec1 = new SimpleConfiguration();
+    ec1.setProperty("ep1", "ev1");
+    ec1.setProperty("ep2", 3L);
+
     ExportQueue.configure(conf, new Options("Q1", "ET", "KT", "VT", 100));
     ExportQueue.configure(conf, new Options("Q2", "ET2", "KT2", "VT2", 200).setBucketsPerTablet(20)
-        .setBufferSize(1000000));
+        .setBufferSize(1000000).setExporterConfiguration(ec1));
 
     Options opts1 = new Options("Q1", conf.getAppConfiguration());
 
@@ -46,6 +51,11 @@ public class OptionsTest {
     Assert.assertEquals(opts2.numBuckets, 200);
     Assert.assertEquals(opts2.bucketsPerTablet.intValue(), 20);
     Assert.assertEquals(opts2.bufferSize.intValue(), 1000000);
+
+    SimpleConfiguration ec2 = opts2.getExporterConfiguration();
+
+    Assert.assertEquals("ev1", ec2.getString("ep1"));
+    Assert.assertEquals(3, ec2.getInt("ep2"));
 
   }
 }

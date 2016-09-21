@@ -34,7 +34,7 @@ import org.apache.fluo.recipes.core.transaction.TxLog;
 public class AccumuloReplicator extends AccumuloExporter<String, TxLog> {
 
   @Override
-  protected Collection<Mutation> processExport(SequencedExport<String, TxLog> export) {
+  protected Collection<Mutation> translate(SequencedExport<String, TxLog> export) {
     return generateMutations(export.getSequence(), export.getValue());
   }
 

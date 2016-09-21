@@ -30,7 +30,7 @@ import org.apache.fluo.api.client.FluoClient;
 import org.apache.fluo.api.client.FluoFactory;
 import org.apache.fluo.api.client.Transaction;
 import org.apache.fluo.api.mini.MiniFluo;
-import org.apache.fluo.recipes.accumulo.export.AccumuloExportQueue;
+import org.apache.fluo.recipes.accumulo.export.AccumuloExporter;
 import org.apache.fluo.recipes.core.export.ExportQueue;
 import org.apache.fluo.recipes.test.AccumuloExportITBase;
 import org.apache.hadoop.io.Text;
@@ -51,10 +51,12 @@ public class AccumuloExporterIT extends AccumuloExportITBase {
 
     MiniAccumuloCluster miniAccumulo = getMiniAccumuloCluster();
 
-    AccumuloExportQueue.configure(getFluoConfiguration(), new ExportQueue.Options(QUEUE_ID,
-        SimpleExporter.class.getName(), String.class.getName(), String.class.getName(), 5)
-        .setBucketsPerTablet(1), new AccumuloExportQueue.Options(miniAccumulo.getInstanceName(),
-        miniAccumulo.getZooKeepers(), ACCUMULO_USER, ACCUMULO_PASSWORD, exportTable));
+    ExportQueue.configure(
+        getFluoConfiguration(),
+        new ExportQueue.Options(QUEUE_ID, SimpleExporter.class, String.class, String.class, 5)
+            .setBucketsPerTablet(1).setExporterConfiguration(
+                new AccumuloExporter.Configuration(miniAccumulo.getInstanceName(), miniAccumulo
+                    .getZooKeepers(), ACCUMULO_USER, ACCUMULO_PASSWORD, exportTable)));
   }
 
   @Test

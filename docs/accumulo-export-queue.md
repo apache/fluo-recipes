@@ -3,8 +3,8 @@
 ## Background
 
 The [Export Queue Recipe][1] provides a generic foundation for building export mechanism to any
-external data store. The [AccumuloExportQueue] provides an implementation of this recipe for
-Accumulo. The [AccumuloExportQueue] is located the 'fluo-recipes-accumulo' module and provides the
+external data store. The [AccumuloExporter] provides an implementation of this recipe for
+Accumulo. The [AccumuloExporter] is located the `fluo-recipes-accumulo` module and provides the
 following functionality:
 
  * Safely batches writes to Accumulo made by multiple transactions exporting data.
@@ -24,7 +24,7 @@ Exporting to Accumulo is easy. Follow the steps below:
     public class SimpleExporter extends AccumuloExporter<String, String> {
 
       @Override
-      protected Collection<Mutation> processExport(SequencedExport<String, String> export) {
+      protected Collection<Mutation> translate(SequencedExport<String, String> export) {
         Mutation m = new Mutation(export.getKey());
         m.put("cf", "cq", export.getSequence(), export.getValue());
         return Collections.singleton(m);
@@ -32,7 +32,7 @@ Exporting to Accumulo is easy. Follow the steps below:
     }
     ```
 
-2. With a `SimpleExporter` created, configure a [AccumuloExportQueue] to use `SimpleExporter` and
+2. With a `SimpleExporter` created, configure an `ExportQueue` to use `SimpleExporter` and
    give it information on how to connect to Accumulo. 
 
     ```java
@@ -46,10 +46,17 @@ Exporting to Accumulo is easy. Follow the steps below:
     String password =       // Accumulo user password
     String exportTable =    // Name of table to export to
 
-    // Configure accumulo export queue
-    AccumuloExportQueue.configure(fluoConfig, new ExportQueue.Options(EXPORT_QUEUE_ID,
-        SimpleExporter.class.getName(), String.class.getName(), String.class.getName(), numMapBuckets),
-        new AccumuloExportQueue.Options(instance, zookeepers, user, password, exportTable));
+
+    // Create config for export table.
+    AccumuloExporter.Configuration exportTableCfg =
+        new AccumuloExporter.Configuration(instance, zookeepers, user, password, exportTable);
+
+    // Create config for export queue.
+    ExportQueue.Options eqOpts = new ExportQueue.Options(EXPORT_QUEUE_ID, SimpleExporter.class,
+        String.class, String.class, numMapBuckets).setExporterConfiguration(exportTableCfg);
+
+    // Configure export queue.  This will modify fluoConfig.
+    ExportQueue.configure(fluoConfig, qeOpts);
 
     // Initialize Fluo using fluoConfig
     ```
@@ -83,7 +90,6 @@ Exporting to Accumulo is easy. Follow the steps below:
 [AccumuloReplicator] is a specialized [AccumuloExporter] that replicates a Fluo table to Accumulo.
 
 [1]: export-queue.md
-[AccumuloExportQueue]: ../modules/accumulo/src/main/java/org/apache/fluo/recipes/accumulo/export/AccumuloExportQueue.java
 [AccumuloExporter]: ../modules/accumulo/src/main/java/org/apache/fluo/recipes/accumulo/export/AccumuloExporter.java
 [AccumuloReplicator]: ../modules/accumulo/src/main/java/org/apache/fluo/recipes/accumulo/export/DifferenceExport.java
 

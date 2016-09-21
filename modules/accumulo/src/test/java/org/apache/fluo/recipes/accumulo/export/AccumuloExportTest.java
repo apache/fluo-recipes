@@ -45,7 +45,7 @@ public class AccumuloExportTest {
 
   public static Collection<Mutation> genMutations(String key, long seq, Optional<String> oldVal,
       Optional<String> newVal) {
-    return AccumuloExportQueue.generateMutations(seq, genData(key, oldVal), genData(key, newVal));
+    return AccumuloExporter.generateMutations(seq, genData(key, oldVal), genData(key, newVal));
   }
 
   public static Mutation makePut(String key, String val, long seq) {

@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -187,6 +188,7 @@ public class ExportQueue<K, V> {
     String valueType;
     String exporterType;
     String queueId;
+    SimpleConfiguration exporterConfig;
 
     Options(String queueId, SimpleConfiguration appConfig) {
       this.queueId = queueId;
@@ -198,6 +200,8 @@ public class ExportQueue<K, V> {
       this.bufferSize = appConfig.getLong(PREFIX + queueId + ".bufferSize", DEFAULT_BUFFER_SIZE);
       this.bucketsPerTablet =
           appConfig.getInt(PREFIX + queueId + ".bucketsPerTablet", DEFAULT_BUCKETS_PER_TABLET);
+
+      this.exporterConfig = appConfig.subset(PREFIX + queueId + ".exporterCfg");
     }
 
     public Options(String queueId, String exporterType, String keyType, String valueType,
@@ -262,6 +266,24 @@ public class ExportQueue<K, V> {
       return bucketsPerTablet;
     }
 
+    /**
+     * Sets exporter specific configuration. This configuration will be made available to an
+     * {@link Exporter} via {@link Exporter.Context#getExporterConfiguration()}.
+     */
+    public Options setExporterConfiguration(SimpleConfiguration config) {
+      Objects.requireNonNull(config);
+      this.exporterConfig = config;
+      return this;
+    }
+
+    public SimpleConfiguration getExporterConfiguration() {
+      if (exporterConfig == null) {
+        return new SimpleConfiguration();
+      }
+
+      return exporterConfig;
+    }
+
     public String getQueueId() {
       return queueId;
     }
@@ -275,8 +297,18 @@ public class ExportQueue<K, V> {
       if (bufferSize != null) {
         appConfig.setProperty(PREFIX + queueId + ".bufferSize", bufferSize);
       }
+
       if (bucketsPerTablet != null) {
         appConfig.setProperty(PREFIX + queueId + ".bucketsPerTablet", bucketsPerTablet);
+      }
+
+      if (exporterConfig != null) {
+        Iterator<String> keys = exporterConfig.getKeys();
+        while (keys.hasNext()) {
+          String key = keys.next();
+          appConfig.setProperty(PREFIX + queueId + ".exporterCfg." + key,
+              exporterConfig.getRawString(key));
+        }
       }
     }
   }
