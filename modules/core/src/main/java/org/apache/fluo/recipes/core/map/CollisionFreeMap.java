@@ -45,6 +45,7 @@ import org.apache.fluo.api.data.RowColumn;
 import org.apache.fluo.api.data.RowColumnValue;
 import org.apache.fluo.api.data.Span;
 import org.apache.fluo.recipes.core.common.TableOptimizations;
+import org.apache.fluo.recipes.core.common.TableOptimizations.TableOptimizationsFactory;
 import org.apache.fluo.recipes.core.common.RowRange;
 import org.apache.fluo.recipes.core.common.TransientRegistry;
 import org.apache.fluo.recipes.core.impl.BucketUtil;
@@ -581,70 +582,59 @@ public class CollisionFreeMap<K, V> {
 
     new TransientRegistry(fluoConfig.getAppConfiguration()).addTransientRange("cfm." + opts.mapId,
         new RowRange(dataRangeEnd, updateRangeEnd));
+
+    TableOptimizations.registerOptimization(fluoConfig.getAppConfiguration(), opts.mapId,
+        Optimizer.class);
   }
 
-  /**
-   * Return suggested Fluo table optimizations for all previously configured collision free maps.
-   *
-   * @param appConfig Must pass in the application configuration obtained from
-   *        {@code FluoClient.getAppConfiguration()} or
-   *        {@code FluoConfiguration.getAppConfiguration()}
-   */
-  public static TableOptimizations getTableOptimizations(SimpleConfiguration appConfig) {
-    HashSet<String> mapIds = new HashSet<>();
-    appConfig.getKeys(Options.PREFIX.substring(0, Options.PREFIX.length() - 1)).forEachRemaining(
-        k -> mapIds.add(k.substring(Options.PREFIX.length()).split("\\.", 2)[0]));
+  public static class Optimizer implements TableOptimizationsFactory {
 
-    TableOptimizations tableOptim = new TableOptimizations();
-    mapIds.forEach(mid -> tableOptim.merge(getTableOptimizations(mid, appConfig)));
+    /**
+     * Return suggested Fluo table optimizations for the specified collisiong free map.
+     *
+     * @param appConfig Must pass in the application configuration obtained from
+     *        {@code FluoClient.getAppConfiguration()} or
+     *        {@code FluoConfiguration.getAppConfiguration()}
+     */
+    @Override
+    public TableOptimizations getTableOptimizations(String mapId, SimpleConfiguration appConfig) {
+      Options opts = new Options(mapId, appConfig);
 
-    return tableOptim;
-  }
+      BytesBuilder rowBuilder = Bytes.builder();
+      rowBuilder.append(mapId);
 
-  /**
-   * Return suggested Fluo table optimizations for the specified collisiong free map.
-   *
-   * @param appConfig Must pass in the application configuration obtained from
-   *        {@code FluoClient.getAppConfiguration()} or
-   *        {@code FluoConfiguration.getAppConfiguration()}
-   */
-  public static TableOptimizations getTableOptimizations(String mapId, SimpleConfiguration appConfig) {
-    Options opts = new Options(mapId, appConfig);
+      List<Bytes> dataSplits = new ArrayList<>();
+      for (int i = opts.getBucketsPerTablet(); i < opts.numBuckets; i += opts.getBucketsPerTablet()) {
+        String bucketId = BucketUtil.genBucketId(i, opts.numBuckets);
+        rowBuilder.setLength(mapId.length());
+        dataSplits.add(rowBuilder.append(":d:").append(bucketId).toBytes());
+      }
+      Collections.sort(dataSplits);
 
-    BytesBuilder rowBuilder = Bytes.builder();
-    rowBuilder.append(mapId);
+      List<Bytes> updateSplits = new ArrayList<>();
+      for (int i = opts.getBucketsPerTablet(); i < opts.numBuckets; i += opts.getBucketsPerTablet()) {
+        String bucketId = BucketUtil.genBucketId(i, opts.numBuckets);
+        rowBuilder.setLength(mapId.length());
+        updateSplits.add(rowBuilder.append(":u:").append(bucketId).toBytes());
+      }
+      Collections.sort(updateSplits);
 
-    List<Bytes> dataSplits = new ArrayList<>();
-    for (int i = opts.getBucketsPerTablet(); i < opts.numBuckets; i += opts.getBucketsPerTablet()) {
-      String bucketId = BucketUtil.genBucketId(i, opts.numBuckets);
-      rowBuilder.setLength(mapId.length());
-      dataSplits.add(rowBuilder.append(":d:").append(bucketId).toBytes());
+      Bytes dataRangeEnd = Bytes.of(opts.mapId + DATA_RANGE_END);
+      Bytes updateRangeEnd = Bytes.of(opts.mapId + UPDATE_RANGE_END);
+
+      List<Bytes> splits = new ArrayList<>();
+      splits.add(dataRangeEnd);
+      splits.add(updateRangeEnd);
+      splits.addAll(dataSplits);
+      splits.addAll(updateSplits);
+
+      TableOptimizations tableOptim = new TableOptimizations();
+      tableOptim.setSplits(splits);
+
+      tableOptim.setTabletGroupingRegex(Pattern.quote(mapId + ":") + "[du]:");
+
+      return tableOptim;
     }
-    Collections.sort(dataSplits);
-
-    List<Bytes> updateSplits = new ArrayList<>();
-    for (int i = opts.getBucketsPerTablet(); i < opts.numBuckets; i += opts.getBucketsPerTablet()) {
-      String bucketId = BucketUtil.genBucketId(i, opts.numBuckets);
-      rowBuilder.setLength(mapId.length());
-      updateSplits.add(rowBuilder.append(":u:").append(bucketId).toBytes());
-    }
-    Collections.sort(updateSplits);
-
-    Bytes dataRangeEnd = Bytes.of(opts.mapId + DATA_RANGE_END);
-    Bytes updateRangeEnd = Bytes.of(opts.mapId + UPDATE_RANGE_END);
-
-    List<Bytes> splits = new ArrayList<>();
-    splits.add(dataRangeEnd);
-    splits.add(updateRangeEnd);
-    splits.addAll(dataSplits);
-    splits.addAll(updateSplits);
-
-    TableOptimizations tableOptim = new TableOptimizations();
-    tableOptim.setSplits(splits);
-
-    tableOptim.setTabletGroupingRegex(Pattern.quote(mapId + ":") + "[du]:");
-
-    return tableOptim;
   }
 
   private static byte[] encSeq(long l) {

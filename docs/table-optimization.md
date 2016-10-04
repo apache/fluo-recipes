@@ -20,21 +20,17 @@ ExportQueue.configure(fluoConf, ...);
 //CollisionFreeMap.configure() will return table optimizations it would like made
 CollisionFreeMap.configure(fluoConf, ...);
 
+//configure optimizations for a prefixed hash range of a table
+RowHasher.configure(fluoConf, ...);
+
 //initialize Fluo
 FluoFactory.newAdmin(fluoConf).initialize(...)
 
 //Automatically optimize the Fluo table for all configured recipes
-TableOptimizations tableOptimizations = getConfiguredOptimizations(fluoConf);
-TableOperations.optimizeTable(fluoConf, tableOptimizations);
+TableOperations.optimizeTable(fluoConf);
 ```
 
-The above example automatically optimizes all configured recipes.  If more
-selective optimizations is need look into using the following methods instead.
-
- * `CollisionFreeMap.getTableOptimizations(String mapId, Configuration appConfig)`
- * `ExportQueue.getTableOptimizations(String queueId, Configuration appConfig)`
- * `TableOperations.optimizeTable(FluoConfiguration fluoConfig, TableOptimizations tableOptim)`
- * `TableOptimizations.merge()`
+[TableOperations][2] is provided in the Accumulo module of Fluo Recipes.
 
 ## Command Example
 
@@ -54,5 +50,12 @@ fluo init app1
 
 #optimize table for all configured recipes
 fluo exec app1 org.apache.fluo.recipes.accumulo.cmds.OptimizeTable
-
 ```
+
+## Table optimization registry
+
+Recipes register themself by calling [TableOptimizations.registerOptimization()][1].  Anyone can use
+this mechanism, its not limited to use by exisitng recipes.
+
+[1]: ../modules/core/src/main/java/org/apache/fluo/recipes/core/common/TableOptimizations.java
+[2]: ../modules/accumulo/src/main/java/org/apache/fluo/recipes/accumulo/ops/TableOperations.java

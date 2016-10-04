@@ -30,16 +30,17 @@ balancing of the prefix.
 ## Example Use
 
 ```java
+import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.data.Bytes;
-import org.apache.fluo.recipes.core.common.TableOptimizations;
 import org.apache.fluo.recipes.core.data.RowHasher;
 
 public class RowHasherExample {
 
+
   private static final RowHasher PAGE_ROW_HASHER = new RowHasher("p");
 
-  //Provide one place to obtain row hasher.  
-  public static RowHasher getPageRowHasher(){
+  // Provide one place to obtain row hasher.
+  public static RowHasher getPageRowHasher() {
     return PAGE_ROW_HASHER;
   }
 
@@ -60,14 +61,23 @@ public class RowHasherExample {
     // Generate table optimizations for the recipe. This can be called when setting up an
     // application that uses a hashed row.
     int numTablets = 20;
-    TableOptimizations tableOptimizations = pageRowHasher.getTableOptimizations(numTablets);
+
+    // The following code would normally be called before initializing Fluo. This code
+    // registers table optimizations for your prefix+hash.
+    FluoConfiguration conf = new FluoConfiguration();
+    RowHasher.configure(conf, PAGE_ROW_HASHER.getPrefix(), numTablets);
+
+    // Normally you would not call the following code, it would be called automatically for you by
+    // TableOperations.optimizeTable(). Calling this code here to show what table optimization will
+    // be generated.
+    TableOptimizations tableOptimizations = new RowHasher.Optimizer()
+        .getTableOptimizations(PAGE_ROW_HASHER.getPrefix(), conf.getAppConfiguration());
     System.out.println("Balance config : " + tableOptimizations.getTabletGroupingRegex());
     System.out.println("Splits         : ");
     tableOptimizations.getSplits().forEach(System.out::println);
     System.out.println();
   }
 }
-
 ```
 
 The example program above prints the following.

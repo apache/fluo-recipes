@@ -63,11 +63,13 @@ public class TableOperations {
   }
 
   /**
-   * This method will perform all post initialization recommended actions.
+   * Make the requested table optimizations.
+   * 
+   * @param fluoConfig should contain information need to connect to Accumulo and name of Fluo table
+   * @param tableOptim Will perform these optimizations on Fluo table in Accumulo.
    */
   public static void optimizeTable(FluoConfiguration fluoConfig, TableOptimizations tableOptim)
       throws Exception {
-
     Connector conn = getConnector(fluoConfig);
 
     TreeSet<Text> splits = new TreeSet<>();
@@ -99,6 +101,16 @@ public class TableOperations {
             e);
       }
     }
+  }
+
+  /**
+   * This method will perform all registered table optimizations. It will call
+   * {@link TableOptimizations#getConfiguredOptimizations(FluoConfiguration)} to obtain
+   * optimizations to perform.
+   */
+  public static void optimizeTable(FluoConfiguration fluoConfig) throws Exception {
+    TableOptimizations tableOptim = TableOptimizations.getConfiguredOptimizations(fluoConfig);
+    optimizeTable(fluoConfig, tableOptim);
   }
 
   /**

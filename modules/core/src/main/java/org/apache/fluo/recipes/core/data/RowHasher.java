@@ -22,9 +22,12 @@ import java.util.regex.Pattern;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.hash.Hashing;
+import org.apache.fluo.api.config.FluoConfiguration;
+import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Bytes.BytesBuilder;
 import org.apache.fluo.recipes.core.common.TableOptimizations;
+import org.apache.fluo.recipes.core.common.TableOptimizations.TableOptimizationsFactory;
 
 /**
  * This recipe provides code to help add a hash of the row as a prefix of the row. Using this recipe
@@ -40,39 +43,82 @@ import org.apache.fluo.recipes.core.common.TableOptimizations;
  * <p>
  * The project documentation has more information.
  *
+ * <p>
+ * A single instance of RowHasher is thread safe. Creating a single static instance and using it can
+ * result in good performance.
+ *
  * @since 1.0.0
  */
 public class RowHasher {
 
   private static final int HASH_LEN = 4;
+  private static final String PREFIX = "recipes.rowHasher.";
 
-  public TableOptimizations getTableOptimizations(int numTablets) {
+  public static class Optimizer implements TableOptimizationsFactory {
 
-    List<Bytes> splits = new ArrayList<>(numTablets - 1);
+    @Override
+    public TableOptimizations getTableOptimizations(String key, SimpleConfiguration appConfig) {
+      int numTablets = appConfig.getInt(PREFIX + key + ".numTablets");
 
-    int numSplits = numTablets - 1;
-    int distance = (((int) Math.pow(Character.MAX_RADIX, HASH_LEN) - 1) / numTablets) + 1;
-    int split = distance;
-    for (int i = 0; i < numSplits; i++) {
-      splits.add(Bytes.of(prefix
-          + Strings.padStart(Integer.toString(split, Character.MAX_RADIX), HASH_LEN, '0')));
-      split += distance;
+      String prefix = key + ":";
+
+      List<Bytes> splits = new ArrayList<>(numTablets - 1);
+
+      int numSplits = numTablets - 1;
+      int distance = (((int) Math.pow(Character.MAX_RADIX, HASH_LEN) - 1) / numTablets) + 1;
+      int split = distance;
+      for (int i = 0; i < numSplits; i++) {
+        splits.add(Bytes.of(prefix
+            + Strings.padStart(Integer.toString(split, Character.MAX_RADIX), HASH_LEN, '0')));
+        split += distance;
+      }
+
+      splits.add(Bytes.of(prefix + "~"));
+
+
+      TableOptimizations tableOptim = new TableOptimizations();
+      tableOptim.setSplits(splits);
+      tableOptim.setTabletGroupingRegex(Pattern.quote(prefix.toString()));
+
+      return tableOptim;
     }
 
-    splits.add(Bytes.of(prefix + "~"));
-
-
-    TableOptimizations tableOptim = new TableOptimizations();
-    tableOptim.setSplits(splits);
-    tableOptim.setTabletGroupingRegex(Pattern.quote(prefix.toString()));
-
-    return tableOptim;
   }
 
-  private Bytes prefix;
+  /**
+   * This method can be called to register table optimizations before initializing Fluo. This will
+   * register {@link Optimizer} with
+   * {@link TableOptimizations#registerOptimization(SimpleConfiguration, String, Class)}. See the
+   * project level documentation for an example.
+   *
+   * @param fluoConfig The config that will be used to initialize Fluo
+   * @param prefix The prefix used for your Row Hasher. If you have a single instance, could call
+   *        {@link RowHasher#getPrefix()}.
+   * @param numTablets Initial number of tablet to create.
+   */
+  public static void configure(FluoConfiguration fluoConfig, String prefix, int numTablets) {
+    fluoConfig.getAppConfiguration().setProperty(PREFIX + prefix + ".numTablets", numTablets);
+    TableOptimizations.registerOptimization(fluoConfig.getAppConfiguration(), prefix,
+        Optimizer.class);
+  }
+
+  private ThreadLocal<BytesBuilder> builders;
+  private Bytes prefixBytes;
+  private String prefix;
 
   public RowHasher(String prefix) {
-    this.prefix = Bytes.of(prefix + ":");
+    this.prefix = prefix;
+    this.prefixBytes = Bytes.of(prefix + ":");
+
+    builders = ThreadLocal.withInitial(() -> {
+      BytesBuilder bb = Bytes.builder(prefixBytes.length() + 5 + 32);
+      bb.append(prefixBytes);
+      return bb;
+    });
+  }
+
+  public String getPrefix() {
+    return prefix;
   }
 
   /**
@@ -86,8 +132,8 @@ public class RowHasher {
    * @return Returns input with prefix and hash of input prepended.
    */
   public Bytes addHash(Bytes row) {
-    BytesBuilder builder = Bytes.builder(prefix.length() + 5 + row.length());
-    builder.append(prefix);
+    BytesBuilder builder = builders.get();
+    builder.setLength(prefixBytes.length());
     builder.append(genHash(row));
     builder.append(":");
     builder.append(row);
@@ -95,7 +141,7 @@ public class RowHasher {
   }
 
   private boolean hasHash(Bytes row) {
-    for (int i = prefix.length(); i < prefix.length() + HASH_LEN; i++) {
+    for (int i = prefixBytes.length(); i < prefixBytes.length() + HASH_LEN; i++) {
       byte b = row.byteAt(i);
       boolean isAlphaNum = (b >= 'a' && b <= 'z') || (b >= '0' && b <= '9');
       if (!isAlphaNum) {
@@ -103,7 +149,8 @@ public class RowHasher {
       }
     }
 
-    if (row.byteAt(prefix.length() - 1) != ':' || row.byteAt(prefix.length() + HASH_LEN) != ':') {
+    if (row.byteAt(prefixBytes.length() - 1) != ':'
+        || row.byteAt(prefixBytes.length() + HASH_LEN) != ':') {
       return false;
     }
 
@@ -114,12 +161,12 @@ public class RowHasher {
    * @return Returns input with prefix and hash stripped from beginning.
    */
   public Bytes removeHash(Bytes row) {
-    Preconditions.checkArgument(row.length() >= prefix.length() + 5,
+    Preconditions.checkArgument(row.length() >= prefixBytes.length() + 5,
         "Row is shorter than expected " + row);
-    Preconditions.checkArgument(row.subSequence(0, prefix.length()).equals(prefix),
+    Preconditions.checkArgument(row.subSequence(0, prefixBytes.length()).equals(prefixBytes),
         "Row does not have expected prefix " + row);
     Preconditions.checkArgument(hasHash(row), "Row does not have expected hash " + row);
-    return row.subSequence(prefix.length() + 5, row.length());
+    return row.subSequence(prefixBytes.length() + 5, row.length());
   }
 
   private static String genHash(Bytes row) {
@@ -130,7 +177,6 @@ public class RowHasher {
     String hashString =
         Strings.padStart(Integer.toString(hash, Character.MAX_RADIX), HASH_LEN, '0');
     hashString = hashString.substring(hashString.length() - HASH_LEN);
-
     return hashString;
   }
 }

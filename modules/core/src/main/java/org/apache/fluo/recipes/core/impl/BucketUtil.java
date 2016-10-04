@@ -15,10 +15,17 @@
 
 package org.apache.fluo.recipes.core.impl;
 
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
+
 public class BucketUtil {
   public static String genBucketId(int bucket, int maxBucket) {
-    int bucketLen = Integer.toHexString(maxBucket).length();
-    // TODO printf is slow
-    return String.format("%0" + bucketLen + "x", bucket);
+    Preconditions.checkArgument(bucket >= 0);
+    Preconditions.checkArgument(maxBucket > 0);
+
+    int bits = 32 - Integer.numberOfLeadingZeros(maxBucket);
+    int bucketLen = bits / 4 + (bits % 4 > 0 ? 1 : 0);
+
+    return Strings.padStart(Integer.toHexString(bucket), bucketLen, '0');
   }
 }

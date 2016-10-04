@@ -180,9 +180,7 @@ public class AccumuloExportITBase {
    * initialized before MiniFluo is started.
    */
   protected void postFluoInitHook() throws Exception {
-    // TODO maybe remove
-    TableOperations.optimizeTable(fluoConfig,
-        TableOptimizations.getConfiguredOptimizations(fluoConfig));
+    TableOperations.optimizeTable(fluoConfig);
   }
 
   /**

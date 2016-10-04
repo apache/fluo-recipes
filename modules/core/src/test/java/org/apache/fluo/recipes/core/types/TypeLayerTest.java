@@ -261,38 +261,42 @@ public class TypeLayerTest {
 
     MockTransactionBase tt =
         new MockTransactionBase("r1,cf1:cq1,v1", "r1,cf1:cq2,v2", "r1,cf1:cq3,9", "r2,cf2:7,12",
-            "r2,cf2:8,13", "13,9:17,20", "13,9:18,20", "13,9:19,20", "13,9:20,20");
+            "r2,cf2:8,13", "13,9:17,20", "13,9:18,30", "13,9:19,40", "13,9:20,50");
 
     TypedTransactionBase ttx = tl.wrap(tt);
 
     // test increments data
-    ttx.mutate().row("13").fam("9").qual("17").increment(1);
-    ttx.mutate().row("13").fam("9").qual(18).increment(2);
-    ttx.mutate().row("13").fam("9").qual(19l).increment(3);
-    ttx.mutate().row("13").fam("9").qual("20".getBytes()).increment(4);
-    ttx.mutate().row("13").fam("9").qual(Bytes.of("21")).increment(5); // increment non existent
-    ttx.mutate().row("13").col(new Column("9", "22")).increment(6); // increment non existent
-    ttx.mutate().row("13").fam("9").qual(ByteBuffer.wrap("23".getBytes())).increment(7); // increment
-                                                                                         // non
-                                                                                         // existent
+    Assert.assertEquals(20, ttx.mutate().row("13").fam("9").qual("17").increment(1));
+    Assert.assertEquals(30, ttx.mutate().row("13").fam("9").qual(18).increment(2));
+    Assert.assertEquals(40, ttx.mutate().row("13").fam("9").qual(19l).increment(3));
+    Assert.assertEquals(50, ttx.mutate().row("13").fam("9").qual("20".getBytes()).increment(4));
+    // increment non existent
+    Assert.assertEquals(0, ttx.mutate().row("13").fam("9").qual(Bytes.of("21")).increment(5));
+    // increment non existent
+    Assert.assertEquals(0, ttx.mutate().row("13").col(new Column("9", "22")).increment(6));
+    // increment non existent
+    Assert.assertEquals(0, ttx.mutate().row("13").fam("9").qual(ByteBuffer.wrap("23".getBytes()))
+        .increment(7));
 
-    Assert.assertEquals(MockTransactionBase.toRCVM("13,9:17,21", "13,9:18,22", "13,9:19,23",
-        "13,9:20,24", "13,9:21,5", "13,9:22,6", "13,9:23,7"), tt.setData);
+    Assert.assertEquals(MockTransactionBase.toRCVM("13,9:17,21", "13,9:18,32", "13,9:19,43",
+        "13,9:20,54", "13,9:21,5", "13,9:22,6", "13,9:23,7"), tt.setData);
     tt.setData.clear();
 
     // test increments long
-    ttx.mutate().row("13").fam("9").qual("17").increment(1l);
-    ttx.mutate().row("13").fam("9").qual(18).increment(2l);
-    ttx.mutate().row("13").fam("9").qual(19l).increment(3l);
-    ttx.mutate().row("13").fam("9").qual("20".getBytes()).increment(4l);
-    ttx.mutate().row("13").fam("9").qual(Bytes.of("21")).increment(5l); // increment non existent
-    ttx.mutate().row("13").col(new Column("9", "22")).increment(6l); // increment non existent
-    ttx.mutate().row("13").fam("9").qual(ByteBuffer.wrap("23".getBytes())).increment(7l); // increment
-                                                                                          // non
-                                                                                          // existent
+    Assert.assertEquals(20l, ttx.mutate().row("13").fam("9").qual("17").increment(1l));
+    Assert.assertEquals(30l, ttx.mutate().row("13").fam("9").qual(18).increment(2l));
+    Assert.assertEquals(40l, ttx.mutate().row("13").fam("9").qual(19l).increment(3l));
+    Assert.assertEquals(50l, ttx.mutate().row("13").fam("9").qual("20".getBytes()).increment(4l));
+    // increment non existent
+    Assert.assertEquals(0l, ttx.mutate().row("13").fam("9").qual(Bytes.of("21")).increment(5l));
+    // increment non existent
+    Assert.assertEquals(0l, ttx.mutate().row("13").col(new Column("9", "22")).increment(6l));
+    // increment non existent
+    Assert.assertEquals(0l, ttx.mutate().row("13").fam("9").qual(ByteBuffer.wrap("23".getBytes()))
+        .increment(7l));
 
-    Assert.assertEquals(MockTransactionBase.toRCVM("13,9:17,21", "13,9:18,22", "13,9:19,23",
-        "13,9:20,24", "13,9:21,5", "13,9:22,6", "13,9:23,7"), tt.setData);
+    Assert.assertEquals(MockTransactionBase.toRCVM("13,9:17,21", "13,9:18,32", "13,9:19,43",
+        "13,9:20,54", "13,9:21,5", "13,9:22,6", "13,9:23,7"), tt.setData);
     tt.setData.clear();
 
     // test setting data

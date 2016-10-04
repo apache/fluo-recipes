@@ -106,9 +106,10 @@ public class TypedTransactionBase extends TypedSnapshotBase implements Transacti
      * have a current value, then it defaults to zero.
      *
      * @param i Integer increment amount
+     * @return The current value (before incrementing). If there is no current value, returns 0.
      * @throws AlreadySetException if value was previously set in transaction
      */
-    public void increment(int i) throws AlreadySetException {
+    public int increment(int i) throws AlreadySetException {
       checkNotSet();
       Bytes val = tx.get(data.row, data.getCol());
       int v = 0;
@@ -116,6 +117,8 @@ public class TypedTransactionBase extends TypedSnapshotBase implements Transacti
         v = encoder.decodeInteger(val);
       }
       tx.set(data.row, data.getCol(), encoder.encode(v + i));
+
+      return v;
     }
 
     /**
@@ -123,9 +126,10 @@ public class TypedTransactionBase extends TypedSnapshotBase implements Transacti
      * have a current value, then it defaults to zero.
      *
      * @param l Long increment amount
+     * @return The current value (before incrementing). If there is no current value, returns 0.
      * @throws AlreadySetException if value was previously set in transaction
      */
-    public void increment(long l) throws AlreadySetException {
+    public long increment(long l) throws AlreadySetException {
       checkNotSet();
       Bytes val = tx.get(data.row, data.getCol());
       long v = 0;
@@ -133,6 +137,8 @@ public class TypedTransactionBase extends TypedSnapshotBase implements Transacti
         v = encoder.decodeLong(val);
       }
       tx.set(data.row, data.getCol(), encoder.encode(v + l));
+
+      return v;
     }
 
     public void delete() throws AlreadySetException {

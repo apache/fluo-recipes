@@ -17,6 +17,7 @@ package org.apache.fluo.recipes.core.common;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 
@@ -25,8 +26,6 @@ import org.apache.fluo.api.client.FluoFactory;
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
-import org.apache.fluo.recipes.core.export.ExportQueue;
-import org.apache.fluo.recipes.core.map.CollisionFreeMap;
 
 /**
  * Post initialization recommended table optimizations.
@@ -67,16 +66,49 @@ public class TableOptimizations {
     }
   }
 
+  public static interface TableOptimizationsFactory {
+    TableOptimizations getTableOptimizations(String key, SimpleConfiguration appConfig);
+  }
+
+  private static final String PREFIX = "recipes.optimizations.";
+
   /**
-   * A utility method to get table optimizations for all configured recipes.
+   * This method provides a standard way to register a table optimization for the Fluo table before
+   * initialization. After Fluo is initialized, the optimizations can be retrieved by calling
+   * {@link #getConfiguredOptimizations(FluoConfiguration)}.
+   * 
+   * @param application config, likely obtained from calling
+   *        {@link FluoConfiguration#getAppConfiguration()}
+   * @param key A unique identifier for the optimization
+   * @param clazz The optimization factory type.
+   */
+  public static void registerOptimization(SimpleConfiguration appConfig, String key,
+      Class<? extends TableOptimizationsFactory> clazz) {
+    appConfig.setProperty(PREFIX + key, clazz.getName());
+  }
+
+  /**
+   * A utility method to get all registered table optimizations. Many recipes will automatically
+   * register table optimizations when configured.
    */
   public static TableOptimizations getConfiguredOptimizations(FluoConfiguration fluoConfig) {
     try (FluoClient client = FluoFactory.newClient(fluoConfig)) {
       SimpleConfiguration appConfig = client.getAppConfiguration();
       TableOptimizations tableOptim = new TableOptimizations();
 
-      tableOptim.merge(ExportQueue.getTableOptimizations(appConfig));
-      tableOptim.merge(CollisionFreeMap.getTableOptimizations(appConfig));
+      SimpleConfiguration subset = appConfig.subset(PREFIX.substring(0, PREFIX.length() - 1));
+      Iterator<String> keys = subset.getKeys();
+      while (keys.hasNext()) {
+        String key = keys.next();
+        String clazz = subset.getString(key);
+        try {
+          TableOptimizationsFactory factory =
+              Class.forName(clazz).asSubclass(TableOptimizationsFactory.class).newInstance();
+          tableOptim.merge(factory.getTableOptimizations(key, appConfig));
+        } catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
+          throw new RuntimeException(e);
+        }
+      }
 
       return tableOptim;
     }

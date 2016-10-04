@@ -15,7 +15,11 @@
 
 package org.apache.fluo.recipes.core.data;
 
+import java.util.Arrays;
+
+import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.data.Bytes;
+import org.apache.fluo.recipes.core.common.TableOptimizations;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -55,8 +59,13 @@ public class RowHasherTest {
 
   @Test
   public void testBalancerRegex() {
-    RowHasher rh = new RowHasher("p");
-    String regex = rh.getTableOptimizations(3).getTabletGroupingRegex();
+    FluoConfiguration fc = new FluoConfiguration();
+    RowHasher.configure(fc, "p", 3);
+    TableOptimizations optimizations =
+        new RowHasher.Optimizer().getTableOptimizations("p", fc.getAppConfiguration());
+    String regex = optimizations.getTabletGroupingRegex();
     Assert.assertEquals("(\\Qp:\\E).*", regex);
+    Assert.assertEquals(Arrays.asList(Bytes.of("p:c000"), Bytes.of("p:o000"), Bytes.of("p:~")),
+        optimizations.getSplits());
   }
 }

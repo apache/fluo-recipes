@@ -19,7 +19,6 @@ import javax.inject.Inject;
 
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.recipes.accumulo.ops.TableOperations;
-import org.apache.fluo.recipes.core.common.TableOptimizations;
 
 /**
  * @since 1.0.0
@@ -36,8 +35,7 @@ public class OptimizeTable {
       System.exit(-1);
     }
 
-    TableOperations.optimizeTable(fluoConfig,
-        TableOptimizations.getConfiguredOptimizations(fluoConfig));
+    TableOperations.optimizeTable(fluoConfig);
     System.out.println("Finished optimizing table");
   }
 }

@@ -32,6 +32,7 @@ import org.apache.fluo.api.config.ObserverSpecification;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.recipes.core.common.TableOptimizations;
+import org.apache.fluo.recipes.core.common.TableOptimizations.TableOptimizationsFactory;
 import org.apache.fluo.recipes.core.common.RowRange;
 import org.apache.fluo.recipes.core.common.TransientRegistry;
 import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
@@ -114,61 +115,48 @@ public class ExportQueue<K, V> {
 
     new TransientRegistry(fluoConfig.getAppConfiguration()).addTransientRange("exportQueue."
         + opts.queueId, new RowRange(exportRangeStart, exportRangeStop));
+
+    TableOptimizations.registerOptimization(appConfig, opts.queueId, Optimizer.class);
   }
 
-  /**
-   * Return suggested Fluo table optimizations for all previously configured export queues.
-   *
-   * @param appConfig Must pass in the application configuration obtained from
-   *        {@code FluoClient.getAppConfiguration()} or
-   *        {@code FluoConfiguration.getAppConfiguration()}
-   */
+  public static class Optimizer implements TableOptimizationsFactory {
 
-  public static TableOptimizations getTableOptimizations(SimpleConfiguration appConfig) {
-    HashSet<String> queueIds = new HashSet<>();
-    appConfig.getKeys(Options.PREFIX.substring(0, Options.PREFIX.length() - 1)).forEachRemaining(
-        k -> queueIds.add(k.substring(Options.PREFIX.length()).split("\\.", 2)[0]));
+    /**
+     * Return suggested Fluo table optimizations for the specified export queue.
+     *
+     * @param appConfig Must pass in the application configuration obtained from
+     *        {@code FluoClient.getAppConfiguration()} or
+     *        {@code FluoConfiguration.getAppConfiguration()}
+     */
+    @Override
+    public TableOptimizations getTableOptimizations(String queueId, SimpleConfiguration appConfig) {
+      Options opts = new Options(queueId, appConfig);
 
-    TableOptimizations tableOptim = new TableOptimizations();
-    queueIds.forEach(qid -> tableOptim.merge(getTableOptimizations(qid, appConfig)));
+      List<Bytes> splits = new ArrayList<>();
 
-    return tableOptim;
-  }
+      Bytes exportRangeStart = Bytes.of(opts.queueId + RANGE_BEGIN);
+      Bytes exportRangeStop = Bytes.of(opts.queueId + RANGE_END);
 
-  /**
-   * Return suggested Fluo table optimizations for the specified export queue.
-   *
-   * @param appConfig Must pass in the application configuration obtained from
-   *        {@code FluoClient.getAppConfiguration()} or
-   *        {@code FluoConfiguration.getAppConfiguration()}
-   */
-  public static TableOptimizations getTableOptimizations(String queueId,
-      SimpleConfiguration appConfig) {
-    Options opts = new Options(queueId, appConfig);
+      splits.add(exportRangeStart);
+      splits.add(exportRangeStop);
 
-    List<Bytes> splits = new ArrayList<>();
+      List<Bytes> exportSplits = new ArrayList<>();
+      for (int i = opts.getBucketsPerTablet(); i < opts.numBuckets; i += opts.getBucketsPerTablet()) {
+        exportSplits.add(ExportBucket.generateBucketRow(opts.queueId, i, opts.numBuckets));
+      }
+      Collections.sort(exportSplits);
+      splits.addAll(exportSplits);
 
-    Bytes exportRangeStart = Bytes.of(opts.queueId + RANGE_BEGIN);
-    Bytes exportRangeStop = Bytes.of(opts.queueId + RANGE_END);
+      TableOptimizations tableOptim = new TableOptimizations();
+      tableOptim.setSplits(splits);
 
-    splits.add(exportRangeStart);
-    splits.add(exportRangeStop);
+      // the tablet with end row <queueId># does not contain any data for the export queue and
+      // should not be grouped with the export queue
+      tableOptim.setTabletGroupingRegex(Pattern.quote(queueId + ":"));
 
-    List<Bytes> exportSplits = new ArrayList<>();
-    for (int i = opts.getBucketsPerTablet(); i < opts.numBuckets; i += opts.getBucketsPerTablet()) {
-      exportSplits.add(ExportBucket.generateBucketRow(opts.queueId, i, opts.numBuckets));
+      return tableOptim;
     }
-    Collections.sort(exportSplits);
-    splits.addAll(exportSplits);
 
-    TableOptimizations tableOptim = new TableOptimizations();
-    tableOptim.setSplits(splits);
-
-    // the tablet with end row <queueId># does not contain any data for the export queue and
-    // should not be grouped with the export queue
-    tableOptim.setTabletGroupingRegex(Pattern.quote(queueId + ":"));
-
-    return tableOptim;
   }
 
   /**

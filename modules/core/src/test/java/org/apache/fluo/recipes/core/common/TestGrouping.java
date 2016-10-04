@@ -21,6 +21,7 @@ import java.util.regex.Pattern;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.fluo.api.config.FluoConfiguration;
+import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.recipes.core.export.ExportQueue;
 import org.apache.fluo.recipes.core.map.CollisionFreeMap;
@@ -39,9 +40,14 @@ public class TestGrouping {
     ExportQueue.configure(conf, new ExportQueue.Options("eq1", "et", "kt", "vt", 7));
     ExportQueue.configure(conf, new ExportQueue.Options("eq2", "et", "kt", "vt", 3));
 
+
+    SimpleConfiguration appConfg = conf.getAppConfiguration();
+
     TableOptimizations tableOptim =
-        CollisionFreeMap.getTableOptimizations(conf.getAppConfiguration());
-    tableOptim.merge(ExportQueue.getTableOptimizations(conf.getAppConfiguration()));
+        new CollisionFreeMap.Optimizer().getTableOptimizations("m1", appConfg);
+    tableOptim.merge(new CollisionFreeMap.Optimizer().getTableOptimizations("m2", appConfg));
+    tableOptim.merge(new ExportQueue.Optimizer().getTableOptimizations("eq1", appConfg));
+    tableOptim.merge(new ExportQueue.Optimizer().getTableOptimizations("eq2", appConfg));
 
     Pattern pattern = Pattern.compile(tableOptim.getTabletGroupingRegex());
 
