@@ -16,10 +16,10 @@
 package org.apache.fluo.recipes.accumulo.export;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import org.apache.accumulo.core.data.Mutation;
 import org.apache.fluo.api.config.SimpleConfiguration;
@@ -68,9 +68,11 @@ public abstract class AccumuloExporter<K, V> extends Exporter<K, V> {
 
     ArrayList<Mutation> buffer = new ArrayList<>();
 
+    Consumer<Mutation> consumer = m -> buffer.add(m);
+
     while (exports.hasNext()) {
       SequencedExport<K, V> export = exports.next();
-      buffer.addAll(translate(export));
+      translate(export, consumer);
     }
 
     if (buffer.size() > 0) {
@@ -78,7 +80,14 @@ public abstract class AccumuloExporter<K, V> extends Exporter<K, V> {
     }
   }
 
-  protected abstract Collection<Mutation> translate(SequencedExport<K, V> export);
+  /**
+   * Implementations of this method should translate the given SequencedExport to 0 or more
+   * Mutations.
+   * 
+   * @param export the input that should be translated to mutations
+   * @param consumer output mutations to this consumer
+   */
+  protected abstract void translate(SequencedExport<K, V> export, Consumer<Mutation> consumer);
 
   /**
    * Generates Accumulo mutations by comparing the differences between a RowColumn/Bytes map that is
@@ -95,12 +104,13 @@ public abstract class AccumuloExporter<K, V> extends Exporter<K, V> {
    * <li>The export sequence number is used for the timestamp in the mutation.
    * </ul>
    *
+   * @param consumer generated mutations will be output to this consumer
    * @param oldData Map containing old row/column data
    * @param newData Map containing new row/column data
    * @param seq Export sequence number
    */
-  public static Collection<Mutation> generateMutations(long seq, Map<RowColumn, Bytes> oldData,
-      Map<RowColumn, Bytes> newData) {
+  public static void generateMutations(long seq, Map<RowColumn, Bytes> oldData,
+      Map<RowColumn, Bytes> newData, Consumer<Mutation> consumer) {
     Map<Bytes, Mutation> mutationMap = new HashMap<>();
     for (Map.Entry<RowColumn, Bytes> entry : oldData.entrySet()) {
       RowColumn rc = entry.getKey();
@@ -120,7 +130,7 @@ public abstract class AccumuloExporter<K, V> extends Exporter<K, V> {
         m.put(col.getFamily().toArray(), col.getQualifier().toArray(), seq, newVal.toArray());
       }
     }
-    return mutationMap.values();
-  }
 
+    mutationMap.values().forEach(consumer);
+  }
 }

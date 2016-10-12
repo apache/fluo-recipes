@@ -15,11 +15,13 @@
 
 package org.apache.fluo.recipes.accumulo.export;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import org.apache.accumulo.core.data.Mutation;
 import org.apache.fluo.api.data.Bytes;
@@ -43,9 +45,9 @@ public class AccumuloExportTest {
     return rcMap;
   }
 
-  public static Collection<Mutation> genMutations(String key, long seq, Optional<String> oldVal,
-      Optional<String> newVal) {
-    return AccumuloExporter.generateMutations(seq, genData(key, oldVal), genData(key, newVal));
+  public static void genMutations(String key, long seq, Optional<String> oldVal,
+      Optional<String> newVal, Consumer<Mutation> consumer) {
+    AccumuloExporter.generateMutations(seq, genData(key, oldVal), genData(key, newVal), consumer);
   }
 
   public static Mutation makePut(String key, String val, long seq) {
@@ -70,33 +72,40 @@ public class AccumuloExportTest {
 
   @Test
   public void testDifferenceExport() {
-    Collection<Mutation> mutations;
+    final Collection<Mutation> mutations = new ArrayList<>();
+    Consumer<Mutation> consumer = m -> mutations.add(m);
 
-    mutations = genMutations("k1", 1, Optional.empty(), Optional.of("a"));
+    genMutations("k1", 1, Optional.empty(), Optional.of("a"), consumer);
     Assert.assertEquals(1, mutations.size());
     Assert.assertTrue(mutations.contains(makePut("k1", "a", 1)));
+    mutations.clear();
 
-    mutations = genMutations("k2", 2, Optional.of("ab"), Optional.of("ab"));
+    genMutations("k2", 2, Optional.of("ab"), Optional.of("ab"), consumer);
     Assert.assertEquals(0, mutations.size());
+    mutations.clear();
 
-    mutations = genMutations("k2", 2, Optional.of("b"), Optional.of("ab"));
+    genMutations("k2", 2, Optional.of("b"), Optional.of("ab"), consumer);
     Assert.assertEquals(1, mutations.size());
     Assert.assertTrue(mutations.contains(makePut("k2", "a", 2)));
+    mutations.clear();
 
-    mutations = genMutations("k3", 3, Optional.of("c"), Optional.of("d"));
+    genMutations("k3", 3, Optional.of("c"), Optional.of("d"), consumer);
     Assert.assertEquals(1, mutations.size());
     Mutation m = makeDel("k3", "c", 3);
     addPut(m, "k3", "d", 3);
     Assert.assertTrue(mutations.contains(m));
+    mutations.clear();
 
-    mutations = genMutations("k4", 4, Optional.of("e"), Optional.empty());
+    genMutations("k4", 4, Optional.of("e"), Optional.empty(), consumer);
     Assert.assertEquals(1, mutations.size());
     Assert.assertTrue(mutations.contains(makeDel("k4", "e", 4)));
+    mutations.clear();
 
-    mutations = genMutations("k5", 5, Optional.of("ef"), Optional.of("fg"));
+    genMutations("k5", 5, Optional.of("ef"), Optional.of("fg"), consumer);
     Assert.assertEquals(1, mutations.size());
     m = makeDel("k5", "e", 5);
     addPut(m, "k5", "g", 5);
     Assert.assertTrue(mutations.contains(m));
+    mutations.clear();
   }
 }

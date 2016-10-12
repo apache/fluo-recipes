@@ -15,9 +15,9 @@
 
 package org.apache.fluo.recipes.accumulo.export;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import org.apache.accumulo.core.data.Mutation;
@@ -34,8 +34,8 @@ import org.apache.fluo.recipes.core.transaction.TxLog;
 public class AccumuloReplicator extends AccumuloExporter<String, TxLog> {
 
   @Override
-  protected Collection<Mutation> translate(SequencedExport<String, TxLog> export) {
-    return generateMutations(export.getSequence(), export.getValue());
+  protected void translate(SequencedExport<String, TxLog> export, Consumer<Mutation> consumer) {
+    generateMutations(export.getSequence(), export.getValue(), consumer);
   }
 
   /**
@@ -51,9 +51,9 @@ public class AccumuloReplicator extends AccumuloExporter<String, TxLog> {
    *
    * @param txLog Transaction log
    * @param seq Export sequence number
-   * @return Collection of mutations
+   * @param consumer generated mutations will be output to this consumer
    */
-  public static Collection<Mutation> generateMutations(long seq, TxLog txLog) {
+  public static void generateMutations(long seq, TxLog txLog, Consumer<Mutation> consumer) {
     Map<Bytes, Mutation> mutationMap = new HashMap<>();
     for (LogEntry le : txLog.getLogEntries()) {
       LogEntry.Operation op = le.getOp();
@@ -78,6 +78,6 @@ public class AccumuloReplicator extends AccumuloExporter<String, TxLog> {
         }
       }
     }
-    return mutationMap.values();
+    mutationMap.values().forEach(consumer);
   }
 }

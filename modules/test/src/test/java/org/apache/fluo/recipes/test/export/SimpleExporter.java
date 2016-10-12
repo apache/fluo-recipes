@@ -15,8 +15,7 @@
 
 package org.apache.fluo.recipes.test.export;
 
-import java.util.Collection;
-import java.util.Collections;
+import java.util.function.Consumer;
 
 import org.apache.accumulo.core.data.Mutation;
 import org.apache.fluo.recipes.accumulo.export.AccumuloExporter;
@@ -25,9 +24,9 @@ import org.apache.fluo.recipes.core.export.SequencedExport;
 public class SimpleExporter extends AccumuloExporter<String, String> {
 
   @Override
-  protected Collection<Mutation> translate(SequencedExport<String, String> export) {
+  protected void translate(SequencedExport<String, String> export, Consumer<Mutation> consumer) {
     Mutation m = new Mutation(export.getKey());
     m.put("cf", "cq", export.getSequence(), export.getValue());
-    return Collections.singleton(m);
+    consumer.accept(m);
   }
 }

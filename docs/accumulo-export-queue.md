@@ -24,10 +24,10 @@ Exporting to Accumulo is easy. Follow the steps below:
     public class SimpleExporter extends AccumuloExporter<String, String> {
 
       @Override
-      protected Collection<Mutation> translate(SequencedExport<String, String> export) {
+      protected void translate(SequencedExport<String, String> export, Consumer<Mutation> consumer) {
         Mutation m = new Mutation(export.getKey());
         m.put("cf", "cq", export.getSequence(), export.getValue());
-        return Collections.singleton(m);
+        consumer.accept(m);
       }
     }
     ```
