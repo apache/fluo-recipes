@@ -13,13 +13,15 @@
  * the License.
  */
 
-package org.apache.fluo.recipes.spark;
+package org.apache.fluo.recipes.spark.it;
 
 import java.util.List;
 
 import org.apache.fluo.api.client.FluoFactory;
 import org.apache.fluo.api.data.RowColumnValue;
 import org.apache.fluo.api.mini.MiniFluo;
+import org.apache.fluo.recipes.spark.FluoSparkHelper;
+import org.apache.fluo.recipes.spark.FluoSparkTestUtil;
 import org.apache.fluo.recipes.test.AccumuloExportITBase;
 import org.apache.fluo.recipes.test.FluoITHelper;
 import org.apache.hadoop.fs.Path;

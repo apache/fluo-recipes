@@ -18,6 +18,7 @@ package org.apache.fluo.recipes.core.export;
 import java.util.Iterator;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.client.scanner.CellScanner;
 import org.apache.fluo.api.data.Bytes;
@@ -25,7 +26,6 @@ import org.apache.fluo.api.data.Column;
 import org.apache.fluo.api.data.RowColumn;
 import org.apache.fluo.api.data.RowColumnValue;
 import org.apache.fluo.api.data.Span;
-import org.apache.fluo.recipes.core.impl.BucketUtil;
 import org.apache.fluo.recipes.core.types.StringEncoder;
 import org.apache.fluo.recipes.core.types.TypeLayer;
 import org.apache.fluo.recipes.core.types.TypedTransactionBase;
@@ -47,8 +47,18 @@ class ExportBucket {
   private final String qid;
   private final Bytes bucketRow;
 
+  static String genBucketId(int bucket, int maxBucket) {
+    Preconditions.checkArgument(bucket >= 0);
+    Preconditions.checkArgument(maxBucket > 0);
+
+    int bits = 32 - Integer.numberOfLeadingZeros(maxBucket);
+    int bucketLen = bits / 4 + (bits % 4 > 0 ? 1 : 0);
+
+    return Strings.padStart(Integer.toHexString(bucket), bucketLen, '0');
+  }
+
   static Bytes generateBucketRow(String qid, int bucket, int numBuckets) {
-    return Bytes.of(qid + ":" + BucketUtil.genBucketId(bucket, numBuckets));
+    return Bytes.of(qid + ":" + genBucketId(bucket, numBuckets));
   }
 
   ExportBucket(TransactionBase tx, String qid, int bucket, int numBuckets) {

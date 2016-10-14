@@ -25,6 +25,7 @@ import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.recipes.core.common.TableOptimizations;
 import org.apache.fluo.recipes.core.map.CollisionFreeMap.Options;
+import org.apache.fluo.recipes.core.map.it.WordCountCombiner;
 import org.junit.Assert;
 import org.junit.Test;
 

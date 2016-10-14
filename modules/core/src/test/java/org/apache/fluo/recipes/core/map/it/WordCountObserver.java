@@ -13,7 +13,7 @@
  * the License.
  */
 
-package org.apache.fluo.recipes.core.map;
+package org.apache.fluo.recipes.core.map.it;
 
 import java.util.Iterator;
 import java.util.Optional;
@@ -21,6 +21,8 @@ import java.util.Optional;
 import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
+import org.apache.fluo.recipes.core.map.Update;
+import org.apache.fluo.recipes.core.map.UpdateObserver;
 
 public class WordCountObserver extends UpdateObserver<String, Long> {
 

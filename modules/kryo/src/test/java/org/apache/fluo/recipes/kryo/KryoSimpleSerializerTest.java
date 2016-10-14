@@ -13,11 +13,12 @@
  * the License.
  */
 
-package org.apache.fluo.recipes.core.serialization;
+package org.apache.fluo.recipes.kryo;
 
 import com.esotericsoftware.kryo.pool.KryoFactory;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
+import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
 import org.apache.fluo.recipes.kryo.KryoSimplerSerializer;
 import org.junit.Assert;
 import org.junit.Test;

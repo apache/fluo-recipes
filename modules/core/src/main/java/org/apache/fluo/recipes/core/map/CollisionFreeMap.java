@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
@@ -48,7 +49,6 @@ import org.apache.fluo.recipes.core.common.TableOptimizations;
 import org.apache.fluo.recipes.core.common.TableOptimizations.TableOptimizationsFactory;
 import org.apache.fluo.recipes.core.common.RowRange;
 import org.apache.fluo.recipes.core.common.TransientRegistry;
-import org.apache.fluo.recipes.core.impl.BucketUtil;
 import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
 
 /**
@@ -290,7 +290,7 @@ public class CollisionFreeMap<K, V> {
     byte[] k = serializer.serialize(key);
 
     int hash = Hashing.murmur3_32().hashBytes(k).asInt();
-    String bucketId = BucketUtil.genBucketId(Math.abs(hash % numBuckets), numBuckets);
+    String bucketId = genBucketId(Math.abs(hash % numBuckets), numBuckets);
 
 
     BytesBuilder rowBuilder = Bytes.builder();
@@ -352,7 +352,7 @@ public class CollisionFreeMap<K, V> {
     for (Entry<K, V> entry : updates.entrySet()) {
       byte[] k = serializer.serialize(entry.getKey());
       int hash = Hashing.murmur3_32().hashBytes(k).asInt();
-      String bucketId = BucketUtil.genBucketId(Math.abs(hash % numBuckets), numBuckets);
+      String bucketId = genBucketId(Math.abs(hash % numBuckets), numBuckets);
 
       // reset to the common row prefix
       rowBuilder.setLength(prefixLength);
@@ -375,6 +375,16 @@ public class CollisionFreeMap<K, V> {
 
       tx.setWeakNotification(row, new Column("fluoRecipes", "cfm:" + mapId));
     }
+  }
+
+  static String genBucketId(int bucket, int maxBucket) {
+    Preconditions.checkArgument(bucket >= 0);
+    Preconditions.checkArgument(maxBucket > 0);
+
+    int bits = 32 - Integer.numberOfLeadingZeros(maxBucket);
+    int bucketLen = bits / 4 + (bits % 4 > 0 ? 1 : 0);
+
+    return Strings.padStart(Integer.toHexString(bucket), bucketLen, '0');
   }
 
   public static <K2, V2> CollisionFreeMap<K2, V2> getInstance(String mapId,
@@ -424,7 +434,7 @@ public class CollisionFreeMap<K, V> {
     public RowColumnValue convert(K2 key, V2 val) {
       byte[] k = serializer.serialize(key);
       int hash = Hashing.murmur3_32().hashBytes(k).asInt();
-      String bucketId = BucketUtil.genBucketId(Math.abs(hash % numBuckets), numBuckets);
+      String bucketId = genBucketId(Math.abs(hash % numBuckets), numBuckets);
 
       BytesBuilder bb = Bytes.builder();
       Bytes row = bb.append(mapId).append(":d:").append(bucketId).append(":").append(k).toBytes();
@@ -605,7 +615,7 @@ public class CollisionFreeMap<K, V> {
 
       List<Bytes> dataSplits = new ArrayList<>();
       for (int i = opts.getBucketsPerTablet(); i < opts.numBuckets; i += opts.getBucketsPerTablet()) {
-        String bucketId = BucketUtil.genBucketId(i, opts.numBuckets);
+        String bucketId = genBucketId(i, opts.numBuckets);
         rowBuilder.setLength(mapId.length());
         dataSplits.add(rowBuilder.append(":d:").append(bucketId).toBytes());
       }
@@ -613,7 +623,7 @@ public class CollisionFreeMap<K, V> {
 
       List<Bytes> updateSplits = new ArrayList<>();
       for (int i = opts.getBucketsPerTablet(); i < opts.numBuckets; i += opts.getBucketsPerTablet()) {
-        String bucketId = BucketUtil.genBucketId(i, opts.numBuckets);
+        String bucketId = genBucketId(i, opts.numBuckets);
         rowBuilder.setLength(mapId.length());
         updateSplits.add(rowBuilder.append(":u:").append(bucketId).toBytes());
       }

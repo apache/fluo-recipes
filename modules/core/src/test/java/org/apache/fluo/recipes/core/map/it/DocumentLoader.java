@@ -13,19 +13,23 @@
  * the License.
  */
 
-package org.apache.fluo.recipes.core.impl;
+package org.apache.fluo.recipes.core.map.it;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
+import org.apache.fluo.recipes.core.types.TypedLoader;
+import org.apache.fluo.recipes.core.types.TypedTransactionBase;
 
-public class BucketUtil {
-  public static String genBucketId(int bucket, int maxBucket) {
-    Preconditions.checkArgument(bucket >= 0);
-    Preconditions.checkArgument(maxBucket > 0);
+public class DocumentLoader extends TypedLoader {
 
-    int bits = 32 - Integer.numberOfLeadingZeros(maxBucket);
-    int bucketLen = bits / 4 + (bits % 4 > 0 ? 1 : 0);
+  String docid;
+  String doc;
 
-    return Strings.padStart(Integer.toHexString(bucket), bucketLen, '0');
+  DocumentLoader(String docid, String doc) {
+    this.docid = docid;
+    this.doc = doc;
+  }
+
+  @Override
+  public void load(TypedTransactionBase tx, Context context) throws Exception {
+    tx.mutate().row("d:" + docid).fam("content").qual("new").set(doc);
   }
 }

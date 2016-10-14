@@ -13,14 +13,26 @@
  * the License.
  */
 
-package org.apache.fluo.recipes.core.export;
+package org.apache.fluo.recipes.core.map.it;
 
-class RefInfo {
-  long seq;
-  boolean deleted;
+import java.util.Iterator;
+import java.util.Optional;
 
-  public RefInfo(long seq, boolean deleted) {
-    this.seq = seq;
-    this.deleted = deleted;
+import org.apache.fluo.recipes.core.map.Combiner;
+
+public class WordCountCombiner implements Combiner<String, Long> {
+  @Override
+  public Optional<Long> combine(String key, Iterator<Long> updates) {
+    long sum = 0;
+
+    while (updates.hasNext()) {
+      sum += updates.next();
+    }
+
+    if (sum == 0) {
+      return Optional.empty();
+    } else {
+      return Optional.of(sum);
+    }
   }
 }

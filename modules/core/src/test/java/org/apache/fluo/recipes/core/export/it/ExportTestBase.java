@@ -13,7 +13,7 @@
  * the License.
  */
 
-package org.apache.fluo.recipes.core.export;
+package org.apache.fluo.recipes.core.export.it;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -41,6 +41,9 @@ import org.apache.fluo.api.data.Column;
 import org.apache.fluo.api.data.ColumnValue;
 import org.apache.fluo.api.data.Span;
 import org.apache.fluo.api.mini.MiniFluo;
+import org.apache.fluo.recipes.core.export.ExportQueue;
+import org.apache.fluo.recipes.core.export.Exporter;
+import org.apache.fluo.recipes.core.export.SequencedExport;
 import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
 import org.junit.After;
 import org.junit.Assert;

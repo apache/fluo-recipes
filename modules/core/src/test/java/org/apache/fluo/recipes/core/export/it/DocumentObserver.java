@@ -13,7 +13,7 @@
  * the License.
  */
 
-package org.apache.fluo.recipes.core.export;
+package org.apache.fluo.recipes.core.export.it;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -21,7 +21,8 @@ import java.util.Set;
 
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
-import org.apache.fluo.recipes.core.export.ExportTestBase.RefExporter;
+import org.apache.fluo.recipes.core.export.ExportQueue;
+import org.apache.fluo.recipes.core.export.it.ExportTestBase.RefExporter;
 import org.apache.fluo.recipes.core.types.TypedObserver;
 import org.apache.fluo.recipes.core.types.TypedTransactionBase;
 

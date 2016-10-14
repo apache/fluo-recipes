@@ -13,7 +13,7 @@
  * the License.
  */
 
-package org.apache.fluo.recipes.core.map;
+package org.apache.fluo.recipes.core.map.it;
 
 import java.io.File;
 import java.util.HashMap;
@@ -37,6 +37,10 @@ import org.apache.fluo.api.data.Column;
 import org.apache.fluo.api.data.ColumnValue;
 import org.apache.fluo.api.data.Span;
 import org.apache.fluo.api.mini.MiniFluo;
+import org.apache.fluo.recipes.core.map.CollisionFreeMap;
+import org.apache.fluo.recipes.core.map.Combiner;
+import org.apache.fluo.recipes.core.map.Update;
+import org.apache.fluo.recipes.core.map.UpdateObserver;
 import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
 import org.apache.fluo.recipes.core.types.StringEncoder;
 import org.apache.fluo.recipes.core.types.TypeLayer;

@@ -77,7 +77,7 @@ public class TableOptimizations {
    * initialization. After Fluo is initialized, the optimizations can be retrieved by calling
    * {@link #getConfiguredOptimizations(FluoConfiguration)}.
    * 
-   * @param application config, likely obtained from calling
+   * @param appConfig config, likely obtained from calling
    *        {@link FluoConfiguration#getAppConfiguration()}
    * @param key A unique identifier for the optimization
    * @param clazz The optimization factory type.

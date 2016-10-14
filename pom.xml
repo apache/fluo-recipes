@@ -20,8 +20,7 @@
     <artifactId>fluo-parent</artifactId>
     <version>1-incubating</version>
   </parent>
-  <groupId>org.apache.fluo</groupId>
-  <artifactId>fluo-recipes-parent</artifactId>
+  <artifactId>fluo-recipes</artifactId>
   <version>1.0.0-incubating-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Fluo Recipes Parent</name>
@@ -51,7 +50,7 @@
     <url>https://github.com/apache/incubator-fluo-recipes/issues</url>
   </issueManagement>
   <properties>
-    <accumulo.version>1.6.5</accumulo.version>
+    <accumulo.version>1.6.6</accumulo.version>
     <curator.version>2.7.1</curator.version>
     <findbugs.maxRank>13</findbugs.maxRank>
     <fluo.version>1.0.0-incubating</fluo.version>
@@ -225,16 +224,6 @@
     <pluginManagement>
       <plugins>
         <plugin>
-          <groupId>org.apache.rat</groupId>
-          <artifactId>apache-rat-plugin</artifactId>
-          <configuration>
-            <excludes>
-              <exclude>README.md</exclude>
-              <exclude>docs/**.md</exclude>
-            </excludes>
-          </configuration>
-        </plugin>
-        <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>
           <configuration>
@@ -242,29 +231,6 @@
               <fluo.it.instance.name>it-instance-maven</fluo.it.instance.name>
               <fluo.it.instance.clear>false</fluo.it.instance.clear>
             </systemPropertyVariables>
-          </configuration>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-jar-plugin</artifactId>
-          <configuration>
-            <archive>
-              <manifest>
-                <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
-                <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-              </manifest>
-              <manifestEntries>
-                <!-- sealing breaks ITs with shaded jar, which is used by this example -->
-                <Sealed>false</Sealed>
-              </manifestEntries>
-            </archive>
-          </configuration>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-javadoc-plugin</artifactId>
-          <configuration>
-            <excludePackageNames>*.impl.*</excludePackageNames>
           </configuration>
         </plugin>
       </plugins>

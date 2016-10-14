@@ -13,7 +13,7 @@
  * the License.
  */
 
-package org.apache.fluo.recipes.core.map;
+package org.apache.fluo.recipes.core.export.it;
 
 import org.apache.fluo.recipes.core.types.TypedLoader;
 import org.apache.fluo.recipes.core.types.TypedTransactionBase;
@@ -21,15 +21,15 @@ import org.apache.fluo.recipes.core.types.TypedTransactionBase;
 public class DocumentLoader extends TypedLoader {
 
   String docid;
-  String doc;
+  String refs[];
 
-  DocumentLoader(String docid, String doc) {
+  DocumentLoader(String docid, String... refs) {
     this.docid = docid;
-    this.doc = doc;
+    this.refs = refs;
   }
 
   @Override
   public void load(TypedTransactionBase tx, Context context) throws Exception {
-    tx.mutate().row("d:" + docid).fam("content").qual("new").set(doc);
+    tx.mutate().row("d:" + docid).fam("content").qual("new").set(String.join(" ", refs));
   }
 }

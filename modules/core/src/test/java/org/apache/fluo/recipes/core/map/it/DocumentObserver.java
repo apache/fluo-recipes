@@ -13,7 +13,7 @@
  * the License.
  */
 
-package org.apache.fluo.recipes.core.map;
+package org.apache.fluo.recipes.core.map.it;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,6 +22,7 @@ import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
+import org.apache.fluo.recipes.core.map.CollisionFreeMap;
 import org.apache.fluo.recipes.core.types.TypedObserver;
 import org.apache.fluo.recipes.core.types.TypedTransactionBase;
 

@@ -17,6 +17,7 @@ package org.apache.fluo.recipes.core.export;
 
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.config.SimpleConfiguration;
+import org.apache.fluo.recipes.core.export.ExportQueue;
 import org.apache.fluo.recipes.core.export.ExportQueue.Options;
 import org.junit.Assert;
 import org.junit.Test;

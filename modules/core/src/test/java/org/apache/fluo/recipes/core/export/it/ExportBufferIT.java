@@ -13,7 +13,7 @@
  * the License.
  */
 
-package org.apache.fluo.recipes.core.export;
+package org.apache.fluo.recipes.core.export.it;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -23,6 +23,7 @@ import java.util.Set;
 import org.apache.fluo.api.client.FluoClient;
 import org.apache.fluo.api.client.FluoFactory;
 import org.apache.fluo.api.client.Transaction;
+import org.apache.fluo.recipes.core.export.ExportQueue;
 import org.junit.Assert;
 import org.junit.Test;
 

@@ -13,33 +13,30 @@
  * the License.
  */
 
-package org.apache.fluo.recipes.core.map;
+package org.apache.fluo.recipes.core.export.it;
 
+import java.nio.charset.StandardCharsets;
+
+import com.google.gson.Gson;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
 
-public class TestSerializer implements SimpleSerializer {
+public class GsonSerializer implements SimpleSerializer {
+
+  private Gson gson = new Gson();
+
+  @Override
+  public void init(SimpleConfiguration appConfig) {
+
+  }
 
   @Override
   public <T> byte[] serialize(T obj) {
-    return obj.toString().getBytes();
+    return gson.toJson(obj).getBytes(StandardCharsets.UTF_8);
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public <T> T deserialize(byte[] serObj, Class<T> clazz) {
-    if (clazz.equals(Long.class)) {
-      return (T) Long.valueOf(new String(serObj));
-    }
-
-    if (clazz.equals(String.class)) {
-      return (T) new String(serObj);
-    }
-
-    throw new IllegalArgumentException();
+    return gson.fromJson(new String(serObj, StandardCharsets.UTF_8), clazz);
   }
-
-  @Override
-  public void init(SimpleConfiguration appConfig) {}
-
 }
