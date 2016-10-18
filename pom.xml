@@ -58,6 +58,12 @@
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
     <spark.version>1.5.2</spark.version>
+    <!--
+      If attempting to build against Accumulo 1.8.X, then set the thrift version to 0.9.3.
+      Otherwise MiniAccumulo may hang. This may happen because Fluo 1.0.0 depends on thrift 0.9.1,
+      Accumulo 1.8.0 depends on Thrift 0.9.3, and Thrift made breaking changes in libthrift between
+      0.9.1 and 0.9.3.
+     -->
     <thrift.version>0.9.1</thrift.version>
     <zookeeper.version>3.4.8</zookeeper.version>
   </properties>
