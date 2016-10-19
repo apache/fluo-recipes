@@ -22,7 +22,7 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>fluo-recipes-spark</artifactId>
-  <name>Fluo Recipes Spark</name>
+  <name>Apache Fluo (incubating) Recipes for Apache Spark</name>
   <dependencies>
     <dependency>
       <groupId>commons-configuration</groupId>

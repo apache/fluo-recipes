@@ -22,7 +22,7 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>fluo-recipes-core</artifactId>
-  <name>Fluo Recipes Core</name>
+  <name>Apache Fluo (incubating) Recipes Core</name>
   <dependencies>
     <dependency>
       <groupId>com.google.guava</groupId>

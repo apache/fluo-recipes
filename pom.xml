@@ -23,7 +23,7 @@
   <artifactId>fluo-recipes</artifactId>
   <version>1.0.0-incubating-SNAPSHOT</version>
   <packaging>pom</packaging>
-  <name>Fluo Recipes Parent</name>
+  <name>Apache Fluo (incubating) Recipes Parent</name>
   <description>Implementation of Common Fluo patterns</description>
   <licenses>
     <license>
