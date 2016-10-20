@@ -75,6 +75,7 @@ public class FluoSparkHelperIT extends AccumuloExportITBase {
         new FluoSparkHelper.BulkImportOptions());
 
     try (MiniFluo miniFluo = FluoFactory.newMiniFluo(getFluoConfiguration())) {
+      Assert.assertNotNull(miniFluo);
       Assert.assertTrue(FluoITHelper.verifyFluoTable(getFluoConfiguration(), expected));
 
       List<RowColumnValue> actualRead = FluoSparkHelper.toRcvRDD(fsh.readFromFluo(ctx)).collect();
