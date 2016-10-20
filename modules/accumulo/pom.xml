@@ -22,7 +22,7 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>fluo-recipes-accumulo</artifactId>
-  <name>Fluo Recipes Accumulo</name>
+  <name>Apache Fluo (incubating) Recipes for Apache Accumulo</name>
   <dependencies>
     <dependency>
       <groupId>commons-configuration</groupId>

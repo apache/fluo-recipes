@@ -22,7 +22,7 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>fluo-recipes-kryo</artifactId>
-  <name>Fluo Recipes Kryo</name>
+  <name>Apache Fluo (incubating) Recipes using Kryo</name>
   <dependencies>
     <dependency>
       <groupId>com.esotericsoftware</groupId>
