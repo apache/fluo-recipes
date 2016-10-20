@@ -57,6 +57,7 @@
     <hadoop.version>2.6.3</hadoop.version>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
+    <releaseProfiles>fluo-recipes-release</releaseProfiles>
     <spark.version>1.5.2</spark.version>
     <!--
       If attempting to build against Accumulo 1.8.X, then set the thrift version to 0.9.3.
@@ -297,4 +298,17 @@
       </plugin>
     </plugins>
   </build>
+  <profiles>
+    <profile>
+      <id>fluo-recipes-release</id>
+      <!-- some properties to make the release build a bit faster -->
+      <properties>
+        <checkstyle.skip>true</checkstyle.skip>
+        <findbugs.skip>true</findbugs.skip>
+        <modernizer.skip>true</modernizer.skip>
+        <skipITs>true</skipITs>
+        <skipTests>true</skipTests>
+      </properties>
+    </profile>
+  </profiles>
 </project>

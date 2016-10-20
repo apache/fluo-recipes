@@ -73,7 +73,7 @@ createEmail() {
 
   local branch; branch=$ver-rc$rc
   local commit; commit=$(gitCommit "$branch") || exit 1
-  local tag; tag=rel/fluo-$ver
+  local tag; tag=rel/fluo-recipes-$ver
   echo
   yellow  "IMPORTANT!! IMPORTANT!! IMPORTANT!! IMPORTANT!! IMPORTANT!! IMPORTANT!!"
   echo
@@ -83,7 +83,7 @@ createEmail() {
   echo
   echo    "    Remember, $(red DO NOT PUSH) the $(red "$tag") tag until after the vote"
   echo    "    passes and the tag is re-made with a gpg signature using:"
-  echo    "      $(red "git tag -f -m 'Apache Fluo $ver' -s $tag ${commit:0:7}")"
+  echo    "      $(red "git tag -f -m 'Apache Fluo Recipes $ver' -s $tag ${commit:0:7}")"
   echo
   yellow  "IMPORTANT!! IMPORTANT!! IMPORTANT!! IMPORTANT!! IMPORTANT!! IMPORTANT!!"
   echo
@@ -105,11 +105,11 @@ createEmail() {
 
   cat <<EOF
 $(yellow '============================================================')
-Subject: $(green [VOTE] Fluo "$branch")
+Subject: $(green [VOTE] Apache Fluo Recipes "$branch")
 $(yellow '============================================================')
 Fluo Developers,
 
-Please consider the following candidate for Fluo $(green "$ver").
+Please consider the following candidate for Fluo Recipes $(green "$ver").
 
 Git Commit:
     $(green "$commit")
@@ -117,12 +117,10 @@ Branch:
     $(green "$branch")
 
 If this vote passes, a gpg-signed tag will be created using:
-    $(green "git tag -f -m 'Apache Fluo $ver' -s $tag") \\
+    $(green "git tag -f -m 'Apache Fluo Recipes $ver' -s $tag") \\
     $(green "$commit")
-
 Staging repo: $(green "https://repository.apache.org/content/repositories/orgapachefluo-$stagingrepo")
-Source (official release artifact): $(green "https://repository.apache.org/content/repositories/orgapachefluo-$stagingrepo/org/apache/fluo/fluo/$ver/fluo-${ver}-source-release.tar.gz")
-Binary: $(green "https://repository.apache.org/content/repositories/orgapachefluo-$stagingrepo/org/apache/fluo/fluo/$ver/fluo-${ver}-bin.tar.gz")
+Source (official release artifact): $(green "https://repository.apache.org/content/repositories/orgapachefluo-$stagingrepo/org/apache/fluo/fluo-recipes/$ver/fluo-recipes-${ver}-source-release.tar.gz")
 (Append ".sha1", ".md5", or ".asc" to download the signature/hash for a given artifact.)
 
 All artifacts were built and staged with:
@@ -137,7 +135,7 @@ Please vote one of:
 [ ] +1 - I have verified and accept...
 [ ] +0 - I have reservations, but not strong enough to vote against...
 [ ] -1 - Because..., I do not accept...
-... these artifacts as the $(green "$ver") release of Apache Fluo.
+... these artifacts as the $(green "$ver") release of Apache Fluo Recipes.
 
 This vote will end on $(green "$votedate")
 ($(green "$edtvotedate") / $(green "$pdtvotedate"))
@@ -212,7 +210,7 @@ createReleaseCandidate() {
   ver=$(xmllint --shell pom.xml <<<'xpath /*[local-name()="project"]/*[local-name()="version"]/text()' | grep content= | cut -f2 -d=)
   ver=${ver%%-SNAPSHOT}
   echo "Building release candidate for version: $(green "$ver")"
-  local tag; tag=rel/fluo-$ver
+  local tag; tag=rel/fluo-recipes-$ver
 
   local cBranch; cBranch=$(currentBranch) || fail "$(red Failure)" to get current branch from git
   local rc; rc=$(prompter 'release candidate sequence number (eg. 1, 2, etc.)' '[0-9]+')
@@ -228,7 +226,7 @@ createReleaseCandidate() {
   } || fail "Unable to create working branch $(red "$nBranch") from $(red "$cBranch")!"
 
   # create a release candidate from a branch
-  local oFile; oFile=$(mktemp --tmpdir "fluo-build-$rcBranch-XXXXXXXX.log")
+  local oFile; oFile=$(mktemp --tmpdir "fluo-recipes-build-$rcBranch-XXXXXXXX.log")
   {
     [[ -w $oFile ]] && runLog "$oFile" mvn clean release:clean
   } || cleanUpAndFail 'mvn clean release:clean' "$oFile" "$cBranch" "$nBranch"
