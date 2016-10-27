@@ -19,7 +19,7 @@ limitations under the License.
 ## Background
 
 Recipes may need to make Accumulo specific table modifications for optimal
-performance.  Configuring the Accumulo tablet balancer and adding splits are
+performance.  Configuring the [Accumulo tablet balancer][3] and adding splits are
 two optimizations that are currently done.  Offering a standard way to do these
 optimizations makes it easier to use recipes correctly.  These optimizations
 are optional.  You could skip them for integration testing, but would probably
@@ -75,3 +75,4 @@ this mechanism, its not limited to use by exisitng recipes.
 
 [1]: ../modules/core/src/main/java/org/apache/fluo/recipes/core/common/TableOptimizations.java
 [2]: ../modules/accumulo/src/main/java/org/apache/fluo/recipes/accumulo/ops/TableOperations.java
+[3]: http://accumulo.apache.org/blog/2015/03/20/balancing-groups-of-tablets.html
