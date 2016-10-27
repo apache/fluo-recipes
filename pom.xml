@@ -21,7 +21,7 @@
     <version>1-incubating</version>
   </parent>
   <artifactId>fluo-recipes</artifactId>
-  <version>1.0.0-incubating-SNAPSHOT</version>
+  <version>1.1.0-incubating-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Apache Fluo (incubating) Recipes Parent</name>
   <description>Implementation of Common Fluo patterns</description>
