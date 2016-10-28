@@ -20,10 +20,12 @@ limitations under the License.
 
 **Fluo Recipes are common code for [Apache Fluo][fluo] application developers.**
 
-Fluo Recipes build on the [Fluo API][fluo-api] to offer additinal functionality to
-developers. They are published seperately from Fluo on their own release schedule.
+Fluo Recipes build on the [Fluo API][fluo-api] to offer additional functionality to
+developers. They are published separately from Fluo on their own release schedule.
 This allows Fluo Recipes to iterate and innovate faster than Fluo (which will maintain
-a more minimal API on a slower release cycle).
+a more minimal API on a slower release cycle). Fluo Recipes offers code to implement
+common patterns on top of Fluo's API.  It also offers glue code to external libraries
+like Spark and Kryo.
 
 ### Documentation
 
