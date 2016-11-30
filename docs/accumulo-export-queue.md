@@ -72,7 +72,7 @@ Exporting to Accumulo is easy. Follow the steps below:
         String.class, String.class, numMapBuckets).setExporterConfiguration(exportTableCfg);
 
     // Configure export queue.  This will modify fluoConfig.
-    ExportQueue.configure(fluoConfig, qeOpts);
+    ExportQueue.configure(fluoConfig, eqOpts);
 
     // Initialize Fluo using fluoConfig
     ```
