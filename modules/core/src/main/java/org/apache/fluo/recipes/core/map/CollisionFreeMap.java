@@ -399,11 +399,10 @@ public class CollisionFreeMap<K, V> {
   }
 
   /**
-   * A @link {@link CollisionFreeMap} stores data in its own data format in the Fluo table. When
+   * A {@link CollisionFreeMap} stores data in its own data format in the Fluo table. When
    * initializing a Fluo table with something like Map Reduce or Spark, data will need to be written
    * in this format. Thats the purpose of this method, it provide a simple class that can do this
    * conversion.
-   *
    */
   public static <K2, V2> Initializer<K2, V2> getInitializer(String mapId, int numBuckets,
       SimpleSerializer serializer) {
