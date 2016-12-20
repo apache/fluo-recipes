@@ -43,6 +43,7 @@ Recipes have common needs that are broken down into the following reusable compo
 * [Serialization][serialization] - Common code for serializing POJOs. 
 * [Transient Ranges][transient] - Standardized process for dealing with transient data.
 * [Table optimization][optimization] - Standardized process for optimizing the Fluo table.
+* [Spark integration][spark] - Spark+Fluo integration code.
 
 ### Usage
 
@@ -108,6 +109,7 @@ Below is a sample Maven POM containing all possible Fluo Recipes dependencies:
 [transient]: docs/transient.md
 [optimization]: docs/table-optimization.md
 [row-hasher]: docs/row-hasher.md
+[spark]: docs/spark.md
 [testing]: docs/testing.md
 [ti]: https://travis-ci.org/apache/incubator-fluo-recipes.svg?branch=master
 [tl]: https://travis-ci.org/apache/incubator-fluo-recipes
