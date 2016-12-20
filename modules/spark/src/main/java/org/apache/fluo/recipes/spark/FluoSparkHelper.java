@@ -286,7 +286,7 @@ public class FluoSparkHelper {
     }
 
     /**
-     * If this method is nto called, then a temp dir will be created based on the path passed
+     * If this method is not called, then a temp dir will be created based on the path passed
      * supplied to {@link FluoSparkHelper#FluoSparkHelper(FluoConfiguration, Configuration, Path)}
      * 
      * @param tempDir Use this directory to store RFiles generated for bulk import.
