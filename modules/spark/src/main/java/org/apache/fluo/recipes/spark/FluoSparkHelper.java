@@ -120,7 +120,7 @@ public class FluoSparkHelper {
   }
 
   /**
-   * Reads all data in Fluo and returns it as a RowColumn/Value RDD
+   * Reads all data from a snapshot in Fluo and returns it as a RowColumn/Value RDD.
    *
    * @param ctx Java Spark context
    * @return RowColumn/Value RDD containing all data in Fluo
@@ -139,7 +139,10 @@ public class FluoSparkHelper {
   }
 
   /**
-   * Bulk import RowColumn/Value data into Fluo
+   * Bulk import RowColumn/Value data into Fluo table (obtained from Fluo configuration). This
+   * method will repartition RDD using the current split points of the Fluo table, creating one
+   * partition per tablet in the table. This is done so that one RFile is created per tablet for
+   * bulk import.
    *
    * @param data RowColumn/Value data to import
    * @param opts Bulk import options
@@ -163,7 +166,9 @@ public class FluoSparkHelper {
   }
 
   /**
-   * Bulk import Key/Value data into Fluo
+   * Bulk import Key/Value data into into Fluo table (obtained from Fluo configuration). This method
+   * does not repartition data. One RFile will be created for each partition in the passed in RDD.
+   * Ensure the RDD is reasonably partitioned before calling this method.
    *
    * @param data Key/Value data to import
    * @param opts Bulk import options
@@ -173,7 +178,9 @@ public class FluoSparkHelper {
   }
 
   /**
-   * Bulk import RowColumn/Value data into Accumulo
+   * Bulk import RowColumn/Value data into specified Accumulo table. This method will repartition
+   * RDD using the current split points of the specified table, creating one partition per tablet in
+   * the table. This is done so that one RFile is created per tablet for bulk import.
    *
    * @param data RowColumn/Value data to import
    * @param accumuloTable Accumulo table used for import
@@ -196,7 +203,9 @@ public class FluoSparkHelper {
   }
 
   /**
-   * Bulk import Key/Value data into Accumulo
+   * Bulk import Key/Value data into specified Accumulo table. This method does not repartition
+   * data. One RFile will be created for each partition in the passed in RDD. Ensure the RDD is
+   * reasonably partitioned before calling this method.
    *
    * @param data Key/value data to import
    * @param accumuloTable Accumulo table used for import
@@ -262,12 +271,27 @@ public class FluoSparkHelper {
 
     public BulkImportOptions() {}
 
+    /**
+     * If this methods is not called, then a Connector will be created using properties in the
+     * FluoConfiguration supplied to
+     * {@link FluoSparkHelper#FluoSparkHelper(FluoConfiguration, Configuration, Path)}
+     * 
+     * @param conn Use this connector to bulk import files into Accumulo.
+     * @return this
+     */
     public BulkImportOptions setAccumuloConnector(Connector conn) {
       Objects.requireNonNull(conn);
       this.conn = conn;
       return this;
     }
 
+    /**
+     * If this method is not called, then a temp dir will be created based on the path passed
+     * supplied to {@link FluoSparkHelper#FluoSparkHelper(FluoConfiguration, Configuration, Path)}
+     * 
+     * @param tempDir Use this directory to store RFiles generated for bulk import.
+     * @return this
+     */
     public BulkImportOptions setTempDir(Path tempDir) {
       Objects.requireNonNull(tempDir);
       this.tempDir = tempDir;
