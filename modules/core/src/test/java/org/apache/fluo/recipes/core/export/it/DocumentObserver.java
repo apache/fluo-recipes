@@ -19,34 +19,27 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.fluo.api.data.Bytes;
+import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.data.Column;
+import org.apache.fluo.api.observer.StringObserver;
 import org.apache.fluo.recipes.core.export.ExportQueue;
-import org.apache.fluo.recipes.core.export.it.ExportTestBase.RefExporter;
-import org.apache.fluo.recipes.core.types.TypedObserver;
-import org.apache.fluo.recipes.core.types.TypedTransactionBase;
 
-public class DocumentObserver extends TypedObserver {
+public class DocumentObserver implements StringObserver {
 
   ExportQueue<String, RefUpdates> refExportQueue;
 
-  @Override
-  public void init(Context context) throws Exception {
-    refExportQueue = ExportQueue.getInstance(RefExporter.QUEUE_ID, context.getAppConfiguration());
+  private static final Column CURRENT_COL = new Column("content", "current");
+
+  DocumentObserver(ExportQueue<String, RefUpdates> refExportQueue) {
+    this.refExportQueue = refExportQueue;
   }
 
   @Override
-  public ObservedColumn getObservedColumn() {
-    return new ObservedColumn(new Column("content", "new"), NotificationType.STRONG);
-  }
-
-  @Override
-  public void process(TypedTransactionBase tx, Bytes row, Column col) {
-    String newContent = tx.get().row(row).col(col).toString();
+  public void process(TransactionBase tx, String row, Column col) {
+    String newContent = tx.gets(row, col).toString();
     Set<String> newRefs = new HashSet<>(Arrays.asList(newContent.split(" ")));
     Set<String> currentRefs =
-        new HashSet<>(Arrays.asList(tx.get().row(row).fam("content").qual("current").toString("")
-            .split(" ")));
+        new HashSet<>(Arrays.asList(tx.gets(row, CURRENT_COL, "").split(" ")));
 
     Set<String> addedRefs = new HashSet<>(newRefs);
     addedRefs.removeAll(currentRefs);
@@ -59,6 +52,6 @@ public class DocumentObserver extends TypedObserver {
 
     refExportQueue.add(tx, key, val);
 
-    tx.mutate().row(row).fam("content").qual("current").set(newContent);
+    tx.set(row, CURRENT_COL, newContent);
   }
 }

@@ -19,6 +19,7 @@ import java.util.Iterator;
 
 import org.apache.fluo.api.client.TransactionBase;
 
+@Deprecated
 class NullUpdateObserver<K, V> extends UpdateObserver<K, V> {
   @Override
   public void updatingValues(TransactionBase tx, Iterator<Update<K, V>> updates) {}

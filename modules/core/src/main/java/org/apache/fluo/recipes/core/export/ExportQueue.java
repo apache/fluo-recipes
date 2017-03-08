@@ -28,12 +28,14 @@ import com.google.common.base.Preconditions;
 import com.google.common.hash.Hashing;
 import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.config.FluoConfiguration;
-import org.apache.fluo.api.config.ObserverSpecification;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
+import org.apache.fluo.api.observer.Observer;
+import org.apache.fluo.api.observer.Observer.NotificationType;
+import org.apache.fluo.api.observer.ObserverProvider;
+import org.apache.fluo.recipes.core.common.RowRange;
 import org.apache.fluo.recipes.core.common.TableOptimizations;
 import org.apache.fluo.recipes.core.common.TableOptimizations.TableOptimizationsFactory;
-import org.apache.fluo.recipes.core.common.RowRange;
 import org.apache.fluo.recipes.core.common.TransientRegistry;
 import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
 
@@ -48,6 +50,7 @@ public class ExportQueue<K, V> {
   private int numBuckets;
   private SimpleSerializer serializer;
   private String queueId;
+  private Options opts;
 
   // usage hint : could be created once in an observers init method
   // usage hint : maybe have a queue for each type of data being exported???
@@ -59,6 +62,7 @@ public class ExportQueue<K, V> {
     this.queueId = opts.queueId;
     this.numBuckets = opts.numBuckets;
     this.serializer = serializer;
+    this.opts = opts;
   }
 
   public void add(TransactionBase tx, K key, V value) {
@@ -87,6 +91,8 @@ public class ExportQueue<K, V> {
     }
   }
 
+  // TODO maybe add for stream and interable
+
   public static <K2, V2> ExportQueue<K2, V2> getInstance(String exportQueueId,
       SimpleConfiguration appConfig) {
     Options opts = new Options(exportQueueId, appConfig);
@@ -103,12 +109,16 @@ public class ExportQueue<K, V> {
    *
    * @param fluoConfig The configuration that will be used to initialize fluo.
    */
+  @SuppressWarnings("deprecation")
   public static void configure(FluoConfiguration fluoConfig, Options opts) {
     SimpleConfiguration appConfig = fluoConfig.getAppConfiguration();
     opts.save(appConfig);
 
-    fluoConfig.addObserver(new ObserverSpecification(ExportObserver.class.getName(), Collections
-        .singletonMap("queueId", opts.queueId)));
+    if (opts.exporterType != null) {
+      // TODO move to pgk private method in exportobs
+      fluoConfig.addObserver(new org.apache.fluo.api.config.ObserverSpecification(
+          ExportObserver.class.getName(), Collections.singletonMap("queueId", opts.queueId)));
+    }
 
     Bytes exportRangeStart = Bytes.of(opts.queueId + RANGE_BEGIN);
     Bytes exportRangeStop = Bytes.of(opts.queueId + RANGE_END);
@@ -160,6 +170,27 @@ public class ExportQueue<K, V> {
   }
 
   /**
+   * TODO deprecate stuff in this class/package
+   * 
+   * @since 1.1.0
+   */
+  public void registerObserver(ObserverProvider.Registry obsRegistry,
+      ExportConsumer<K, V> exportConsumer) {
+    Preconditions
+        .checkState(
+            opts.exporterType == null,
+            "Expected exporter type not be set, it was set to %s.  Cannot not use the old and new way of configuring "
+                + "exporters at the same time.", opts.exporterType); // TODO error message
+    Observer obs;
+    try {
+      obs = new ExportObserverImpl<K, V>(queueId, opts, serializer, exportConsumer);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    obsRegistry.register(ExportBucket.newNotificationColumn(queueId), NotificationType.WEAK, obs);
+  }
+
+  /**
    * @since 1.0.0
    */
   public static class Options {
@@ -182,7 +213,7 @@ public class ExportQueue<K, V> {
       this.queueId = queueId;
 
       this.numBuckets = appConfig.getInt(PREFIX + queueId + ".buckets");
-      this.exporterType = appConfig.getString(PREFIX + queueId + ".exporter");
+      this.exporterType = appConfig.getString(PREFIX + queueId + ".exporter", null);
       this.keyType = appConfig.getString(PREFIX + queueId + ".key");
       this.valueType = appConfig.getString(PREFIX + queueId + ".val");
       this.bufferSize = appConfig.getLong(PREFIX + queueId + ".bufferSize", DEFAULT_BUFFER_SIZE);
@@ -192,20 +223,43 @@ public class ExportQueue<K, V> {
       this.exporterConfig = appConfig.subset(PREFIX + queueId + ".exporterCfg");
     }
 
+    /**
+     * @deprecated since 1.1.0
+     */
+    @Deprecated
     public Options(String queueId, String exporterType, String keyType, String valueType,
         int buckets) {
-      Preconditions.checkArgument(buckets > 0);
-
-      this.queueId = queueId;
-      this.numBuckets = buckets;
-      this.exporterType = exporterType;
-      this.keyType = keyType;
-      this.valueType = valueType;
+      this(queueId, keyType, valueType, buckets);
+      this.exporterType = Objects.requireNonNull(exporterType);
     }
 
+    /**
+     * @deprecated since 1.1.0
+     */
+    @Deprecated
     public <K, V> Options(String queueId, Class<? extends Exporter<K, V>> exporter,
         Class<K> keyType, Class<V> valueType, int buckets) {
       this(queueId, exporter.getName(), keyType.getName(), valueType.getName(), buckets);
+    }
+
+    /**
+     * @since 1.1.0
+     */
+    public Options(String queueId, String keyType, String valueType, int buckets) {
+      Preconditions.checkArgument(buckets > 0);
+
+      this.queueId = Objects.requireNonNull(queueId);
+      this.numBuckets = buckets;
+      this.exporterType = null;
+      this.keyType = Objects.requireNonNull(keyType);
+      this.valueType = Objects.requireNonNull(valueType);
+    }
+
+    /**
+     * @since 1.1.0
+     */
+    public <K, V> Options(String queueId, Class<K> keyType, Class<V> valueType, int buckets) {
+      this(queueId, keyType.getName(), valueType.getName(), buckets);
     }
 
     /**
@@ -257,13 +311,20 @@ public class ExportQueue<K, V> {
     /**
      * Sets exporter specific configuration. This configuration will be made available to an
      * {@link Exporter} via {@link Exporter.Context#getExporterConfiguration()}.
+     * 
+     * @deprecated since 1.1.0
      */
+    @Deprecated
     public Options setExporterConfiguration(SimpleConfiguration config) {
       Objects.requireNonNull(config);
       this.exporterConfig = config;
       return this;
     }
 
+    /**
+     * @deprecated since 1.1.0
+     */
+    @Deprecated
     public SimpleConfiguration getExporterConfiguration() {
       if (exporterConfig == null) {
         return new SimpleConfiguration();
@@ -278,7 +339,9 @@ public class ExportQueue<K, V> {
 
     void save(SimpleConfiguration appConfig) {
       appConfig.setProperty(PREFIX + queueId + ".buckets", numBuckets + "");
-      appConfig.setProperty(PREFIX + queueId + ".exporter", exporterType + "");
+      if (exporterType != null) {
+        appConfig.setProperty(PREFIX + queueId + ".exporter", exporterType + "");
+      }
       appConfig.setProperty(PREFIX + queueId + ".key", keyType);
       appConfig.setProperty(PREFIX + queueId + ".val", valueType);
 

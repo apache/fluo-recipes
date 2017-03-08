@@ -15,22 +15,20 @@
 
 package org.apache.fluo.recipes.core.map.it;
 
-import java.util.Iterator;
 import java.util.Optional;
 
 import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
 import org.apache.fluo.recipes.core.map.Update;
-import org.apache.fluo.recipes.core.map.UpdateObserver;
+import org.apache.fluo.recipes.core.map.ValueObserver;
 
-public class WordCountObserver extends UpdateObserver<String, Long> {
+public class WordCountObserver implements ValueObserver<String, Long> {
 
   @Override
-  public void updatingValues(TransactionBase tx, Iterator<Update<String, Long>> updates) {
+  public void process(TransactionBase tx, Iterable<Update<String, Long>> updates) {
 
-    while (updates.hasNext()) {
-      Update<String, Long> update = updates.next();
+    for (Update<String, Long> update : updates) {
 
       Optional<Long> oldVal = update.getOldValue();
       Optional<Long> newVal = update.getNewValue();

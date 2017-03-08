@@ -34,11 +34,11 @@ public class TestGrouping {
   public void testTabletGrouping() {
     FluoConfiguration conf = new FluoConfiguration();
 
-    CollisionFreeMap.configure(conf, new Options("m1", "ct", "kt", "vt", 119));
-    CollisionFreeMap.configure(conf, new Options("m2", "ct", "kt", "vt", 3));
+    CollisionFreeMap.configure(conf, new Options("m1", "kt", "vt", 119));
+    CollisionFreeMap.configure(conf, new Options("m2", "kt", "vt", 3));
 
-    ExportQueue.configure(conf, new ExportQueue.Options("eq1", "et", "kt", "vt", 7));
-    ExportQueue.configure(conf, new ExportQueue.Options("eq2", "et", "kt", "vt", 3));
+    ExportQueue.configure(conf, new ExportQueue.Options("eq1", "kt", "vt", 7));
+    ExportQueue.configure(conf, new ExportQueue.Options("eq2", "kt", "vt", 3));
 
 
     SimpleConfiguration appConfg = conf.getAppConfiguration();

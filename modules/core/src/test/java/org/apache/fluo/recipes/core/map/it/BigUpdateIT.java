@@ -17,9 +17,9 @@ package org.apache.fluo.recipes.core.map.it;
 
 import java.io.File;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.collect.ImmutableSet;
@@ -37,10 +37,11 @@ import org.apache.fluo.api.data.Column;
 import org.apache.fluo.api.data.ColumnValue;
 import org.apache.fluo.api.data.Span;
 import org.apache.fluo.api.mini.MiniFluo;
+import org.apache.fluo.api.observer.ObserverProvider;
 import org.apache.fluo.recipes.core.map.CollisionFreeMap;
-import org.apache.fluo.recipes.core.map.Combiner;
+import org.apache.fluo.recipes.core.map.ICombiner;
 import org.apache.fluo.recipes.core.map.Update;
-import org.apache.fluo.recipes.core.map.UpdateObserver;
+import org.apache.fluo.recipes.core.map.ValueObserver;
 import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
 import org.apache.fluo.recipes.core.types.StringEncoder;
 import org.apache.fluo.recipes.core.types.TypeLayer;
@@ -64,32 +65,24 @@ public class BigUpdateIT {
 
   static final String MAP_ID = "bu";
 
-  public static class LongCombiner implements Combiner<String, Long> {
-
-    @Override
-    public Optional<Long> combine(String key, Iterator<Long> updates) {
-      long[] count = new long[] {0};
-      updates.forEachRemaining(l -> count[0] += l);
-      return Optional.of(count[0]);
-    }
-  }
+  static final ICombiner<String, Long> LONG_COMBINER = input -> {
+    OptionalLong ol = input.stream().mapToLong(v -> v).reduce(Long::sum);
+    return ol.isPresent() ? Optional.of(ol.getAsLong()) : Optional.empty();
+  };
 
   static final Column DSCOL = new Column("debug", "sum");
 
   private static AtomicInteger globalUpdates = new AtomicInteger(0);
 
-  public static class MyObserver extends UpdateObserver<String, Long> {
+  public static class MyObserver implements ValueObserver<String, Long> {
 
     @Override
-    public void updatingValues(TransactionBase tx, Iterator<Update<String, Long>> updates) {
+    public void process(TransactionBase tx, Iterable<Update<String, Long>> updates) {
       TypedTransactionBase ttx = tl.wrap(tx);
 
       Map<String, Long> expectedOld = new HashMap<>();
 
-
-      while (updates.hasNext()) {
-        Update<String, Long> update = updates.next();
-
+      for (Update<String, Long> update : updates) {
         if (update.getOldValue().isPresent()) {
           expectedOld.put("side:" + update.getKey(), update.getOldValue().get());
         }
@@ -111,6 +104,16 @@ public class BigUpdateIT {
     }
   }
 
+  public static class BuObserverProvider implements ObserverProvider {
+    @Override
+    public void provide(Registry obsRegistry, Context ctx) {
+      CollisionFreeMap<String, Long> wcMap =
+          CollisionFreeMap.getInstance(MAP_ID, ctx.getAppConfiguration(), LONG_COMBINER);
+      wcMap.registerObserver(obsRegistry, new MyObserver());
+    }
+
+  }
+
   @Before
   public void setUpFluo() throws Exception {
     FileUtils.deleteQuietly(new File("target/mini"));
@@ -120,14 +123,16 @@ public class BigUpdateIT {
     props.setWorkerThreads(20);
     props.setMiniDataDir("target/mini");
 
+    props.setObserverProvider(BuObserverProvider.class);
+
     SimpleSerializer.setSerializer(props, TestSerializer.class);
 
-    CollisionFreeMap.configure(props, new CollisionFreeMap.Options(MAP_ID, LongCombiner.class,
-        MyObserver.class, String.class, Long.class, 2).setBufferSize(1 << 10));
+    CollisionFreeMap.configure(props, new CollisionFreeMap.Options(MAP_ID, String.class,
+        Long.class, 2).setBufferSize(1 << 10));
 
     miniFluo = FluoFactory.newMiniFluo(props);
 
-    wcMap = CollisionFreeMap.getInstance(MAP_ID, props.getAppConfiguration());
+    wcMap = CollisionFreeMap.getInstance(MAP_ID, props.getAppConfiguration(), LONG_COMBINER);
 
     globalUpdates.set(0);
   }

@@ -13,26 +13,41 @@
  * the License.
  */
 
-package org.apache.fluo.recipes.core.map.it;
+package org.apache.fluo.recipes.core.export;
 
 import java.util.Iterator;
-import java.util.Optional;
+import java.util.NoSuchElementException;
 
-import org.apache.fluo.recipes.core.map.Combiner;
+class MemLimitIterator implements Iterator<ExportEntry> {
 
-public class WordCountCombiner implements Combiner<String, Long> {
+  private long memConsumed = 0;
+  private long memLimit;
+  private int extraPerKey;
+  private Iterator<ExportEntry> source;
+
+  public MemLimitIterator(Iterator<ExportEntry> input, long limit, int extraPerKey) {
+    this.source = input;
+    this.memLimit = limit;
+    this.extraPerKey = extraPerKey;
+  }
+
   @Override
-  public Optional<Long> combine(String key, Iterator<Long> updates) {
-    long sum = 0;
+  public boolean hasNext() {
+    return memConsumed < memLimit && source.hasNext();
+  }
 
-    while (updates.hasNext()) {
-      sum += updates.next();
+  @Override
+  public ExportEntry next() {
+    if (!hasNext()) {
+      throw new NoSuchElementException();
     }
+    ExportEntry ee = source.next();
+    memConsumed += ee.key.length + extraPerKey + ee.value.length;
+    return ee;
+  }
 
-    if (sum == 0) {
-      return Optional.empty();
-    } else {
-      return Optional.of(sum);
-    }
+  @Override
+  public void remove() {
+    source.remove();
   }
 }

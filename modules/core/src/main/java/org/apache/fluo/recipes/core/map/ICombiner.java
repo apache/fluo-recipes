@@ -16,23 +16,31 @@
 package org.apache.fluo.recipes.core.map;
 
 import java.util.Iterator;
-
-import org.apache.fluo.api.client.TransactionBase;
-import org.apache.fluo.api.observer.Observer.Context;
-import org.apache.fluo.api.observer.ObserverProvider.Registry;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 /**
- * A {@link CollisionFreeMap} calls this to allow additional processing to be done when key values
- * are updated. See the project level documentation for more information.
- *
- * @since 1.0.0
- * @deprecated since 1.1.0 use {@link ValueObserver} and
- *             {@link CollisionFreeMap#registerObserver(Registry, ValueObserver)}
+ * This class was created as an alternative to {@link Combiner}. It supports easy and efficient use
+ * of java streams when implementing combiners using lambdas.
+ * 
+ * @since 1.1.0
  */
-@Deprecated
-public abstract class UpdateObserver<K, V> {
+public interface ICombiner<K, V> {
 
-  public void init(String mapId, Context observerContext) throws Exception {}
+  public static interface Input<KI, VI> extends Iterable<VI> {
+    KI getKey();
 
-  public abstract void updatingValues(TransactionBase tx, Iterator<Update<K, V>> updates);
+    Stream<VI> stream();
+
+    Iterator<VI> iterator();
+  }
+
+  /**
+   * This function is called to combine the current value of a key with updates that were queued for
+   * the key. See the collision free map project level documentation for more information.
+   *
+   * @return Then new value for the key. Returning Optional.empty() will cause the key to be
+   *         deleted.
+   */
+  Optional<V> combine(Input<K, V> input);
 }

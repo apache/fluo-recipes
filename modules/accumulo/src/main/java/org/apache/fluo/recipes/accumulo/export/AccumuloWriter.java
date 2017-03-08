@@ -130,7 +130,7 @@ class AccumuloWriter {
 
   private static Map<String, AccumuloWriter> exporters = new HashMap<>();
 
-
+  @Deprecated
   static AccumuloWriter getInstance(SimpleConfiguration sc) {
     String instanceName = sc.getString("instanceName");
     String zookeepers = sc.getString("zookeepers");
@@ -165,5 +165,4 @@ class AccumuloWriter {
       throw new RuntimeException(e);
     }
   }
-
 }

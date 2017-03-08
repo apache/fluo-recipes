@@ -24,7 +24,8 @@ import org.junit.Test;
 
 public class OptionsTest {
   @Test
-  public void testExportQueueOptions() {
+  @Deprecated
+  public void testDeprecatedExportQueueOptions() {
     FluoConfiguration conf = new FluoConfiguration();
 
     SimpleConfiguration ec1 = new SimpleConfiguration();
@@ -58,5 +59,36 @@ public class OptionsTest {
     Assert.assertEquals("ev1", ec2.getString("ep1"));
     Assert.assertEquals(3, ec2.getInt("ep2"));
 
+  }
+
+  @Test
+  public void testExportQueueOptions() {
+    FluoConfiguration conf = new FluoConfiguration();
+
+    SimpleConfiguration ec1 = new SimpleConfiguration();
+    ec1.setProperty("ep1", "ev1");
+    ec1.setProperty("ep2", 3L);
+
+    ExportQueue.configure(conf, new Options("Q1", "KT", "VT", 100));
+    ExportQueue.configure(conf, new Options("Q2", "KT2", "VT2", 200).setBucketsPerTablet(20)
+        .setBufferSize(1000000));
+
+    Options opts1 = new Options("Q1", conf.getAppConfiguration());
+
+    Assert.assertNull(opts1.exporterType);
+    Assert.assertEquals(opts1.keyType, "KT");
+    Assert.assertEquals(opts1.valueType, "VT");
+    Assert.assertEquals(opts1.numBuckets, 100);
+    Assert.assertEquals(opts1.bucketsPerTablet.intValue(), Options.DEFAULT_BUCKETS_PER_TABLET);
+    Assert.assertEquals(opts1.bufferSize.intValue(), Options.DEFAULT_BUFFER_SIZE);
+
+    Options opts2 = new Options("Q2", conf.getAppConfiguration());
+
+    Assert.assertNull(opts2.exporterType);
+    Assert.assertEquals(opts2.keyType, "KT2");
+    Assert.assertEquals(opts2.valueType, "VT2");
+    Assert.assertEquals(opts2.numBuckets, 200);
+    Assert.assertEquals(opts2.bucketsPerTablet.intValue(), 20);
+    Assert.assertEquals(opts2.bufferSize.intValue(), 1000000);
   }
 }

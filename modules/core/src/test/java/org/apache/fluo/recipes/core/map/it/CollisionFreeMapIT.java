@@ -29,12 +29,14 @@ import org.apache.fluo.api.client.Snapshot;
 import org.apache.fluo.api.client.Transaction;
 import org.apache.fluo.api.client.scanner.CellScanner;
 import org.apache.fluo.api.config.FluoConfiguration;
-import org.apache.fluo.api.config.ObserverSpecification;
 import org.apache.fluo.api.data.Column;
 import org.apache.fluo.api.data.RowColumnValue;
 import org.apache.fluo.api.data.Span;
 import org.apache.fluo.api.mini.MiniFluo;
+import org.apache.fluo.api.observer.Observer.NotificationType;
+import org.apache.fluo.api.observer.ObserverProvider;
 import org.apache.fluo.recipes.core.map.CollisionFreeMap;
+import org.apache.fluo.recipes.core.map.SummingCombiner;
 import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
 import org.junit.After;
 import org.junit.Assert;
@@ -49,6 +51,18 @@ public class CollisionFreeMapIT {
 
   static final String MAP_ID = "wcm";
 
+  public static class CfmItObserverProvider implements ObserverProvider {
+
+    @Override
+    public void provide(Registry obsRegistry, Context ctx) {
+      CollisionFreeMap<String, Long> wcMap =
+          CollisionFreeMap.getInstance(MAP_ID, ctx.getAppConfiguration(), new SummingCombiner<>());
+      wcMap.registerObserver(obsRegistry, new WordCountObserver());
+      obsRegistry.register(new Column("content", "new"), NotificationType.STRONG,
+          new DocumentObserver(wcMap));
+    }
+  }
+
   @Before
   public void setUpFluo() throws Exception {
     FileUtils.deleteQuietly(new File("target/mini"));
@@ -58,16 +72,17 @@ public class CollisionFreeMapIT {
     props.setWorkerThreads(20);
     props.setMiniDataDir("target/mini");
 
-    props.addObserver(new ObserverSpecification(DocumentObserver.class.getName()));
+    props.setObserverProvider(CfmItObserverProvider.class);
 
     SimpleSerializer.setSerializer(props, TestSerializer.class);
 
-    CollisionFreeMap.configure(props, new CollisionFreeMap.Options(MAP_ID, WordCountCombiner.class,
-        WordCountObserver.class, String.class, Long.class, 17));
+    CollisionFreeMap.configure(props, new CollisionFreeMap.Options(MAP_ID, String.class,
+        Long.class, 17));
 
     miniFluo = FluoFactory.newMiniFluo(props);
 
-    wcMap = CollisionFreeMap.getInstance(MAP_ID, props.getAppConfiguration());
+    wcMap =
+        CollisionFreeMap.getInstance(MAP_ID, props.getAppConfiguration(), new SummingCombiner<>());
   }
 
   @After

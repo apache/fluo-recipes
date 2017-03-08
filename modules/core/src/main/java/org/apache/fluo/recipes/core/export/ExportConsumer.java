@@ -13,26 +13,14 @@
  * the License.
  */
 
-package org.apache.fluo.recipes.core.map;
+package org.apache.fluo.recipes.core.export;
 
 import java.util.Iterator;
-
-import org.apache.fluo.api.client.TransactionBase;
-import org.apache.fluo.api.observer.Observer.Context;
-import org.apache.fluo.api.observer.ObserverProvider.Registry;
+import java.util.function.Consumer;
 
 /**
- * A {@link CollisionFreeMap} calls this to allow additional processing to be done when key values
- * are updated. See the project level documentation for more information.
- *
- * @since 1.0.0
- * @deprecated since 1.1.0 use {@link ValueObserver} and
- *             {@link CollisionFreeMap#registerObserver(Registry, ValueObserver)}
+ * @since 1.1.0
  */
-@Deprecated
-public abstract class UpdateObserver<K, V> {
+public interface ExportConsumer<K, V> extends Consumer<Iterator<SequencedExport<K, V>>> {
 
-  public void init(String mapId, Context observerContext) throws Exception {}
-
-  public abstract void updatingValues(TransactionBase tx, Iterator<Update<K, V>> updates);
 }

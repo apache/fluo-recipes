@@ -18,26 +18,22 @@ limitations under the License.
 
 ## Background
 
-When many transactions are trying to modify the same keys, collisions will occur.
-These collisions will cause the transactions to fail and throughput to nose
-dive.  For example consider the [phrasecount] example.  In this example many
-transactions are processing documents as input.  Each transaction counts the
-phrases in its document and then tries to update global phrase counts.  With
-each transaction attempting to update many phrase counts, the probability of
-two transactions colliding is very high.
+When many transactions try to modify the same keys, collisions will occur.  Too many collisions
+cause the transactions to fail and throughput to nose dive.  For example, consider the [phrasecount]
+that has many transactions processing documents.  Each transaction counts the phrases in a document
+and then updates global phrase counts.  With each transaction attempting to update many phrase
+counts, the probability of two collisions is high.
 
 ## Solution
 
-This recipe provides a reusable solution for the problem of many transactions
-updating many keys while avoiding collisions.  As an added bonus, this recipe
-also organizes updates into batches for efficiency in order to improve
-throughput.
+This recipe provides a reusable solution for the problem of many transactions updating many keys
+while avoiding collisions.  As an added bonus, this recipe also organizes updates into batches for
+efficiency in order to improve throughput.
 
-The central idea behind this recipe is that updates to a key are queued up to
-be processed by another transaction triggered by weak notifications.  In the
-phrase count example transactions processing documents would queue updates,
-but would not actually update the counts.  Below is an example of how
-transactions would compute phrasecounts using this recipe.
+The central idea behind this recipe is that updates to a key are queued up and processed by another
+transaction.  In the phrase count example transactions processing documents would queue updates, but
+not actually update the counts.  Below is an example of how transactions would compute phrasecounts
+using this recipe.
 
  * TX1 queues `+1` update  for phrase `we want lambdas now`
  * TX2 queues `+1` update  for phrase `we want lambdas now`
@@ -52,85 +48,90 @@ value could also be placed on an export queue to update an external database.
 
 ### Buckets
 
-A simple implementation of this recipe would be to have an update queue for
-each key.  However the implementation does something slightly more complex.
-Each update queue is in a bucket and transactions that process updates, process
-all of the updates in a bucket.  This allows more efficient processing of
-updates for the following reasons :
+A simple implementation of this recipe would have an update queue for each key.  However the
+implementation does something slightly more complex.  Each update queue is in a bucket and
+transactions that process updates, process all of the updates in a bucket.  This allows more
+efficient processing of updates for the following reasons :
 
  * When updates are queued, notifications are made per bucket(instead of per a key).
- * The transaction doing the update can scan the entire bucket reading updates, this avoids a seek for each key being updated.  
+ * The transaction doing the update can scan the entire bucket reading updates, this avoids a seek for each key being updated.
  * Also the transaction can request a batch lookup to get the current value of all the keys being updated.
  * Any additional actions taken on update (like adding something to an export queue) can also be batched.
  * Data is organized to make reading exiting values for keys in a bucket more efficient.
 
-Which bucket a key goes to is decided using hash and modulus so that multiple
-updates for the same key always go to the same bucket.
+Which bucket a key goes to is decided using hash and modulus so that multiple updates for the same
+key always go to the same bucket.
 
-The initial number of tablets to create when applying table optimizations can be
-controlled by setting the buckets per tablet option when configuring a Collision
-Free Map.  For example if you have 20 tablet servers and 1000 buckets and want
-2 tablets per tserver initially then set buckets per tablet to 1000/(2*20)=25.
+The initial number of tablets to create when applying table optimizations can be controlled by
+setting the buckets per tablet option when configuring a Collision Free Map.  For example if you
+have 20 tablet servers and 1000 buckets and want 2 tablets per tserver initially then set buckets
+per tablet to 1000/(2*20)=25.
 
 ## Example Use
 
-The following code snippets show how to setup and use this recipe for
-wordcount.  The first step in using this recipe is to configure it before
-initializing Fluo.  When initializing an ID will need to be provided.  This ID
-is used in two ways.  First, the ID is used as a row prefix in the table.
-Therefore nothing else should use that row range in the table.  Second, the ID
-is used in generating configuration keys associated with the instance of the
-Collision Free Map.
+The following code snippets show how to use this recipe for wordcount.  The first step is to
+configure it before initializing Fluo.  When initializing an ID is needed.  This ID is used in two
+ways.  First, the ID is used as a row prefix in the table.  Therefore nothing else should use that
+row range in the table.  Second, the ID is used in generating configuration keys associated with the
+instance of the Collision Free Map.
 
-The following snippet shows how to setup a collision free map.  
+The following snippet shows how to configure a collision free map.
 
 ```java
   FluoConfiguration fluoConfig = ...;
 
   int numBuckets = 119;
+  int numTablets = 20;
 
-  WordCountMap.configure(fluoConfig, 119);
+  String mapId = WcObserverProvider.ID;
 
-  //initialize Fluo using fluoConfig
+  CollisionFreeMap.Options cfmOpts =
+      new CollisionFreeMap.Options(mapId, String.class, Long.class, numBuckets)
+          .setBucketsPerTablet(numBuckets / numTablets);
+  CollisionFreeMap.configure(fluoConfig, cfmOpts);
+
+  fluoConfig.setObserverProvider(WcObserverProvider.class);
+
+  // initialize Fluo using fluoConfig
 
 ```
 
-Assume the following observer is triggered when a documents contents are
-updated.  It examines new and old document content and determines changes in
-word counts.  These changes are pushed to a collision free map.
+Assume the following observer is triggered when a documents contents are updated.  It examines new
+and old document content and determines changes in word counts.  These changes are pushed to a
+collision free map.
 
 ```java
-public class DocumentObserver extends TypedObserver {
+public class DocumentObserver implements StringObserver {
 
-  CollisionFreeMap<String, Long> wcm;
+  private CollisionFreeMap<String, Long> wcm;
 
-  @Override
-  public void init(Context context) throws Exception {
-    wcm = CollisionFreeMap.getInstance(WordCountMap.ID, context.getAppConfiguration());
+  public static final Column NEW_COL = new Column("content", "new");
+  public static final Column CUR_COL = new Column("content", "current");
+
+  public DocumentObserver(CollisionFreeMap<String, Long> wcm) {
+    this.wcm = wcm;
   }
 
   @Override
-  public ObservedColumn getObservedColumn() {
-    return new ObservedColumn(new Column("content", "new"), NotificationType.STRONG);
-  }
+  public void process(TransactionBase tx, String row, Column col) {
 
-  @Override
-  public void process(TypedTransactionBase tx, Bytes row, Column col) {
-    String newContent = tx.get().row(row).col(col).toString();
-    String currentContent = tx.get().row(row).fam("content").qual("current").toString("");
+    Preconditions.checkArgument(col.equals(NEW_COL));
+
+    String newContent = tx.gets(row,NEW_COL);
+    String currentContent = tx.gets(row, CUR_COL, "");
 
     Map<String, Long> newWordCounts = getWordCounts(newContent);
     Map<String, Long> currentWordCounts = getWordCounts(currentContent);
 
     //determine changes in word counts between old and new document content
-    Map<String, Long> changes = calculateChanges(newWordCounts, currentWordCounts);    
+    Map<String, Long> changes = calculateChanges(newWordCounts, currentWordCounts);
 
     //queue updates to word counts for processing by other transactions
     wcm.update(tx, changes);
 
     //update the current content and delete the new content
-    tx.mutate().row(row).fam("content").qual("current").set(newContent);
-    tx.mutate().row(row).col(col).delete();
+    tx.set(row, CUR_COL, newContent);
+    tx.delete(row,NEW_COL);
   }
 
   private static Map<String, Long> getWordCounts(String doc) {
@@ -156,85 +157,57 @@ public class DocumentObserver extends TypedObserver {
 
     return changes;
   }
-
 }
 ```
 
-Each collision free map has two extension points, a combiner and an update
-observer.  These two extension points are defined below as `WordCountCombiner`
-and  `WordCountObserver`.  The collision free map configures a Fluo observer that
-will process queued updates.  When processing these queued updates the two
-extension points are called.  In this example `WordCountCombiner` is called to
-combine updates that were queued by `DocumentObserver`. The collision free map
-will process a batch of keys, calling the combiner for each key.  When finished
-processing a batch, it will call the update observer `WordCountObserver`.
+Each collision free map has two extension points, a [combiner][ICombiner] and a
+[value observer][ValueObserver].  The collision free map configures a Fluo observer that
+processes queued updates.  When processing these updates the two
+extension points are called.  The code below shows how to use these extension points.
 
-An update observer can do additional processing when a batch of key values are
-updated.  In `WordCountObserver`, updates are queued for export to an external
-database.  The export is given the new and old value allowing it to delete the
-old value if needed.
+A value observer can do additional processing when a batch of key values are updated.  Below
+updates are queued for export to an external database.  The export is given the new and old value
+allowing it to delete the old value if needed.
 
 ```java
-/**
- * This class exists to provide a single place to put all code related to the
- * word count map.
- */
-public class WordCountMap {
+public class WcObserverProvider implements ObserverProvider {
 
   public static final String ID = "wc";
 
-  /**
-   * A helper method for configuring the word count map.
-   *
-   * @param numTablets the desired number of tablets to create when applying table optimizations
-   */
-  public static void configure(FluoConfiguration fluoConfig, int numBuckets, int numTablets) {
-    Options cfmOpts =
-      new Options(ID, WordCountCombiner.class,  WordCountObserver.class, String.class, Long.class, numBuckets)
-        .setBucketsPerTablet(numBuckets/numTablets);
-    CollisionFreeMap.configure(fluoConfig, cfmOpts);
-  }
+  @Override
+  public void provide(Registry obsRegistry, Context ctx) {
 
-  public static class WordCountCombiner implements Combiner<String, Long> {
-    @Override
-    public Optional<Long> combine(String key, Iterator<Long> updates) {
-      long sum = 0L;
+    ExportQueue<String, MyDatabaseExport> exportQ = createExportQueue(ctx);
 
-      while (updates.hasNext()) {
-        sum += updates.next();
-      }
+    // Used to join new values for a key in the map with the existing value. The lambda sums all
+    // values and returns Optional.empty() when the sum is zero. Returning Optional.empty() causes
+    // the key/value to be deleted.
+    ICombiner<String, Long> combiner =
+        input -> input.stream().reduce(Long::sum).filter(l -> l != 0);
 
-      if (sum == 0) {
-        //returning absent will cause the collision free map to delte the current key
-        return Optional.absent();
-      } else {
-        return Optional.of(sum);
-      }
-    }
-  }
+    // Create a collision free map that computes word counts.
+    CollisionFreeMap<String, Long> wcMap =
+        CollisionFreeMap.getInstance(ID, ctx.getAppConfiguration(), combiner);
 
-  public static class WordCountObserver extends UpdateObserver<String, Long> {
-
-    private ExportQueue<String, MyDatabaseExport> exportQ;
-
-    @Override
-    public void init(String mapId, Context observerContext) throws Exception {
-      exportQ = ExportQueue.getInstance(MyExportQ.ID, observerContext.getAppConfiguration());
-    }
-
-    @Override
-    public void updatingValues(TransactionBase tx, Iterator<Update<String, Long>> updates) {
-      while (updates.hasNext()) {
-        Update<String, Long> update = updates.next();
-
+    // Called when the value of a key in the map changes. The lambda exports these changes to an
+    // external database.  Make sure to read ValueObserver's javadoc.
+    ValueObserver<String, Long> valueObserver = (tx, updates) -> {
+      for (Update<String, Long> update : updates) {
         String word = update.getKey();
         Optional<Long> oldVal = update.getOldValue();
         Optional<Long> newVal = update.getNewValue();
 
-        //queue an export to let an external database know the word count has changed
-        exportQ.add(word, new MyDatabaseExport(oldVal, newVal));
+        // queue an export to let an external database know the word count has changed
+        exportQ.add(tx, word, new MyDatabaseExport(oldVal, newVal));
       }
-    }
+    };
+
+    // Register observer that handles updates to the CollisionFreeMap. This observer will use the
+    // combiner and valueObserver.
+    wcMap.registerObserver(obsRegistry, valueObserver);
+
+    // Register observer that updates the CollisionsFreeMap
+    obsRegistry.register(DocumentObserver.NEW_COL, STRONG, new DocumentObserver(wcMap));
   }
 }
 ```
@@ -242,7 +215,7 @@ public class WordCountMap {
 ## Guarantees
 
 This recipe makes two important guarantees about updates for a key when it
-calls `updatingValues()` on an `UpdateObserver`.
+calls `process()` on a [ValueObserver].
 
  * The new value reported for an update will be derived from combining all
    updates that were committed before the transaction thats processing updates
@@ -252,6 +225,8 @@ calls `updatingValues()` on an `UpdateObserver`.
    the `-1` processed.  A transaction that started processing updates after TX2
    committed would process both.
  * The old value will always be what was reported as the new value in the
-   previous transaction that called `updatingValues()`.  
- 
+   previous transaction that called `ValueObserver.process()`.
+
 [phrasecount]: https://github.com/fluo-io/phrasecount
+[ValueObserver]: /modules/core/src/main/java/org/apache/fluo/recipes/core/map/ValueObserver.java
+[ICombiner]: /modules/core/src/main/java/org/apache/fluo/recipes/core/map/ICombiner.java

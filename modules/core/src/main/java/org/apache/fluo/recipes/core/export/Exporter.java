@@ -22,7 +22,9 @@ import org.apache.fluo.api.observer.Observer;
 
 /**
  * @since 1.0.0
+ * @deprecated since 1.1.0
  */
+@Deprecated
 public abstract class Exporter<K, V> {
 
   public interface Context {

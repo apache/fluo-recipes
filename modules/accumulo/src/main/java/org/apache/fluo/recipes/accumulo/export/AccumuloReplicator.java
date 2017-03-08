@@ -26,24 +26,41 @@ import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
 import org.apache.fluo.recipes.core.export.SequencedExport;
 import org.apache.fluo.recipes.core.transaction.LogEntry;
+import org.apache.fluo.recipes.core.transaction.RecordingTransaction;
 import org.apache.fluo.recipes.core.transaction.TxLog;
 
 /**
- * An {@link AccumuloExporter} that replicates data to Accumulo using a {@link TxLog}
+ * Supports replicating data to Accumulo using a {@link TxLog}. The method {@link #getTranslator()}
+ * can be used with {@link AccumuloConsumer} to export {@link TxLog} objects.
  */
+@SuppressWarnings("deprecation")
 public class AccumuloReplicator extends AccumuloExporter<String, TxLog> {
 
+  /**
+   * @deprecated since 1.1.0 use {@link AccumuloConsumer} with {@link #getTranslator()} instead.
+   */
   @Override
   protected void translate(SequencedExport<String, TxLog> export, Consumer<Mutation> consumer) {
     generateMutations(export.getSequence(), export.getValue(), consumer);
   }
 
   /**
-   * Returns LogEntry filter for Accumulo replication
+   * Returns LogEntry filter for Accumulo replication.
+   * 
+   * @see RecordingTransaction#wrap(org.apache.fluo.api.client.TransactionBase, Predicate)
    */
   public static Predicate<LogEntry> getFilter() {
     return le -> le.getOp().equals(LogEntry.Operation.DELETE)
         || le.getOp().equals(LogEntry.Operation.SET);
+  }
+
+  /**
+   * @return A translator from TxLog to Mutations
+   * @since 1.1.0
+   */
+  public static AccumuloTranslator<String, TxLog> getTranslator() {
+    return (export, consumer) -> generateMutations(export.getSequence(), export.getValue(),
+        consumer);
   }
 
   /**

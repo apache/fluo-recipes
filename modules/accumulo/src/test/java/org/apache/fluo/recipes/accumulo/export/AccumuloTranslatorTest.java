@@ -30,7 +30,7 @@ import org.apache.fluo.api.data.RowColumn;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class AccumuloExportTest {
+public class AccumuloTranslatorTest {
 
   public static Map<RowColumn, Bytes> genData(String key, Optional<String> val) {
     if (!val.isPresent()) {
@@ -47,7 +47,7 @@ public class AccumuloExportTest {
 
   public static void genMutations(String key, long seq, Optional<String> oldVal,
       Optional<String> newVal, Consumer<Mutation> consumer) {
-    AccumuloExporter.generateMutations(seq, genData(key, oldVal), genData(key, newVal), consumer);
+    AccumuloTranslator.generateMutations(seq, genData(key, oldVal), genData(key, newVal), consumer);
   }
 
   public static Mutation makePut(String key, String val, long seq) {
