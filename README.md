@@ -31,7 +31,8 @@ like Spark and Kryo.
 
 Recipes are documented below and in the [Recipes API docs][recipes-api].
 
-* [Collision Free Map][cfm] - A recipe for making many to many updates.
+* [Combine Queue][combine-q] - A recipe for concurrently updating many keys while avoiding
+  collisions.
 * [Export Queue][export-q] - A recipe for exporting data from Fluo to external systems.
 * [Row Hash Prefix][row-hasher] - A recipe for spreading data evenly in a row prefix.
 * [RecordingTransaction][recording-tx] - A wrapper for a Fluo transaction that records all transaction
@@ -102,7 +103,7 @@ Below is a sample Maven POM containing all possible Fluo Recipes dependencies:
 [fluo]: https://fluo.apache.org/
 [fluo-api]: https://fluo.apache.org/apidocs/fluo/
 [recipes-api]: https://fluo.apache.org/apidocs/fluo-recipes/
-[cfm]: docs/cfm.md
+[combine-q]: docs/combine-queue.md
 [export-q]: docs/export-queue.md
 [recording-tx]: docs/recording-tx.md
 [serialization]: docs/serialization.md

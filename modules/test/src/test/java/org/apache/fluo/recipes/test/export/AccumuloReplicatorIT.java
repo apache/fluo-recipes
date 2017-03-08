@@ -28,8 +28,9 @@ import org.apache.fluo.api.client.FluoClient;
 import org.apache.fluo.api.client.FluoFactory;
 import org.apache.fluo.api.client.Transaction;
 import org.apache.fluo.api.mini.MiniFluo;
-import org.apache.fluo.recipes.accumulo.export.AccumuloExporter;
+import org.apache.fluo.api.observer.ObserverProvider;
 import org.apache.fluo.recipes.accumulo.export.AccumuloReplicator;
+import org.apache.fluo.recipes.accumulo.export.function.AccumuloExporter;
 import org.apache.fluo.recipes.core.export.ExportQueue;
 import org.apache.fluo.recipes.core.transaction.TxLog;
 import org.apache.fluo.recipes.test.AccumuloExportITBase;
@@ -46,6 +47,16 @@ public class AccumuloReplicatorIT extends AccumuloExportITBase {
   public static final String QUEUE_ID = "repq";
   private TypeLayer tl = new TypeLayer(new StringEncoder());
 
+  public static class AritObserverProvider implements ObserverProvider {
+
+    @Override
+    public void provide(Registry or, Context ctx) {
+      ExportQueue<String, TxLog> eq = ExportQueue.getInstance(QUEUE_ID, ctx.getAppConfiguration());
+      eq.registerObserver(or, new AccumuloExporter<>(QUEUE_ID, ctx.getAppConfiguration(),
+          AccumuloReplicator.getTranslator()));
+    }
+  }
+
   @Override
   public void preFluoInitHook() throws Exception {
 
@@ -55,11 +66,15 @@ public class AccumuloReplicatorIT extends AccumuloExportITBase {
 
     MiniAccumuloCluster miniAccumulo = getMiniAccumuloCluster();
 
-    ExportQueue.configure(getFluoConfiguration(), new ExportQueue.Options(QUEUE_ID,
-        AccumuloReplicator.class.getName(), String.class.getName(), TxLog.class.getName(), 5)
-        .setExporterConfiguration(new AccumuloExporter.Configuration(
-            miniAccumulo.getInstanceName(), miniAccumulo.getZooKeepers(), ACCUMULO_USER,
-            ACCUMULO_PASSWORD, exportTable)));
+    ExportQueue.configure(QUEUE_ID).keyType(String.class).valueType(TxLog.class).buckets(5)
+        .save(getFluoConfiguration());
+
+    AccumuloExporter.configure(QUEUE_ID)
+        .instance(miniAccumulo.getInstanceName(), miniAccumulo.getZooKeepers())
+        .credentials(ACCUMULO_USER, ACCUMULO_PASSWORD).table(exportTable)
+        .save(getFluoConfiguration());
+
+    getFluoConfiguration().setObserverProvider(AritObserverProvider.class);
   }
 
   @Test

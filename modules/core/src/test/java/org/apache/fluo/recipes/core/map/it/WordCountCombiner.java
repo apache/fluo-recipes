@@ -20,6 +20,8 @@ import java.util.Optional;
 
 import org.apache.fluo.recipes.core.map.Combiner;
 
+@Deprecated
+// TODO move to CombineQueue test when removing CFM
 public class WordCountCombiner implements Combiner<String, Long> {
   @Override
   public Optional<Long> combine(String key, Iterator<Long> updates) {

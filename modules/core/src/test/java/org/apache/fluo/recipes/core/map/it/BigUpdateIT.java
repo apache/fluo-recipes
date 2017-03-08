@@ -55,6 +55,8 @@ import org.junit.Test;
  * This test configures a small buffer size and verifies that multiple passes are made to process
  * updates.
  */
+@Deprecated
+// TODO migrate to CombineQueue test when removing CFM
 public class BigUpdateIT {
   private static final TypeLayer tl = new TypeLayer(new StringEncoder());
 

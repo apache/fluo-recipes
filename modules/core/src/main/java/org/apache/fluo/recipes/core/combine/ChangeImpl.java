@@ -13,46 +13,36 @@
  * the License.
  */
 
-package org.apache.fluo.recipes.core.map;
+package org.apache.fluo.recipes.core.combine;
 
-import java.util.Iterator;
 import java.util.Optional;
 
-import org.apache.fluo.recipes.core.combine.ChangeObserver.Change;
-
-import com.google.common.collect.Iterators;
-
-/**
- * @since 1.0.0
- * @deprecated since 1.1.0
- */
-@Deprecated
-public class Update<K, V> {
+// intentionally package private
+class ChangeImpl<K, V> implements ChangeObserver.Change<K, V> {
 
   private final K key;
   private final Optional<V> oldValue;
   private final Optional<V> newValue;
 
-  Update(K key, Optional<V> oldValue, Optional<V> newValue) {
+  ChangeImpl(K key, Optional<V> oldValue, Optional<V> newValue) {
     this.key = key;
     this.oldValue = oldValue;
     this.newValue = newValue;
   }
 
+  @Override
   public K getKey() {
     return key;
   }
 
+  @Override
   public Optional<V> getNewValue() {
     return newValue;
   }
 
+  @Override
   public Optional<V> getOldValue() {
     return oldValue;
   }
 
-  static <K2, V2> Iterator<Update<K2, V2>> transform(Iterable<Change<K2, V2>> changes) {
-    return Iterators.transform(changes.iterator(), change -> new Update<K2, V2>(change.getKey(),
-        change.getOldValue(), change.getNewValue()));
-  }
 }

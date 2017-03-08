@@ -15,9 +15,40 @@
 
 package org.apache.fluo.recipes.core.export;
 
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+
 // This class intentionally package private.
-class ExportEntry {
-  byte[] key;
-  long seq;
-  byte[] value;
+class MemLimitIterator implements Iterator<ExportEntry> {
+
+  private long memConsumed = 0;
+  private long memLimit;
+  private int extraPerKey;
+  private Iterator<ExportEntry> source;
+
+  public MemLimitIterator(Iterator<ExportEntry> input, long limit, int extraPerKey) {
+    this.source = input;
+    this.memLimit = limit;
+    this.extraPerKey = extraPerKey;
+  }
+
+  @Override
+  public boolean hasNext() {
+    return memConsumed < memLimit && source.hasNext();
+  }
+
+  @Override
+  public ExportEntry next() {
+    if (!hasNext()) {
+      throw new NoSuchElementException();
+    }
+    ExportEntry ee = source.next();
+    memConsumed += ee.key.length + extraPerKey + ee.value.length;
+    return ee;
+  }
+
+  @Override
+  public void remove() {
+    source.remove();
+  }
 }

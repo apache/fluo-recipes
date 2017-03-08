@@ -41,6 +41,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+@Deprecated
+// TODO migrate to CombineQueue test when removing CFM
 public class CollisionFreeMapIT {
 
   private MiniFluo miniFluo;

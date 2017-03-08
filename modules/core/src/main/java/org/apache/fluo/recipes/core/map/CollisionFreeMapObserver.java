@@ -25,7 +25,9 @@ import org.apache.fluo.api.observer.AbstractObserver;
  * CollisionFreeMap.Options) . This class should never have to be used directly.
  *
  * @since 1.0.0
+ * @deprecated since 1.1.0
  */
+@Deprecated
 public class CollisionFreeMapObserver extends AbstractObserver {
 
   @SuppressWarnings("rawtypes")

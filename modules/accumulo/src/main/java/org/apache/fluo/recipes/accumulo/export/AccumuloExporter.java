@@ -15,18 +15,17 @@
 
 package org.apache.fluo.recipes.accumulo.export;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.function.Consumer;
 
 import org.apache.accumulo.core.data.Mutation;
+import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
-import org.apache.fluo.api.data.Column;
 import org.apache.fluo.api.data.RowColumn;
-import org.apache.fluo.recipes.core.export.ExportQueue;
+import org.apache.fluo.recipes.core.export.ExportQueue.Options;
+import org.apache.fluo.recipes.accumulo.export.function.AccumuloTranslator;
 import org.apache.fluo.recipes.core.export.Exporter;
 import org.apache.fluo.recipes.core.export.SequencedExport;
 
@@ -35,16 +34,22 @@ import org.apache.fluo.recipes.core.export.SequencedExport;
  * to use this, see the project level documentation for exporting to Accumulo.
  *
  * @since 1.0.0
+ * @deprecated since 1.1.0, replaced by
+ *             {@link org.apache.fluo.recipes.accumulo.export.function.AccumuloExporter} and
+ *             {@link AccumuloTranslator}
  */
+@Deprecated
 public abstract class AccumuloExporter<K, V> extends Exporter<K, V> {
 
   /**
    * Use this to configure the Accumulo table where an AccumuloExporter's mutations will be written.
-   * Create and pass to {@link ExportQueue.Options#setExporterConfiguration(SimpleConfiguration)}
+   * Create and pass to {@link Options#setExporterConfiguration(SimpleConfiguration)}
    *
    * @since 1.0.0
    */
   public static class Configuration extends SimpleConfiguration {
+
+    private static final long serialVersionUID = 1L;
 
     public Configuration(String instanceName, String zookeepers, String user, String password,
         String table) {
@@ -56,28 +61,28 @@ public abstract class AccumuloExporter<K, V> extends Exporter<K, V> {
     }
   }
 
-  private AccumuloWriter accumuloWriter;
+  private org.apache.fluo.recipes.accumulo.export.function.AccumuloExporter<K, V> accumuloWriter;
 
   @Override
   public void init(Exporter.Context context) throws Exception {
-    accumuloWriter = AccumuloWriter.getInstance(context.getExporterConfiguration());
+    SimpleConfiguration sc = context.getExporterConfiguration();
+    String instanceName = sc.getString("instanceName");
+    String zookeepers = sc.getString("zookeepers");
+    String user = sc.getString("user");
+    String password = sc.getString("password");
+    String table = sc.getString("table");
+
+    FluoConfiguration tmpFc = new FluoConfiguration();
+    org.apache.fluo.recipes.accumulo.export.function.AccumuloExporter.configure("aecfgid")
+        .instance(instanceName, zookeepers).credentials(user, password).table(table).save(tmpFc);
+    accumuloWriter =
+        new org.apache.fluo.recipes.accumulo.export.function.AccumuloExporter<K, V>("aecfgid",
+            tmpFc.getAppConfiguration(), this::translate);
   }
 
   @Override
   protected void processExports(Iterator<SequencedExport<K, V>> exports) {
-
-    ArrayList<Mutation> buffer = new ArrayList<>();
-
-    Consumer<Mutation> consumer = m -> buffer.add(m);
-
-    while (exports.hasNext()) {
-      SequencedExport<K, V> export = exports.next();
-      translate(export, consumer);
-    }
-
-    if (buffer.size() > 0) {
-      accumuloWriter.write(buffer);
-    }
+    accumuloWriter.export(exports);
   }
 
   /**
@@ -108,29 +113,11 @@ public abstract class AccumuloExporter<K, V> extends Exporter<K, V> {
    * @param oldData Map containing old row/column data
    * @param newData Map containing new row/column data
    * @param seq Export sequence number
+   * @deprecated since 1.1.0 use
+   *             {@link AccumuloTranslator#generateMutations(long, Map, Map, Consumer)}
    */
   public static void generateMutations(long seq, Map<RowColumn, Bytes> oldData,
       Map<RowColumn, Bytes> newData, Consumer<Mutation> consumer) {
-    Map<Bytes, Mutation> mutationMap = new HashMap<>();
-    for (Map.Entry<RowColumn, Bytes> entry : oldData.entrySet()) {
-      RowColumn rc = entry.getKey();
-      if (!newData.containsKey(rc)) {
-        Mutation m = mutationMap.computeIfAbsent(rc.getRow(), r -> new Mutation(r.toArray()));
-        m.putDelete(rc.getColumn().getFamily().toArray(), rc.getColumn().getQualifier().toArray(),
-            seq);
-      }
-    }
-    for (Map.Entry<RowColumn, Bytes> entry : newData.entrySet()) {
-      RowColumn rc = entry.getKey();
-      Column col = rc.getColumn();
-      Bytes newVal = entry.getValue();
-      Bytes oldVal = oldData.get(rc);
-      if (oldVal == null || !oldVal.equals(newVal)) {
-        Mutation m = mutationMap.computeIfAbsent(rc.getRow(), r -> new Mutation(r.toArray()));
-        m.put(col.getFamily().toArray(), col.getQualifier().toArray(), seq, newVal.toArray());
-      }
-    }
-
-    mutationMap.values().forEach(consumer);
+    AccumuloTranslator.generateMutations(seq, oldData, newData, consumer);
   }
 }

@@ -13,7 +13,7 @@
  * the License.
  */
 
-package org.apache.fluo.recipes.accumulo.export;
+package org.apache.fluo.recipes.accumulo.export.function;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -35,13 +35,13 @@ import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.accumulo.core.client.ZooKeeperInstance;
 import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.data.Mutation;
-import org.apache.fluo.api.config.SimpleConfiguration;
 
 /**
  * Writes mutations to Accumulo using a shared batch writer
  *
  * @since 1.0.0
  */
+// intentionally package private
 class AccumuloWriter {
 
   private static class Mutations {
@@ -130,16 +130,6 @@ class AccumuloWriter {
 
   private static Map<String, AccumuloWriter> exporters = new HashMap<>();
 
-
-  static AccumuloWriter getInstance(SimpleConfiguration sc) {
-    String instanceName = sc.getString("instanceName");
-    String zookeepers = sc.getString("zookeepers");
-    String user = sc.getString("user");
-    String password = sc.getString("password");
-    String table = sc.getString("table");
-    return getInstance(instanceName, zookeepers, user, password, table);
-  }
-
   static synchronized AccumuloWriter getInstance(String instanceName, String zookeepers,
       String user, String password, String table) {
 
@@ -165,5 +155,4 @@ class AccumuloWriter {
       throw new RuntimeException(e);
     }
   }
-
 }

@@ -20,6 +20,7 @@ import org.apache.fluo.recipes.core.map.CollisionFreeMap.Options;
 import org.junit.Assert;
 import org.junit.Test;
 
+@Deprecated
 public class OptionsTest {
   @Test
   public void testExportQueueOptions() {

@@ -13,26 +13,39 @@
  * the License.
  */
 
-package org.apache.fluo.recipes.core.map;
+package org.apache.fluo.recipes.core.combine;
 
 import java.util.Iterator;
 import java.util.Optional;
-
-import org.apache.fluo.recipes.core.combine.CombineQueue;
+import java.util.stream.Stream;
 
 /**
- * @since 1.0.0
- * @deprecated since 1.1.0 use {@link org.apache.fluo.recipes.core.combine.Combiner} and
- *             {@link CombineQueue}
+ * This class was created as an alternative to {@link Combiner}. It supports easy and efficient use
+ * of java streams when implementing combiners using lambdas.
+ * 
+ * @since 1.1.0
  */
+@FunctionalInterface
 public interface Combiner<K, V> {
+
+  /**
+   * 
+   * @since 1.1.0
+   */
+  public static interface Input<KI, VI> extends Iterable<VI> {
+    KI getKey();
+
+    Stream<VI> stream();
+
+    Iterator<VI> iterator();
+  }
 
   /**
    * This function is called to combine the current value of a key with updates that were queued for
    * the key. See the collision free map project level documentation for more information.
    *
-   * @return Then new value for the key. Returning Optional.absent() will cause the key to be
+   * @return Then new value for the key. Returning Optional.empty() will cause the key to be
    *         deleted.
    */
-  Optional<V> combine(K key, Iterator<V> updates);
+  Optional<V> combine(Input<K, V> input);
 }

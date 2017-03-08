@@ -31,10 +31,11 @@ import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.config.ObserverSpecification;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
+import org.apache.fluo.api.observer.Observer;
+import org.apache.fluo.api.observer.Observer.NotificationType;
+import org.apache.fluo.api.observer.ObserverProvider;
 import org.apache.fluo.recipes.core.common.TableOptimizations;
 import org.apache.fluo.recipes.core.common.TableOptimizations.TableOptimizationsFactory;
-import org.apache.fluo.recipes.core.common.RowRange;
-import org.apache.fluo.recipes.core.common.TransientRegistry;
 import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
 
 /**
@@ -42,23 +43,25 @@ import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
  */
 public class ExportQueue<K, V> {
 
-  private static final String RANGE_BEGIN = "#";
-  private static final String RANGE_END = ":~";
+  static final String RANGE_BEGIN = "#";
+  static final String RANGE_END = ":~";
 
   private int numBuckets;
   private SimpleSerializer serializer;
   private String queueId;
+  private FluentConfigurator opts;
 
   // usage hint : could be created once in an observers init method
   // usage hint : maybe have a queue for each type of data being exported???
   // maybe less queues are
   // more efficient though because more batching at export time??
-  ExportQueue(Options opts, SimpleSerializer serializer) throws Exception {
+  ExportQueue(FluentConfigurator opts, SimpleSerializer serializer) throws Exception {
     // TODO sanity check key type based on type params
     // TODO defer creating classes until needed.. so that its not done during Fluo init
     this.queueId = opts.queueId;
-    this.numBuckets = opts.numBuckets;
+    this.numBuckets = opts.buckets;
     this.serializer = serializer;
+    this.opts = opts;
   }
 
   public void add(TransactionBase tx, K key, V value) {
@@ -87,9 +90,11 @@ public class ExportQueue<K, V> {
     }
   }
 
+  // TODO maybe add for stream and interable
+
   public static <K2, V2> ExportQueue<K2, V2> getInstance(String exportQueueId,
       SimpleConfiguration appConfig) {
-    Options opts = new Options(exportQueueId, appConfig);
+    FluentConfigurator opts = FluentConfigurator.load(exportQueueId, appConfig);
     try {
       return new ExportQueue<>(opts, SimpleSerializer.getInstance(appConfig));
     } catch (Exception e) {
@@ -99,26 +104,100 @@ public class ExportQueue<K, V> {
   }
 
   /**
+   * Part of a fluent API for configuring a export queue.
+   * 
+   * @since 1.1.0
+   */
+  public static interface FluentArg1 {
+    public FluentArg2 keyType(String keyType);
+
+    public FluentArg2 keyType(Class<?> keyType);
+  }
+
+  /**
+   * Part of a fluent API for configuring a export queue.
+   * 
+   * @since 1.1.0
+   */
+  public static interface FluentArg2 {
+    public FluentArg3 valueType(String keyType);
+
+    public FluentArg3 valueType(Class<?> keyType);
+  }
+
+  /**
+   * Part of a fluent API for configuring a export queue.
+   * 
+   * @since 1.1.0
+   */
+  public static interface FluentArg3 {
+    FluentOptions buckets(int numBuckets);
+  }
+
+  /**
+   * Part of a fluent API for configuring a export queue.
+   * 
+   * @since 1.1.0
+   */
+  public static interface FluentOptions {
+    /**
+     * Sets a limit on the amount of serialized updates to read into memory. Additional memory will
+     * be used to actually deserialize and process the updates. This limit does not account for
+     * object overhead in java, which can be significant.
+     *
+     * <p>
+     * The way memory read is calculated is by summing the length of serialized key and value byte
+     * arrays. Once this sum exceeds the configured memory limit, no more export key values are
+     * processed in the current transaction. When not everything is processed, the observer
+     * processing exports will notify itself causing another transaction to continue processing
+     * later.
+     */
+    public FluentOptions bufferSize(long bufferSize);
+
+    /**
+     * Sets the number of buckets per tablet to generate. This affects how many split points will be
+     * generated when optimizing the Accumulo table.
+     */
+    public FluentOptions bucketsPerTablet(int bucketsPerTablet);
+
+    /**
+     * Adds properties to the Fluo application configuration for this CombineQueue.
+     */
+    public void save(FluoConfiguration fluoConfig);
+  }
+
+  /**
+   * A Fluent API for configuring an Export Queue. Use this method in conjunction with
+   * {@link #registerObserver(ObserverProvider.Registry, org.apache.fluo.recipes.core.export.function.Exporter)}
+   *
+   * @param exportQueueId An id that uniquely identifies an export queue. This id is used in the
+   *        keys in the Fluo table and in the keys in the Fluo application configuration.
+   * @since 1.1.0
+   */
+  public static FluentArg1 configure(String exportQueueId) {
+    return new FluentConfigurator(Objects.requireNonNull(exportQueueId));
+  }
+
+  /**
    * Call this method before initializing Fluo.
    *
    * @param fluoConfig The configuration that will be used to initialize fluo.
+   * @deprecated since 1.1.0 use {@link #configure(String)} and
+   *             {@link #registerObserver(ObserverProvider.Registry, org.apache.fluo.recipes.core.export.function.Exporter)}
+   *             instead.
    */
+  @Deprecated
   public static void configure(FluoConfiguration fluoConfig, Options opts) {
     SimpleConfiguration appConfig = fluoConfig.getAppConfiguration();
     opts.save(appConfig);
 
     fluoConfig.addObserver(new ObserverSpecification(ExportObserver.class.getName(), Collections
-        .singletonMap("queueId", opts.queueId)));
-
-    Bytes exportRangeStart = Bytes.of(opts.queueId + RANGE_BEGIN);
-    Bytes exportRangeStop = Bytes.of(opts.queueId + RANGE_END);
-
-    new TransientRegistry(fluoConfig.getAppConfiguration()).addTransientRange("exportQueue."
-        + opts.queueId, new RowRange(exportRangeStart, exportRangeStop));
-
-    TableOptimizations.registerOptimization(appConfig, opts.queueId, Optimizer.class);
+        .singletonMap("queueId", opts.fluentCfg.queueId)));
   }
 
+  /**
+   * @since 1.0.0
+   */
   public static class Optimizer implements TableOptimizationsFactory {
 
     /**
@@ -130,7 +209,7 @@ public class ExportQueue<K, V> {
      */
     @Override
     public TableOptimizations getTableOptimizations(String queueId, SimpleConfiguration appConfig) {
-      Options opts = new Options(queueId, appConfig);
+      FluentConfigurator opts = FluentConfigurator.load(queueId, appConfig);
 
       List<Bytes> splits = new ArrayList<>();
 
@@ -141,8 +220,8 @@ public class ExportQueue<K, V> {
       splits.add(exportRangeStop);
 
       List<Bytes> exportSplits = new ArrayList<>();
-      for (int i = opts.getBucketsPerTablet(); i < opts.numBuckets; i += opts.getBucketsPerTablet()) {
-        exportSplits.add(ExportBucket.generateBucketRow(opts.queueId, i, opts.numBuckets));
+      for (int i = opts.getBucketsPerTablet(); i < opts.buckets; i += opts.getBucketsPerTablet()) {
+        exportSplits.add(ExportBucket.generateBucketRow(opts.queueId, i, opts.buckets));
       }
       Collections.sort(exportSplits);
       splits.addAll(exportSplits);
@@ -160,52 +239,60 @@ public class ExportQueue<K, V> {
   }
 
   /**
+   * Registers an observer that will export queued data. Use this method in conjunction with
+   * {@link ExportQueue#configure(String)}.
+   * 
+   * @since 1.1.0
+   */
+  public void registerObserver(ObserverProvider.Registry obsRegistry,
+      org.apache.fluo.recipes.core.export.function.Exporter<K, V> exporter) {
+    Preconditions
+        .checkState(
+            opts.exporterType == null,
+            "Expected exporter type not be set, it was set to %s.  Cannot not use the old and new way of configuring "
+                + "exporters at the same time.", opts.exporterType);
+    Observer obs;
+    try {
+      obs = new ExportObserverImpl<K, V>(queueId, opts, serializer, exporter);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    obsRegistry.register(ExportBucket.newNotificationColumn(queueId), NotificationType.WEAK, obs);
+  }
+
+  /**
    * @since 1.0.0
+   * @deprecated since 1.1.0 use {@link ExportQueue#configure(String)}
    */
   public static class Options {
 
-    private static final String PREFIX = "recipes.exportQueue.";
-    static final long DEFAULT_BUFFER_SIZE = 1 << 20;
-    static final int DEFAULT_BUCKETS_PER_TABLET = 10;
+    private static final String PREFIX = FluentConfigurator.PREFIX;
 
-    int numBuckets;
-    Integer bucketsPerTablet = null;
-    Long bufferSize;
-
-    String keyType;
-    String valueType;
-    String exporterType;
-    String queueId;
+    FluentConfigurator fluentCfg;
     SimpleConfiguration exporterConfig;
 
     Options(String queueId, SimpleConfiguration appConfig) {
-      this.queueId = queueId;
-
-      this.numBuckets = appConfig.getInt(PREFIX + queueId + ".buckets");
-      this.exporterType = appConfig.getString(PREFIX + queueId + ".exporter");
-      this.keyType = appConfig.getString(PREFIX + queueId + ".key");
-      this.valueType = appConfig.getString(PREFIX + queueId + ".val");
-      this.bufferSize = appConfig.getLong(PREFIX + queueId + ".bufferSize", DEFAULT_BUFFER_SIZE);
-      this.bucketsPerTablet =
-          appConfig.getInt(PREFIX + queueId + ".bucketsPerTablet", DEFAULT_BUCKETS_PER_TABLET);
-
+      fluentCfg = FluentConfigurator.load(queueId, appConfig);
       this.exporterConfig = appConfig.subset(PREFIX + queueId + ".exporterCfg");
     }
 
     public Options(String queueId, String exporterType, String keyType, String valueType,
         int buckets) {
-      Preconditions.checkArgument(buckets > 0);
-
-      this.queueId = queueId;
-      this.numBuckets = buckets;
-      this.exporterType = exporterType;
-      this.keyType = keyType;
-      this.valueType = valueType;
+      this(queueId, keyType, valueType, buckets);
+      fluentCfg.exporterType = Objects.requireNonNull(exporterType);
     }
 
     public <K, V> Options(String queueId, Class<? extends Exporter<K, V>> exporter,
         Class<K> keyType, Class<V> valueType, int buckets) {
       this(queueId, exporter.getName(), keyType.getName(), valueType.getName(), buckets);
+    }
+
+    // intentionally package private
+    Options(String queueId, String keyType, String valueType, int buckets) {
+      Preconditions.checkArgument(buckets > 0);
+      this.fluentCfg =
+          (FluentConfigurator) new FluentConfigurator(queueId).keyType(keyType)
+              .valueType(valueType).buckets(buckets);
     }
 
     /**
@@ -221,17 +308,12 @@ public class ExportQueue<K, V> {
      * later.
      */
     public Options setBufferSize(long bufferSize) {
-      Preconditions.checkArgument(bufferSize > 0, "Buffer size must be positive");
-      this.bufferSize = bufferSize;
+      fluentCfg.bufferSize(bufferSize);
       return this;
     }
 
     long getBufferSize() {
-      if (bufferSize == null) {
-        return DEFAULT_BUFFER_SIZE;
-      }
-
-      return bufferSize;
+      return fluentCfg.getBufferSize();
     }
 
     /**
@@ -240,24 +322,14 @@ public class ExportQueue<K, V> {
      *
      */
     public Options setBucketsPerTablet(int bucketsPerTablet) {
-      Preconditions.checkArgument(bucketsPerTablet > 0, "bucketsPerTablet is <= 0 : "
-          + bucketsPerTablet);
-      this.bucketsPerTablet = bucketsPerTablet;
+      fluentCfg.bucketsPerTablet(bucketsPerTablet);
       return this;
     }
 
     int getBucketsPerTablet() {
-      if (bucketsPerTablet == null) {
-        return DEFAULT_BUCKETS_PER_TABLET;
-      }
-
-      return bucketsPerTablet;
+      return fluentCfg.getBucketsPerTablet();
     }
 
-    /**
-     * Sets exporter specific configuration. This configuration will be made available to an
-     * {@link Exporter} via {@link Exporter.Context#getExporterConfiguration()}.
-     */
     public Options setExporterConfiguration(SimpleConfiguration config) {
       Objects.requireNonNull(config);
       this.exporterConfig = config;
@@ -273,28 +345,17 @@ public class ExportQueue<K, V> {
     }
 
     public String getQueueId() {
-      return queueId;
+      return fluentCfg.queueId;
     }
 
     void save(SimpleConfiguration appConfig) {
-      appConfig.setProperty(PREFIX + queueId + ".buckets", numBuckets + "");
-      appConfig.setProperty(PREFIX + queueId + ".exporter", exporterType + "");
-      appConfig.setProperty(PREFIX + queueId + ".key", keyType);
-      appConfig.setProperty(PREFIX + queueId + ".val", valueType);
-
-      if (bufferSize != null) {
-        appConfig.setProperty(PREFIX + queueId + ".bufferSize", bufferSize);
-      }
-
-      if (bucketsPerTablet != null) {
-        appConfig.setProperty(PREFIX + queueId + ".bucketsPerTablet", bucketsPerTablet);
-      }
+      fluentCfg.save(appConfig);
 
       if (exporterConfig != null) {
         Iterator<String> keys = exporterConfig.getKeys();
         while (keys.hasNext()) {
           String key = keys.next();
-          appConfig.setProperty(PREFIX + queueId + ".exporterCfg." + key,
+          appConfig.setProperty(PREFIX + fluentCfg.queueId + ".exporterCfg." + key,
               exporterConfig.getRawString(key));
         }
       }

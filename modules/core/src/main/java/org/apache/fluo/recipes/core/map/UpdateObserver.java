@@ -19,17 +19,20 @@ import java.util.Iterator;
 
 import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.observer.Observer.Context;
+import org.apache.fluo.recipes.core.combine.ChangeObserver;
+import org.apache.fluo.recipes.core.combine.CombineQueue;
 
 /**
  * A {@link CollisionFreeMap} calls this to allow additional processing to be done when key values
  * are updated. See the project level documentation for more information.
  *
  * @since 1.0.0
+ * @deprecated since 1.1.0 use {@link ChangeObserver} and {@link CombineQueue}
  */
+@Deprecated
 public abstract class UpdateObserver<K, V> {
+
   public void init(String mapId, Context observerContext) throws Exception {}
 
   public abstract void updatingValues(TransactionBase tx, Iterator<Update<K, V>> updates);
-
-  // TODO add close
 }

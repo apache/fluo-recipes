@@ -34,6 +34,7 @@ import org.apache.fluo.recipes.core.types.TypedTransactionBase;
 /**
  * This class encapsulates a buckets serialization code.
  */
+// This class intentionally package private.
 class ExportBucket {
   private static final String NOTIFICATION_CF = "fluoRecipes";
   private static final String NOTIFICATION_CQ_PREFIX = "eq:";

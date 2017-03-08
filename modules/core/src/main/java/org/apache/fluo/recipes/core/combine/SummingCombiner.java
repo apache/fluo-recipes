@@ -13,20 +13,25 @@
  * the License.
  */
 
-package org.apache.fluo.recipes.test.export;
+package org.apache.fluo.recipes.core.combine;
 
-import java.util.function.Consumer;
+import java.util.Optional;
 
-import org.apache.accumulo.core.data.Mutation;
-import org.apache.fluo.recipes.accumulo.export.AccumuloExporter;
-import org.apache.fluo.recipes.core.export.SequencedExport;
-
-public class SimpleExporter extends AccumuloExporter<String, String> {
+/**
+ * Sums long values and returns Optional.empty() when the sum is zero.
+ * 
+ * @since 1.1.0
+ */
+public class SummingCombiner<K> implements Combiner<K, Long> {
 
   @Override
-  protected void translate(SequencedExport<String, String> export, Consumer<Mutation> consumer) {
-    Mutation m = new Mutation(export.getKey());
-    m.put("cf", "cq", export.getSequence(), export.getValue());
-    consumer.accept(m);
+  public Optional<Long> combine(Input<K, Long> input) {
+    long sum = 0;
+    for (Long l : input) {
+      sum += l;
+    }
+
+    return sum == 0 ? Optional.empty() : Optional.of(sum);
   }
+
 }

@@ -26,6 +26,8 @@ import org.apache.fluo.recipes.core.map.CollisionFreeMap;
 import org.apache.fluo.recipes.core.types.TypedObserver;
 import org.apache.fluo.recipes.core.types.TypedTransactionBase;
 
+@Deprecated
+// TODO move to CombineQueue test when removing CFM
 public class DocumentObserver extends TypedObserver {
 
   CollisionFreeMap<String, Long> wcm;

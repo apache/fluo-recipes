@@ -15,10 +15,6 @@
 
 package org.apache.fluo.recipes.core.export;
 
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-
-import com.google.common.collect.Iterators;
 import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
@@ -28,76 +24,34 @@ import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
 
 /**
  * @since 1.0.0
+ * @deprecated since 1.1.0
  */
+@Deprecated
 public class ExportObserver<K, V> extends AbstractObserver {
 
-  private static class MemLimitIterator implements Iterator<ExportEntry> {
-
-    private long memConsumed = 0;
-    private long memLimit;
-    private int extraPerKey;
-    private Iterator<ExportEntry> source;
-
-    public MemLimitIterator(Iterator<ExportEntry> input, long limit, int extraPerKey) {
-      this.source = input;
-      this.memLimit = limit;
-      this.extraPerKey = extraPerKey;
-    }
-
-    @Override
-    public boolean hasNext() {
-      return memConsumed < memLimit && source.hasNext();
-    }
-
-    @Override
-    public ExportEntry next() {
-      if (!hasNext()) {
-        throw new NoSuchElementException();
-      }
-      ExportEntry ee = source.next();
-      memConsumed += ee.key.length + extraPerKey + ee.value.length;
-      return ee;
-    }
-
-    @Override
-    public void remove() {
-      source.remove();
-    }
-  }
+  private ExportObserverImpl<K, V> eoi;
 
   private String queueId;
-  private Class<K> keyType;
-  private Class<V> valType;
-  SimpleSerializer serializer;
-  private Exporter<K, V> exporter;
-
-  private long memLimit;
 
   protected String getQueueId() {
     return queueId;
   }
 
-  SimpleSerializer getSerializer() {
-    return serializer;
-  }
-
   @SuppressWarnings("unchecked")
   @Override
   public void init(Context context) throws Exception {
+
     queueId = context.getObserverConfiguration().getString("queueId");
     ExportQueue.Options opts = new ExportQueue.Options(queueId, context.getAppConfiguration());
 
     // TODO defer loading classes... so that not done during fluo init
     // TODO move class loading to centralized place... also attempt to check type params
-    keyType = (Class<K>) getClass().getClassLoader().loadClass(opts.keyType);
-    valType = (Class<V>) getClass().getClassLoader().loadClass(opts.valueType);
-    exporter =
-        getClass().getClassLoader().loadClass(opts.exporterType).asSubclass(Exporter.class)
-            .newInstance();
+    @SuppressWarnings("rawtypes")
+    Exporter exporter =
+        getClass().getClassLoader().loadClass(opts.fluentCfg.exporterType)
+            .asSubclass(Exporter.class).newInstance();
 
-    serializer = SimpleSerializer.getInstance(context.getAppConfiguration());
-
-    memLimit = opts.getBufferSize();
+    SimpleSerializer serializer = SimpleSerializer.getInstance(context.getAppConfiguration());
 
     exporter.init(new Exporter.Context() {
 
@@ -116,6 +70,11 @@ public class ExportObserver<K, V> extends AbstractObserver {
         return context;
       }
     });
+
+
+    this.eoi =
+        new ExportObserverImpl<K, V>(queueId, opts.fluentCfg, serializer, exporter::processExports);
+
   }
 
   @Override
@@ -124,40 +83,7 @@ public class ExportObserver<K, V> extends AbstractObserver {
   }
 
   @Override
-  public void process(TransactionBase tx, Bytes row, Column column) throws Exception {
-    ExportBucket bucket = new ExportBucket(tx, row);
-
-    Bytes continueRow = bucket.getContinueRow();
-
-    Iterator<ExportEntry> input = bucket.getExportIterator(continueRow);
-    MemLimitIterator memLimitIter = new MemLimitIterator(input, memLimit, 8 + queueId.length());
-
-    Iterator<SequencedExport<K, V>> exportIterator =
-        Iterators.transform(
-            memLimitIter,
-            ee -> new SequencedExport<>(serializer.deserialize(ee.key, keyType), serializer
-                .deserialize(ee.value, valType), ee.seq));
-
-    exportIterator = Iterators.consumingIterator(exportIterator);
-
-    exporter.processExports(exportIterator);
-
-    if (input.hasNext() || continueRow != null) {
-      // not everything was processed so notify self OR new data may have been inserted above the
-      // continue row
-      bucket.notifyExportObserver();
-    }
-
-    if (input.hasNext()) {
-      if (!memLimitIter.hasNext()) {
-        // stopped because of mem limit... set continue key
-        bucket.setContinueRow(input.next());
-        continueRow = null;
-      }
-    }
-
-    if (continueRow != null) {
-      bucket.clearContinueRow();
-    }
+  public void process(TransactionBase tx, Bytes row, Column col) throws Exception {
+    eoi.process(tx, row, col);
   }
 }

@@ -19,33 +19,32 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.google.common.collect.ImmutableSet;
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
+import org.apache.fluo.recipes.core.combine.CombineQueue;
+import org.apache.fluo.recipes.core.combine.CombineQueue.Optimizer;
 import org.apache.fluo.recipes.core.export.ExportQueue;
-import org.apache.fluo.recipes.core.map.CollisionFreeMap;
-import org.apache.fluo.recipes.core.map.CollisionFreeMap.Options;
 import org.junit.Assert;
 import org.junit.Test;
+
+import com.google.common.collect.ImmutableSet;
 
 public class TestGrouping {
   @Test
   public void testTabletGrouping() {
     FluoConfiguration conf = new FluoConfiguration();
 
-    CollisionFreeMap.configure(conf, new Options("m1", "ct", "kt", "vt", 119));
-    CollisionFreeMap.configure(conf, new Options("m2", "ct", "kt", "vt", 3));
+    CombineQueue.configure("m1").keyType("kt").valueType("vt").buckets(119).save(conf);
+    CombineQueue.configure("m2").keyType("kt").valueType("vt").buckets(3).save(conf);
 
-    ExportQueue.configure(conf, new ExportQueue.Options("eq1", "et", "kt", "vt", 7));
-    ExportQueue.configure(conf, new ExportQueue.Options("eq2", "et", "kt", "vt", 3));
-
+    ExportQueue.configure("eq1").keyType("kt").valueType("vt").buckets(7).save(conf);
+    ExportQueue.configure("eq2").keyType("kt").valueType("vt").buckets(3).save(conf);
 
     SimpleConfiguration appConfg = conf.getAppConfiguration();
 
-    TableOptimizations tableOptim =
-        new CollisionFreeMap.Optimizer().getTableOptimizations("m1", appConfg);
-    tableOptim.merge(new CollisionFreeMap.Optimizer().getTableOptimizations("m2", appConfg));
+    TableOptimizations tableOptim = new Optimizer().getTableOptimizations("m1", appConfg);
+    tableOptim.merge(new Optimizer().getTableOptimizations("m2", appConfg));
     tableOptim.merge(new ExportQueue.Optimizer().getTableOptimizations("eq1", appConfg));
     tableOptim.merge(new ExportQueue.Optimizer().getTableOptimizations("eq2", appConfg));
 

@@ -18,22 +18,20 @@ limitations under the License.
 
 ## Background
 
-Fluo is not suited for servicing low latency queries for two reasons.  The
-first reason is that the implementation of transactions are designed for
-throughput.  To get throughput, transactions recover lazily from failures and
-may wait on another transaction that is writing.  Both of these design decisions
-can lead to delays for an individual transaction, but do not negatively impact
-throughput.   The second reason is that Fluo observers executing transactions
-will likely cause a large number of random accesses.  This could lead to high
-response time variability for an individual random access.  This variability
-would not impede throughput but would impede the goal of latency.
+Fluo is not suited for servicing low latency queries for two reasons. First, the implementation of
+transactions are designed for throughput.  To get throughput, transactions recover lazily from
+failures and may wait on other transactions.  Both of these design decisions can
+lead to delays of individual transactions, but do not negatively impact throughput.   The second
+reason is that Fluo observers executing transactions will likely cause a large number of random
+accesses.  This could lead to high response time variability for an individual random access.  This
+variability would not impede throughput but would impede the goal of low latency.
 
 One way to make data transformed by Fluo available for low latency queries is
-to export that data to another system.  For example Fluo could be running
+to export that data to another system.  For example Fluo could run on
 cluster A, continually transforming a large data set, and exporting data to
 Accumulo tables on cluster B.  The tables on cluster B would service user
 queries.  Fluo Recipes has built in support for [exporting to Accumulo][3],
-however recipe could be used to export to systems other than Accumulo, like
+however this recipe can be used to export to systems other than Accumulo, like
 Redis, Elasticsearch, MySQL, etc.
 
 Exporting data from Fluo is easy to get wrong which is why this recipe exists.
@@ -41,29 +39,30 @@ To understand what can go wrong consider the following example observer
 transaction.
 
 ```java
-public class MyObserver extends AbstractObserver {
+public class MyObserver implements StringObserver {
 
-    private static final TYPEL = new TypeLayer(new StringEncoder());
+    static final Column UPDATE_COL = new Column("meta", "numUpdates");
+    static final Column COUNTER_COL = new Column("meta", "counter1");
 
     //reperesents a Query system extrnal to Fluo that is updated by Fluo
     QuerySystem querySystem;
 
     @Override
-    public void process(TransactionBase tx, Bytes row, Column col) {
+    public void process(TransactionBase tx, String row, Column col) {
 
-        TypedTransactionBase ttx = TYPEL.wrap(tx);
-        int oldCount = ttx.get().row(row).fam("meta").qual("counter1").toInteger(0);
-        int numUpdates = ttx.get().row(row).fam("meta").qual("numUpdates").toInteger(0);
-        int newCount = oldCount + numUpdates;
-        ttx.mutate().row(row).fam("meta").qual("counter1").set(newCount);
-        ttx.mutate().row(row).fam("meta").qual("numUpdates").set(0);
+       int oldCount = Integer.parseInt(tx.gets(row, COUNTER_COL, "0"));
+       int numUpdates = Integer.parseInt(tx.gets(row, UPDATE_COL, "0"));
+       int newCount = oldCount + numUpdates;
+
+       tx.set(row, COUNTER_COL, "" + newCount);
+       tx.delete(row, UPDATE_COL);
 
         //Build an inverted index in the query system, based on count from the
         //meta:counter1 column in fluo.  Do this by creating rows for the
-        //external query system based on the count.        
+        //external query system based on the count.
         String oldCountRow = String.format("%06d", oldCount);
         String newCountRow = String.format("%06d", newCount);
-        
+
         //add a new entry to the inverted index
         querySystem.insertRow(newCountRow, row);
         //remove the old entry from the inverted index
@@ -94,9 +93,9 @@ system before the transaction is committed (Note : for observers, the
 transaction is committed by the framework after `process(...)` is called).  So
 if the transaction fails, the next time it runs it could compute a completely
 different value for `newCountRow` (and it would not delete what was written by the
-failed transaction).  
+failed transaction).
 
-## Solution 
+## Solution
 
 The simple solution to the problem of exporting uncommitted data is to only
 export committed data.  There are multiple ways to accomplish this.  This
@@ -113,7 +112,139 @@ There are three requirements for using this recipe :
 
  * Must configure export queues before initializing a Fluo application.
  * Transactions adding to an export queue must get an instance of the queue using its unique QID.
- * Must implement a class that extends [Exporter][1] in order to process exports.
+ * Must create a class or lambda that implements [Exporter][1] in order to process exports.
+
+## Example Use
+
+This example shows how to incrementally build an inverted index in an external query system using an
+export queue.  The class below is simple POJO used as the value for the export queue.
+
+```java
+class CountUpdate {
+  public int oldCount;
+  public int newCount;
+
+  public CountUpdate(int oc, int nc) {
+    this.oldCount = oc;
+    this.newCount = nc;
+  }
+}
+```
+
+The following code shows how to configure an export queue.  This code
+modifies the FluoConfiguration object with options needed for the export queue.
+This FluoConfiguration object should be used to initialize the fluo
+application.
+
+```java
+public class FluoApp {
+
+  // export queue id "ici" means inverted count index
+  public static final String EQ_ID = "ici";
+
+  static final Column UPDATE_COL = new Column("meta", "numUpdates");
+  static final Column COUNTER_COL = new Column("meta", "counter1");
+
+  public static class AppObserverProvider implements ObserverProvider {
+    @Override
+    public void provide(Registry obsRegistry, Context ctx) {
+      ExportQueue<String, CountUpdate> expQ =
+          ExportQueue.getInstance(EQ_ID, ctx.getAppConfiguration());
+
+      // register observer that will queue data to export
+      obsRegistry.register(UPDATE_COL, STRONG, new MyObserver(expQ));
+
+      // register observer that will export queued data
+      expQ.registerObserver(obsRegistry, new CountExporter());
+    }
+  }
+
+  /**
+   * Call this method before initializing Fluo.
+   *
+   * @param fluoConfig the configuration object that will be used to initialize Fluo
+   */
+  public static void preInit(FluoConfiguration fluoConfig) {
+
+    // Set properties for export queue in Fluo app configuration
+    ExportQueue.configure(QUEUE_ID)
+        .keyType(String.class)
+        .valueType(CountUpdate.class)
+        .buckets(1009)
+        .bucketsPerTablet(10)
+        .save(getFluoConfiguration());
+
+    fluoConfig.setObserverProvider(AppObserverProvider.class);
+  }
+}
+```
+
+Below is updated version of the observer from above thats now using an export
+queue.
+
+```java
+public class MyObserver implements StringObserver {
+
+  private ExportQueue<String, CountUpdate> exportQueue;
+
+  public MyObserver(ExportQueue<String, CountUpdate> exportQueue) {
+    this.exportQueue = exportQueue;
+  }
+
+  @Override
+  public void process(TransactionBase tx, String row, Column col) {
+
+    int oldCount = Integer.parseInt(tx.gets(row, FluoApp.COUNTER_COL, "0"));
+    int numUpdates = Integer.parseInt(tx.gets(row, FluoApp.UPDATE_COL, "0"));
+    int newCount = oldCount + numUpdates;
+
+    tx.set(row, FluoApp.COUNTER_COL, "" + newCount);
+    tx.delete(row, FluoApp.UPDATE_COL);
+
+    // Because the update to the export queue is part of the transaction,
+    // either the update to meta:counter1 is made and an entry is added to
+    // the export queue or neither happens.
+    exportQueue.add(tx, row, new CountUpdate(oldCount, newCount));
+  }
+}
+```
+
+The export queue will call the `accept()` method on the class below to process entries queued for
+export.  It is possible the call to `accept()` can fail part way through and/or be called multiple
+times.  In the case of failures the export consumer will be called again with the same data.
+Its possible for the same export entry to be processed on multiple computers at different times.
+This can cause exports to arrive out of order.   The purpose of the sequence number is to help
+systems receiving out of order and redundant data.
+
+```java
+public class CountExporter implements Exporter<String, CountUpdate> {
+  // represents the external query system we want to update from Fluo
+  QuerySystem querySystem;
+
+  @Override
+  public void export(Iterator<SequencedExport<String, CountUpdate>> exports) {
+    BatchUpdater batchUpdater = querySystem.getBatchUpdater();
+
+    while (exports.hasNext()) {
+      SequencedExport<String, CountUpdate> export = exports.next();
+      String row = export.getKey();
+      CountUpdate uc = export.getValue();
+      long seqNum = export.getSequence();
+
+      String oldCountRow = String.format("%06d", uc.oldCount);
+      String newCountRow = String.format("%06d", uc.newCount);
+
+      // add a new entry to the inverted index
+      batchUpdater.insertRow(newCountRow, row, seqNum);
+      // remove the old entry from the inverted index
+      batchUpdater.deleteRow(oldCountRow, row, seqNum);
+    }
+
+    // flush all of the updates to the external query system
+    batchUpdater.close();
+  }
+}
+```
 
 ## Schema
 
@@ -127,122 +258,6 @@ queue is configured, it will recommend split points using the [table
 optimization process](table-optimization.md).  The number of splits generated
 by this process can be controlled by setting the number of buckets per tablet
 when configuring an export queue.
-
-## Example Use
-
-This example will show how to build an inverted index in an external
-query system using an export queue.  The class below is simple POJO to hold the
-count update, this will be used as the value for the export queue.
-
-```java
-class CountUpdate {
-  public int oldCount;
-  public int newCount;
-  
-  public CountUpdate(int oc, int nc) {
-    this.oldCount = oc;
-    this.newCount = nc;
-  }
-}
-```
-
-The following code shows how to configure an export queue.  This code will
-modify the FluoConfiguration object with options needed for the export queue.
-This FluoConfiguration object should be used to initialize the fluo
-application.
-
-```java
-   FluoConfiguration fluoConfig = ...;
-
-   //queue id "ici" means inverted count index, would probably use static final in real application
-   String exportQueueID = "ici";  
-   Class<CountExporter> exporterType = CountExporter.class;
-   Class<Bytes> keyType = Bytes.class;
-   Class<CountUpdate> valueType = CountUpdate.class;
-   int numBuckets = 1009;
-   //the desired number of tablets to create when applying table optimizations
-   int numTablets = 100;
-
-   ExportQueue.Options eqOptions =
-        new ExportQueue.Options(exportQueueId, exporterType, keyType, valueType, numBuckets)
-          .setsetBucketsPerTablet(numBuckets/numTablets);
-   ExportQueue.configure(fluoConfig, eqOptions);
-
-   //initialize Fluo using fluoConfig
-```
-
-Below is updated version of the observer from above thats now using the export
-queue.
-
-```java
-public class MyObserver extends AbstractObserver {
-
-    private static final TYPEL = new TypeLayer(new StringEncoder());
-
-    private ExportQueue<Bytes, CountUpdate> exportQueue;
-
-    @Override
-    public void init(Context context) throws Exception {
-      exportQueue = ExportQueue.getInstance("ici", context.getAppConfiguration());
-    }
-
-    @Override
-    public void process(TransactionBase tx, Bytes row, Column col) {
-
-        TypedTransactionBase ttx = TYPEL.wrap(tx);
-        int oldCount = ttx.get().row(row).fam("meta").qual("counter1").toInteger(0);
-        int numUpdates = ttx.get().row(row).fam("meta").qual("numUpdates").toInteger(0);
-        int newCount = oldCount + numUpdates;
-        ttx.mutate().row(row).fam("meta").qual("counter1").set(newCount);
-        ttx.mutate().row(row).fam("meta").qual("numUpdates").set(0);
-
-        //Because the update to the export queue is part of the transaction,
-        //either the update to meta:counter1 is made and an entry is added to
-        //the export queue or neither happens.
-        exportQueue.add(tx, row, new CountUpdate(oldCount, newCount));
-    }
-}
-```
-
-The observer setup for the export queue will call the `processExports()` method
-on the class below to process entries in the export queue.  It possible the
-call to `processExports()` can fail part way through and/or be called multiple
-times.  In the case of failures the exporter will eventually be called again
-with the exact same data.  The possibility of the same export entry being
-processed on multiple computer at different times can cause exports to arrive
-out of order.  The system receiving exports has to be resilient to data
-arriving out of order and multiple times.  The purpose of the sequence number
-is to help systems receiving data from Fluo process out of order and redundant
-data.
-
-```java
-  public class CountExporter extends Exporter<Bytes, CountUpdate> {
-    //represents the external query system we want to update from Fluo
-    QuerySystem querySystem;
-
-    @Override
-    protected void processExports(Iterator<SequencedExport<Bytes, CountUpdate>> exportIterator) {
-      BatchUpdater batchUpdater = querySystem.getBatchUpdater();
-      while(exportIterator.hasNext()){
-        SequencedExport<Bytes, CountUpdate> exportEntry =  exportItertor.next();
-        Bytes row =  exportEntry.getKey();
-        UpdateCount uc = exportEntry.getValue();
-        long seqNum = exportEntry.getSequence();
-
-        String oldCountRow = String.format("%06d", uc.oldCount);
-        String newCountRow = String.format("%06d", uc.newCount);
-
-        //add a new entry to the inverted index
-        batchUpdater.insertRow(newCountRow, row, seqNum);
-        //remove the old entry from the inverted index
-        batchUpdater.deleteRow(oldCountRow, row, seqNum);
-      }
-
-      //flush all of the updates to the external query system
-      batchUpdater.close();
-    }
-  }
-```
 
 ## Concurrency
 
@@ -285,7 +300,7 @@ cells (`rowB fam1:qual2` and `rowA fam1:qual2`).  This approach makes it more
 difficult to reason about export entries with the same key, because the
 transactions adding those entries could have overlapped in time.  This is an
 example of write skew mentioned in the Percolater paper.
- 
+
  1. TH1 : key1 = ek(`row1`,`fam1:qual1`)
  1. TH1 : val1 = ev(tx1.get(`row1`,`fam1:qual1`), tx1.get(`rowA`,`fam1:qual2`))
  1. TH1 : exportQueueA.add(tx1, key1, val1)
@@ -295,7 +310,7 @@ example of write skew mentioned in the Percolater paper.
  1. TH1 : tx1.set(`rowA`,`fam1:qual2`, val1)
  1. TH2 : tx2.set(`rowB`,`fam1:qual2`, val2)
 
-[1]: ../modules/core/src/main/java/org/apache/fluo/recipes/core/export/Exporter.java
+[1]: ../modules/core/src/main/java/org/apache/fluo/recipes/core/export/function/Exporter.java
 [2]: https://en.wikipedia.org/wiki/Serializability
 [3]: accumulo-export-queue.md
 

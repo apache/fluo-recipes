@@ -23,14 +23,17 @@ import java.util.Random;
 
 import org.apache.accumulo.core.client.Scanner;
 import org.apache.accumulo.core.data.Key;
+import org.apache.accumulo.core.data.Mutation;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.minicluster.MiniAccumuloCluster;
 import org.apache.fluo.api.client.FluoClient;
 import org.apache.fluo.api.client.FluoFactory;
 import org.apache.fluo.api.client.Transaction;
+import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.mini.MiniFluo;
-import org.apache.fluo.recipes.accumulo.export.AccumuloExporter;
+import org.apache.fluo.api.observer.ObserverProvider;
+import org.apache.fluo.recipes.accumulo.export.function.AccumuloExporter;
 import org.apache.fluo.recipes.core.export.ExportQueue;
 import org.apache.fluo.recipes.test.AccumuloExportITBase;
 import org.apache.hadoop.io.Text;
@@ -42,6 +45,24 @@ public class AccumuloExporterIT extends AccumuloExportITBase {
   private String exportTable;
   public static final String QUEUE_ID = "aeqt";
 
+  public static class AccumuloExporterObserverProvider implements ObserverProvider {
+
+    @Override
+    public void provide(Registry obsRegistry, Context ctx) {
+      SimpleConfiguration appCfg = ctx.getAppConfiguration();
+
+      ExportQueue<String, String> teq = ExportQueue.getInstance(QUEUE_ID, appCfg);
+
+      teq.registerObserver(obsRegistry, new AccumuloExporter<>(QUEUE_ID, appCfg, (export,
+          mutConsumer) -> {
+        Mutation m = new Mutation(export.getKey());
+        m.put("cf", "cq", export.getSequence(), export.getValue());
+        mutConsumer.accept(m);
+      }));
+    }
+
+  }
+
   @Override
   public void preFluoInitHook() throws Exception {
 
@@ -51,12 +72,16 @@ public class AccumuloExporterIT extends AccumuloExportITBase {
 
     MiniAccumuloCluster miniAccumulo = getMiniAccumuloCluster();
 
-    ExportQueue.configure(
-        getFluoConfiguration(),
-        new ExportQueue.Options(QUEUE_ID, SimpleExporter.class, String.class, String.class, 5)
-            .setBucketsPerTablet(1).setExporterConfiguration(
-                new AccumuloExporter.Configuration(miniAccumulo.getInstanceName(), miniAccumulo
-                    .getZooKeepers(), ACCUMULO_USER, ACCUMULO_PASSWORD, exportTable)));
+    getFluoConfiguration().setObserverProvider(AccumuloExporterObserverProvider.class);
+
+    ExportQueue.configure(QUEUE_ID).keyType(String.class).valueType(String.class).buckets(5)
+        .bucketsPerTablet(1).save(getFluoConfiguration());
+
+    AccumuloExporter.configure(QUEUE_ID)
+        .instance(miniAccumulo.getInstanceName(), miniAccumulo.getZooKeepers())
+        .credentials(ACCUMULO_USER, ACCUMULO_PASSWORD).table(exportTable)
+        .save(getFluoConfiguration());
+
   }
 
   @Test

@@ -16,23 +16,14 @@
 package org.apache.fluo.recipes.core.map;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Optional;
-import java.util.Set;
-import java.util.regex.Pattern;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
 import org.apache.fluo.api.client.SnapshotBase;
 import org.apache.fluo.api.client.TransactionBase;
@@ -42,52 +33,63 @@ import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Bytes.BytesBuilder;
 import org.apache.fluo.api.data.Column;
-import org.apache.fluo.api.data.RowColumn;
 import org.apache.fluo.api.data.RowColumnValue;
 import org.apache.fluo.api.data.Span;
+import org.apache.fluo.api.observer.Observer;
+import org.apache.fluo.api.observer.Observer.NotificationType;
+import org.apache.fluo.api.observer.ObserverProvider;
+import org.apache.fluo.api.observer.StringObserver;
+import org.apache.fluo.recipes.core.combine.CombineQueue;
 import org.apache.fluo.recipes.core.common.TableOptimizations;
 import org.apache.fluo.recipes.core.common.TableOptimizations.TableOptimizationsFactory;
-import org.apache.fluo.recipes.core.common.RowRange;
-import org.apache.fluo.recipes.core.common.TransientRegistry;
 import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
 
 /**
  * See the project level documentation for information about this recipe.
  *
  * @since 1.0.0
+ * @deprecated since 1.1.0 use {@link CombineQueue}
  */
 public class CollisionFreeMap<K, V> {
 
-  private static final String UPDATE_RANGE_END = ":u:~";
-
-  private static final String DATA_RANGE_END = ":d:~";
-
   private Bytes updatePrefix;
   private Bytes dataPrefix;
-  private Column notifyColumn;
 
-  private Class<K> keyType;
   private Class<V> valType;
   private SimpleSerializer serializer;
   private Combiner<K, V> combiner;
   UpdateObserver<K, V> updateObserver;
-  private long bufferSize;
 
   static final Column UPDATE_COL = new Column("u", "v");
   static final Column NEXT_COL = new Column("u", "next");
 
   private int numBuckets = -1;
 
+  private CombineQueue<K, V> combineQ;
+  private Observer combineQueueObserver;
+
+  private static class CfmRegistry implements ObserverProvider.Registry {
+
+    Observer observer;
+
+    @Override
+    public void register(Column observedColumn, NotificationType ntfyType, Observer observer) {
+      this.observer = observer;
+    }
+
+    @Override
+    public void registers(Column observedColumn, NotificationType ntfyType, StringObserver observer) {
+      this.observer = observer;
+    }
+  }
+
   @SuppressWarnings("unchecked")
-  CollisionFreeMap(Options opts, SimpleSerializer serializer) throws Exception {
+  CollisionFreeMap(SimpleConfiguration appConfig, Options opts, SimpleSerializer serializer)
+      throws Exception {
     this.updatePrefix = Bytes.of(opts.mapId + ":u:");
     this.dataPrefix = Bytes.of(opts.mapId + ":d:");
-    this.notifyColumn = new Column("fluoRecipes", "cfm:" + opts.mapId);
-    // TODO defer loading classes
-    // TODO centralize class loading
-    // TODO try to check type params
+
     this.numBuckets = opts.numBuckets;
-    this.keyType = (Class<K>) getClass().getClassLoader().loadClass(opts.keyType);
     this.valType = (Class<V>) getClass().getClassLoader().loadClass(opts.valueType);
     this.combiner =
         (Combiner<K, V>) getClass().getClassLoader().loadClass(opts.combinerType).newInstance();
@@ -99,183 +101,27 @@ public class CollisionFreeMap<K, V> {
     } else {
       this.updateObserver = new NullUpdateObserver<>();
     }
-    this.bufferSize = opts.getBufferSize();
+
+    combineQ = CombineQueue.getInstance(opts.mapId, appConfig);
+
+    // When this class was deprecated, most of its code was copied to CombineQueue. The following
+    // code is a round about way of using that copied code, with having to make anything in
+    // CombineQueue public.
+    CfmRegistry obsRegistry = new CfmRegistry();
+    combineQ.registerObserver(obsRegistry, i -> this.combiner.combine(i.getKey(), i.iterator()), (
+        tx, changes) -> this.updateObserver.updatingValues(tx, Update.transform(changes)));
+    combineQueueObserver = obsRegistry.observer;
   }
 
   private V deserVal(Bytes val) {
     return serializer.deserialize(val.toArray(), valType);
   }
 
-  private Bytes getKeyFromUpdateRow(Bytes prefix, Bytes row) {
-    return row.subSequence(prefix.length(), row.length() - 8);
-  }
-
   void process(TransactionBase tx, Bytes ntfyRow, Column col) throws Exception {
-
-    Preconditions.checkState(ntfyRow.startsWith(updatePrefix));
-
-    Bytes nextKey = tx.get(ntfyRow, NEXT_COL);
-
-    Span span;
-
-    if (nextKey != null) {
-      Bytes startRow =
-          Bytes.builder(ntfyRow.length() + nextKey.length()).append(ntfyRow).append(nextKey)
-              .toBytes();
-      Span tmpSpan = Span.prefix(ntfyRow);
-      Span nextSpan =
-          new Span(new RowColumn(startRow, UPDATE_COL), false, tmpSpan.getEnd(),
-              tmpSpan.isEndInclusive());
-      span = nextSpan;
-    } else {
-      span = Span.prefix(ntfyRow);
-    }
-
-    Iterator<RowColumnValue> iter = tx.scanner().over(span).fetch(UPDATE_COL).build().iterator();
-
-    Map<Bytes, List<Bytes>> updates = new HashMap<>();
-
-    long approxMemUsed = 0;
-
-    Bytes partiallyReadKey = null;
-    boolean setNextKey = false;
-
-    if (iter.hasNext()) {
-      Bytes lastKey = null;
-      while (iter.hasNext() && approxMemUsed < bufferSize) {
-        RowColumnValue rcv = iter.next();
-        Bytes curRow = rcv.getRow();
-
-        tx.delete(curRow, UPDATE_COL);
-
-        Bytes serializedKey = getKeyFromUpdateRow(ntfyRow, curRow);
-        lastKey = serializedKey;
-
-        List<Bytes> updateList = updates.get(serializedKey);
-        if (updateList == null) {
-          updateList = new ArrayList<>();
-          updates.put(serializedKey, updateList);
-        }
-
-        Bytes val = rcv.getValue();
-        updateList.add(val);
-
-        approxMemUsed += curRow.length();
-        approxMemUsed += val.length();
-      }
-
-      if (iter.hasNext()) {
-        RowColumnValue rcv = iter.next();
-        Bytes curRow = rcv.getRow();
-
-        // check if more updates for last key
-        if (getKeyFromUpdateRow(ntfyRow, curRow).equals(lastKey)) {
-          // there are still more updates for this key
-          partiallyReadKey = lastKey;
-
-          // start next time at the current key
-          tx.set(ntfyRow, NEXT_COL, partiallyReadKey);
-        } else {
-          // start next time at the next possible key
-          Bytes nextPossible =
-              Bytes.builder(lastKey.length() + 1).append(lastKey).append(0).toBytes();
-          tx.set(ntfyRow, NEXT_COL, nextPossible);
-        }
-
-        setNextKey = true;
-      } else if (nextKey != null) {
-        // clear nextKey
-        tx.delete(ntfyRow, NEXT_COL);
-      }
-    } else if (nextKey != null) {
-      tx.delete(ntfyRow, NEXT_COL);
-    }
-
-    if (nextKey != null || setNextKey) {
-      // If not all data was read need to run again in the future. If scanning was started in the
-      // middle of the bucket, its possible there is new data before nextKey that still needs to be
-      // processed. If scanning stopped before reading the entire bucket there may be data after the
-      // stop point.
-      tx.setWeakNotification(ntfyRow, col);
-    }
-
-
-
-    BytesBuilder rowBuilder = Bytes.builder();
-    rowBuilder.append(dataPrefix);
-    rowBuilder.append(ntfyRow.subSequence(updatePrefix.length(), ntfyRow.length()));
-    int rowPrefixLen = rowBuilder.getLength();
-
-    Set<Bytes> keysToFetch = updates.keySet();
-    if (partiallyReadKey != null) {
-      final Bytes prk = partiallyReadKey;
-      keysToFetch = Sets.filter(keysToFetch, b -> !b.equals(prk));
-    }
-    Map<Bytes, Map<Column, Bytes>> currentVals = getCurrentValues(tx, rowBuilder, keysToFetch);
-
-    ArrayList<Update<K, V>> updatesToReport = new ArrayList<>(updates.size());
-
-    for (Entry<Bytes, List<Bytes>> entry : updates.entrySet()) {
-      rowBuilder.setLength(rowPrefixLen);
-      Bytes currentValueRow = rowBuilder.append(entry.getKey()).toBytes();
-      Bytes currVal =
-          currentVals.getOrDefault(currentValueRow, Collections.emptyMap()).get(DATA_COLUMN);
-
-      Iterator<V> ui = Iterators.transform(entry.getValue().iterator(), this::deserVal);
-
-      K kd = serializer.deserialize(entry.getKey().toArray(), keyType);
-
-      if (partiallyReadKey != null && partiallyReadKey.equals(entry.getKey())) {
-        // not all updates were read for this key, so requeue the combined updates as an update
-        Optional<V> nv = combiner.combine(kd, ui);
-        if (nv.isPresent()) {
-          update(tx, Collections.singletonMap(kd, nv.get()));
-        }
-      } else {
-        Optional<V> nv = combiner.combine(kd, concat(ui, currVal));
-        Bytes newVal = nv.isPresent() ? Bytes.of(serializer.serialize(nv.get())) : null;
-        if (newVal != null ^ currVal != null || (currVal != null && !currVal.equals(newVal))) {
-          if (newVal == null) {
-            tx.delete(currentValueRow, DATA_COLUMN);
-          } else {
-            tx.set(currentValueRow, DATA_COLUMN, newVal);
-          }
-
-          Optional<V> cvd = Optional.ofNullable(currVal).map(this::deserVal);
-          updatesToReport.add(new Update<>(kd, cvd, nv));
-        }
-      }
-    }
-
-    // TODO could clear these as converted to objects to avoid double memory usage
-    updates.clear();
-    currentVals.clear();
-
-    if (updatesToReport.size() > 0) {
-      updateObserver.updatingValues(tx, updatesToReport.iterator());
-    }
+    combineQueueObserver.process(tx, ntfyRow, col);
   }
 
   private static final Column DATA_COLUMN = new Column("data", "current");
-
-  private Map<Bytes, Map<Column, Bytes>> getCurrentValues(TransactionBase tx, BytesBuilder prefix,
-      Set<Bytes> keySet) {
-
-    Set<Bytes> rows = new HashSet<>();
-
-    int prefixLen = prefix.getLength();
-    for (Bytes key : keySet) {
-      prefix.setLength(prefixLen);
-      rows.add(prefix.append(key).toBytes());
-    }
-
-    try {
-      return tx.get(rows, Collections.singleton(DATA_COLUMN));
-    } catch (IllegalArgumentException e) {
-      System.out.println(rows.size());
-      throw e;
-    }
-  }
 
   private Iterator<V> concat(Iterator<V> updates, Bytes currentVal) {
     if (currentVal == null) {
@@ -295,7 +141,6 @@ public class CollisionFreeMap<K, V> {
 
     int hash = Hashing.murmur3_32().hashBytes(k).asInt();
     String bucketId = genBucketId(Math.abs(hash % numBuckets), numBuckets);
-
 
     BytesBuilder rowBuilder = Bytes.builder();
     rowBuilder.append(updatePrefix).append(bucketId).append(':').append(k);
@@ -339,42 +184,7 @@ public class CollisionFreeMap<K, V> {
    *        updated. The values in the map will be queued for updating.
    */
   public void update(TransactionBase tx, Map<K, V> updates) {
-    Preconditions.checkState(numBuckets > 0, "Not initialized");
-
-    Set<String> buckets = new HashSet<>();
-
-    BytesBuilder rowBuilder = Bytes.builder();
-    rowBuilder.append(updatePrefix);
-    int prefixLength = rowBuilder.getLength();
-
-    byte[] startTs = encSeq(tx.getStartTimestamp());
-
-    for (Entry<K, V> entry : updates.entrySet()) {
-      byte[] k = serializer.serialize(entry.getKey());
-      int hash = Hashing.murmur3_32().hashBytes(k).asInt();
-      String bucketId = genBucketId(Math.abs(hash % numBuckets), numBuckets);
-
-      // reset to the common row prefix
-      rowBuilder.setLength(prefixLength);
-
-      Bytes row = rowBuilder.append(bucketId).append(':').append(k).append(startTs).toBytes();
-      Bytes val = Bytes.of(serializer.serialize(entry.getValue()));
-
-      // TODO set if not exists would be comforting here.... but
-      // collisions on bucketId+key+uuid should never occur
-      tx.set(row, UPDATE_COL, val);
-
-      buckets.add(bucketId);
-    }
-
-    for (String bucketId : buckets) {
-      rowBuilder.setLength(prefixLength);
-      rowBuilder.append(bucketId).append(':');
-
-      Bytes row = rowBuilder.toBytes();
-
-      tx.setWeakNotification(row, notifyColumn);
-    }
+    combineQ.addAll(tx, updates);
   }
 
   static String genBucketId(int bucket, int maxBucket) {
@@ -391,7 +201,7 @@ public class CollisionFreeMap<K, V> {
       SimpleConfiguration appConf) {
     Options opts = new Options(mapId, appConf);
     try {
-      return new CollisionFreeMap<>(opts, SimpleSerializer.getInstance(appConf));
+      return new CollisionFreeMap<>(appConf, opts, SimpleSerializer.getInstance(appConf));
     } catch (Exception e) {
       // TODO
       throw new RuntimeException(e);
@@ -413,39 +223,29 @@ public class CollisionFreeMap<K, V> {
    * @see CollisionFreeMap#getInitializer(String, int, SimpleSerializer)
    *
    * @since 1.0.0
+   * @deprecated since 1.1.0
    */
+  @Deprecated
   public static class Initializer<K2, V2> implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    private Bytes dataPrefix;
-
-    private SimpleSerializer serializer;
-
-    private int numBuckets = -1;
+    private org.apache.fluo.recipes.core.combine.CombineQueue.Initializer<K2, V2> initializer;
 
     private Initializer(String mapId, int numBuckets, SimpleSerializer serializer) {
-      this.dataPrefix = Bytes.of(mapId + ":d:");
-      this.numBuckets = numBuckets;
-      this.serializer = serializer;
+      this.initializer = CombineQueue.getInitializer(mapId, numBuckets, serializer);
     }
 
     public RowColumnValue convert(K2 key, V2 val) {
-      byte[] k = serializer.serialize(key);
-      int hash = Hashing.murmur3_32().hashBytes(k).asInt();
-      String bucketId = genBucketId(Math.abs(hash % numBuckets), numBuckets);
-
-      BytesBuilder bb = Bytes.builder(dataPrefix.length() + bucketId.length() + 1 + k.length);
-      Bytes row = bb.append(dataPrefix).append(bucketId).append(':').append(k).toBytes();
-      byte[] v = serializer.serialize(val);
-
-      return new RowColumnValue(row, DATA_COLUMN, Bytes.of(v));
+      return initializer.convert(key, val);
     }
   }
 
   /**
    * @since 1.0.0
+   * @deprecated since 1.1.0
    */
+  @Deprecated
   public static class Options {
 
     static final long DEFAULT_BUFFER_SIZE = 1 << 22;
@@ -531,21 +331,12 @@ public class CollisionFreeMap<K, V> {
     /**
      * Sets the number of buckets per tablet to generate. This affects how many split points will be
      * generated when optimizing the Accumulo table.
-     *
      */
     public Options setBucketsPerTablet(int bucketsPerTablet) {
       Preconditions.checkArgument(bucketsPerTablet > 0, "bucketsPerTablet is <= 0 : "
           + bucketsPerTablet);
       this.bucketsPerTablet = bucketsPerTablet;
       return this;
-    }
-
-    int getBucketsPerTablet() {
-      if (bucketsPerTablet == null) {
-        return DEFAULT_BUCKETS_PER_TABLET;
-      }
-
-      return bucketsPerTablet;
     }
 
     public <K, V> Options(String mapId, Class<? extends Combiner<K, V>> combiner, Class<K> keyType,
@@ -561,18 +352,9 @@ public class CollisionFreeMap<K, V> {
     }
 
     void save(SimpleConfiguration appConfig) {
-      appConfig.setProperty(PREFIX + mapId + ".buckets", numBuckets + "");
       appConfig.setProperty(PREFIX + mapId + ".combiner", combinerType + "");
-      appConfig.setProperty(PREFIX + mapId + ".key", keyType);
-      appConfig.setProperty(PREFIX + mapId + ".val", valueType);
       if (updateObserverType != null) {
         appConfig.setProperty(PREFIX + mapId + ".updateObserver", updateObserverType + "");
-      }
-      if (bufferSize != null) {
-        appConfig.setProperty(PREFIX + mapId + ".bufferSize", bufferSize);
-      }
-      if (bucketsPerTablet != null) {
-        appConfig.setProperty(PREFIX + mapId + ".bucketsPerTablet", bucketsPerTablet);
       }
     }
   }
@@ -582,20 +364,27 @@ public class CollisionFreeMap<K, V> {
    * Fluo.
    */
   public static void configure(FluoConfiguration fluoConfig, Options opts) {
+    org.apache.fluo.recipes.core.combine.CombineQueue.FluentOptions cqopts =
+        CombineQueue.configure(opts.mapId).keyType(opts.keyType).valueType(opts.valueType)
+            .buckets(opts.numBuckets);
+    if (opts.bucketsPerTablet != null) {
+      cqopts.bucketsPerTablet(opts.bucketsPerTablet);
+    }
+    if (opts.bufferSize != null) {
+      cqopts.bufferSize(opts.bufferSize);
+    }
+    cqopts.save(fluoConfig);
+
     opts.save(fluoConfig.getAppConfiguration());
+
     fluoConfig.addObserver(new ObserverSpecification(CollisionFreeMapObserver.class.getName(),
         ImmutableMap.of("mapId", opts.mapId)));
-
-    Bytes dataRangeEnd = Bytes.of(opts.mapId + DATA_RANGE_END);
-    Bytes updateRangeEnd = Bytes.of(opts.mapId + UPDATE_RANGE_END);
-
-    new TransientRegistry(fluoConfig.getAppConfiguration()).addTransientRange("cfm." + opts.mapId,
-        new RowRange(dataRangeEnd, updateRangeEnd));
-
-    TableOptimizations.registerOptimization(fluoConfig.getAppConfiguration(), opts.mapId,
-        Optimizer.class);
   }
 
+  /**
+   * @deprecated since 1.1.0 use {@link org.apache.fluo.recipes.core.combine.CombineQueue.Optimizer}
+   */
+  @Deprecated
   public static class Optimizer implements TableOptimizationsFactory {
 
     /**
@@ -607,55 +396,8 @@ public class CollisionFreeMap<K, V> {
      */
     @Override
     public TableOptimizations getTableOptimizations(String mapId, SimpleConfiguration appConfig) {
-      Options opts = new Options(mapId, appConfig);
-
-      BytesBuilder rowBuilder = Bytes.builder();
-      rowBuilder.append(mapId);
-
-      List<Bytes> dataSplits = new ArrayList<>();
-      for (int i = opts.getBucketsPerTablet(); i < opts.numBuckets; i += opts.getBucketsPerTablet()) {
-        String bucketId = genBucketId(i, opts.numBuckets);
-        rowBuilder.setLength(mapId.length());
-        dataSplits.add(rowBuilder.append(":d:").append(bucketId).toBytes());
-      }
-      Collections.sort(dataSplits);
-
-      List<Bytes> updateSplits = new ArrayList<>();
-      for (int i = opts.getBucketsPerTablet(); i < opts.numBuckets; i += opts.getBucketsPerTablet()) {
-        String bucketId = genBucketId(i, opts.numBuckets);
-        rowBuilder.setLength(mapId.length());
-        updateSplits.add(rowBuilder.append(":u:").append(bucketId).toBytes());
-      }
-      Collections.sort(updateSplits);
-
-      Bytes dataRangeEnd = Bytes.of(opts.mapId + DATA_RANGE_END);
-      Bytes updateRangeEnd = Bytes.of(opts.mapId + UPDATE_RANGE_END);
-
-      List<Bytes> splits = new ArrayList<>();
-      splits.add(dataRangeEnd);
-      splits.add(updateRangeEnd);
-      splits.addAll(dataSplits);
-      splits.addAll(updateSplits);
-
-      TableOptimizations tableOptim = new TableOptimizations();
-      tableOptim.setSplits(splits);
-
-      tableOptim.setTabletGroupingRegex(Pattern.quote(mapId + ":") + "[du]:");
-
-      return tableOptim;
+      return new org.apache.fluo.recipes.core.combine.CombineQueue.Optimizer()
+          .getTableOptimizations(mapId, appConfig);
     }
-  }
-
-  private static byte[] encSeq(long l) {
-    byte[] ret = new byte[8];
-    ret[0] = (byte) (l >>> 56);
-    ret[1] = (byte) (l >>> 48);
-    ret[2] = (byte) (l >>> 40);
-    ret[3] = (byte) (l >>> 32);
-    ret[4] = (byte) (l >>> 24);
-    ret[5] = (byte) (l >>> 16);
-    ret[6] = (byte) (l >>> 8);
-    ret[7] = (byte) (l >>> 0);
-    return ret;
   }
 }
