@@ -19,21 +19,19 @@ limitations under the License.
 ## Background
 
 When many transactions try to modify the same keys, collisions will occur.  Too many collisions
-cause the transactions to fail and throughput to nose dive.  For example, consider the [phrasecount]
-that has many transactions processing documents.  Each transaction counts the phrases in a document
-and then updates global phrase counts.  With each transaction attempting to update many phrase
-counts, the probability of two collisions is high.
+cause transactions to fail and throughput to nose dive.  For example, consider [phrasecount]
+which has many transactions processing documents.  Each transaction counts the phrases in a document
+and then updates global phrase counts.  Since transaction attempts to update many phrases
+, the probability of collisions is high.
 
 ## Solution
 
-This recipe provides a reusable solution for the problem of many transactions updating many keys
-while avoiding collisions.  As an added bonus, this recipe also organizes updates into batches for
-efficiency in order to improve throughput.
+This recipe provides a reusable solution for updating many keys while avoiding collisions.  The
+recipe also organizes updates into batches in order to improve throughput.
 
-The central idea behind this recipe is that updates to a key are queued up and processed by another
-transaction.  In the phrase count example transactions processing documents would queue updates, but
-not actually update the counts.  Below is an example of how transactions would compute phrasecounts
-using this recipe.
+This recipes queues updates to keys for other transactions to process. In the phrase count example
+transactions processing documents queue updates, but do not actually update the counts.  Below is an
+example of computing phrasecounts using this recipe.
 
  * TX1 queues `+1` update  for phrase `we want lambdas now`
  * TX2 queues `+1` update  for phrase `we want lambdas now`
@@ -49,9 +47,9 @@ value could also be placed on an export queue to update an external database.
 ### Buckets
 
 A simple implementation of this recipe would have an update queue for each key.  However the
-implementation does something slightly more complex.  Each update queue is in a bucket and
-transactions that process updates, process all of the updates in a bucket.  This allows more
-efficient processing of updates for the following reasons :
+implementation is slightly more complex.  Each update queue is in a bucket and transactions process
+all of the updates in a bucket.  This allows more efficient processing of updates for the following
+reasons :
 
  * When updates are queued, notifications are made per bucket(instead of per a key).
  * The transaction doing the update can scan the entire bucket reading updates, this avoids a seek for each key being updated.
@@ -59,8 +57,8 @@ efficient processing of updates for the following reasons :
  * Any additional actions taken on update (like adding something to an export queue) can also be batched.
  * Data is organized to make reading exiting values for keys in a bucket more efficient.
 
-Which bucket a key goes to is decided using hash and modulus so that multiple updates for the same
-key always go to the same bucket.
+Which bucket a key goes to is decided using hash and modulus so that multiple updates for a key go
+to the same bucket.
 
 The initial number of tablets to create when applying table optimizations can be controlled by
 setting the buckets per tablet option when configuring a Collision Free Map.  For example if you
@@ -72,8 +70,7 @@ per tablet to 1000/(2*20)=25.
 The following code snippets show how to use this recipe for wordcount.  The first step is to
 configure it before initializing Fluo.  When initializing an ID is needed.  This ID is used in two
 ways.  First, the ID is used as a row prefix in the table.  Therefore nothing else should use that
-row range in the table.  Second, the ID is used in generating configuration keys associated with the
-instance of the Collision Free Map.
+row range in the table.  Second, the ID is used in generating configuration keys.
 
 The following snippet shows how to configure a collision free map.
 
@@ -85,9 +82,13 @@ The following snippet shows how to configure a collision free map.
 
   String mapId = WcObserverProvider.ID;
 
+  // Create a Java Object that encapsulates the configuration
   CollisionFreeMap.Options cfmOpts =
       new CollisionFreeMap.Options(mapId, String.class, Long.class, numBuckets)
           .setBucketsPerTablet(numBuckets / numTablets);
+
+  // Set application properties for the collision free map.  These properties are read later by
+  // observers.
   CollisionFreeMap.configure(fluoConfig, cfmOpts);
 
   fluoConfig.setObserverProvider(WcObserverProvider.class);
@@ -96,7 +97,7 @@ The following snippet shows how to configure a collision free map.
 
 ```
 
-Assume the following observer is triggered when a documents contents are updated.  It examines new
+Assume the following observer is triggered when a documents is updated.  It examines new
 and old document content and determines changes in word counts.  These changes are pushed to a
 collision free map.
 
@@ -160,10 +161,10 @@ public class DocumentObserver implements StringObserver {
 }
 ```
 
-Each collision free map has two extension points, a [combiner][ICombiner] and a
-[value observer][ValueObserver].  The collision free map configures a Fluo observer that
-processes queued updates.  When processing these updates the two
-extension points are called.  The code below shows how to use these extension points.
+Each collision free map has two extension points, a [combiner][ICombiner] and a [value
+observer][ValueObserver].  The collision free map configures a Fluo observer that processes queued
+updates.  When processing these updates the two extension points are called.  The code below shows
+how to use these extension points.
 
 A value observer can do additional processing when a batch of key values are updated.  Below
 updates are queued for export to an external database.  The export is given the new and old value
@@ -189,6 +190,9 @@ public class WcObserverProvider implements ObserverProvider {
     CollisionFreeMap<String, Long> wcMap =
         CollisionFreeMap.getInstance(ID, ctx.getAppConfiguration(), combiner);
 
+    // Register observer that updates the CollisionsFreeMap
+    obsRegistry.register(DocumentObserver.NEW_COL, STRONG, new DocumentObserver(wcMap));
+
     // Called when the value of a key in the map changes. The lambda exports these changes to an
     // external database.  Make sure to read ValueObserver's javadoc.
     ValueObserver<String, Long> valueObserver = (tx, updates) -> {
@@ -205,9 +209,6 @@ public class WcObserverProvider implements ObserverProvider {
     // Register observer that handles updates to the CollisionFreeMap. This observer will use the
     // combiner and valueObserver.
     wcMap.registerObserver(obsRegistry, valueObserver);
-
-    // Register observer that updates the CollisionsFreeMap
-    obsRegistry.register(DocumentObserver.NEW_COL, STRONG, new DocumentObserver(wcMap));
   }
 }
 ```

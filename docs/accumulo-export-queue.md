@@ -111,11 +111,10 @@ Exporting to Accumulo is easy. Follow the steps below:
 
 ## Other use cases
 
-[AccumuloReplicator] is a specialized [AccumuloExporter] that replicates a Fluo table to Accumulo.
+The `getTranslator()` method in [AccumuloReplicator] creates a specialized [AccumuloTranslator] for replicating a Fluo table to Accumulo.
 
 [1]: export-queue.md
 [AccumuloConsumer]: ../modules/accumulo/src/main/java/org/apache/fluo/recipes/accumulo/export/AccumuloConsumer.java
-[AccumuloExporter]: ../modules/accumulo/src/main/java/org/apache/fluo/recipes/accumulo/export/AccumuloExporter.java
 [AccumuloTranslator]: ../modules/accumulo/src/main/java/org/apache/fluo/recipes/accumulo/export/AccumuloTranslator.java
 [AccumuloReplicator]: ../modules/accumulo/src/main/java/org/apache/fluo/recipes/accumulo/export/AccumuloReplicator.java
 
