@@ -33,7 +33,7 @@ import org.apache.fluo.api.client.Transaction;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.mini.MiniFluo;
 import org.apache.fluo.api.observer.ObserverProvider;
-import org.apache.fluo.recipes.accumulo.export.AccumuloConsumer;
+import org.apache.fluo.recipes.accumulo.export.function.AccumuloExporter;
 import org.apache.fluo.recipes.core.export.ExportQueue;
 import org.apache.fluo.recipes.test.AccumuloExportITBase;
 import org.apache.hadoop.io.Text;
@@ -53,7 +53,7 @@ public class AccumuloExporterIT extends AccumuloExportITBase {
 
       ExportQueue<String, String> teq = ExportQueue.getInstance(QUEUE_ID, appCfg);
 
-      teq.registerObserver(obsRegistry, new AccumuloConsumer<>(QUEUE_ID, appCfg, (export,
+      teq.registerObserver(obsRegistry, new AccumuloExporter<>(QUEUE_ID, appCfg, (export,
           mutConsumer) -> {
         Mutation m = new Mutation(export.getKey());
         m.put("cf", "cq", export.getSequence(), export.getValue());
@@ -77,7 +77,7 @@ public class AccumuloExporterIT extends AccumuloExportITBase {
     ExportQueue.configure(getFluoConfiguration(), new ExportQueue.Options(QUEUE_ID, String.class,
         String.class, 5).setBucketsPerTablet(1));
 
-    new AccumuloConsumer.Configuration(miniAccumulo.getInstanceName(),
+    new AccumuloExporter.Configuration(miniAccumulo.getInstanceName(),
         miniAccumulo.getZooKeepers(), ACCUMULO_USER, ACCUMULO_PASSWORD, exportTable).save(QUEUE_ID,
         getFluoConfiguration().getAppConfiguration());
   }

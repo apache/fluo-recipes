@@ -29,8 +29,8 @@ import org.apache.fluo.api.client.FluoFactory;
 import org.apache.fluo.api.client.Transaction;
 import org.apache.fluo.api.mini.MiniFluo;
 import org.apache.fluo.api.observer.ObserverProvider;
-import org.apache.fluo.recipes.accumulo.export.AccumuloConsumer;
 import org.apache.fluo.recipes.accumulo.export.AccumuloReplicator;
+import org.apache.fluo.recipes.accumulo.export.function.AccumuloExporter;
 import org.apache.fluo.recipes.core.export.ExportQueue;
 import org.apache.fluo.recipes.core.transaction.TxLog;
 import org.apache.fluo.recipes.test.AccumuloExportITBase;
@@ -52,7 +52,7 @@ public class AccumuloReplicatorIT extends AccumuloExportITBase {
     @Override
     public void provide(Registry or, Context ctx) {
       ExportQueue<String, TxLog> eq = ExportQueue.getInstance(QUEUE_ID, ctx.getAppConfiguration());
-      eq.registerObserver(or, new AccumuloConsumer<>(QUEUE_ID, ctx.getAppConfiguration(),
+      eq.registerObserver(or, new AccumuloExporter<>(QUEUE_ID, ctx.getAppConfiguration(),
           AccumuloReplicator.getTranslator()));
     }
   }
@@ -69,7 +69,7 @@ public class AccumuloReplicatorIT extends AccumuloExportITBase {
     ExportQueue.configure(getFluoConfiguration(),
         new ExportQueue.Options(QUEUE_ID, String.class.getName(), TxLog.class.getName(), 5));
 
-    new AccumuloConsumer.Configuration(miniAccumulo.getInstanceName(),
+    new AccumuloExporter.Configuration(miniAccumulo.getInstanceName(),
         miniAccumulo.getZooKeepers(), ACCUMULO_USER, ACCUMULO_PASSWORD, exportTable).save(QUEUE_ID,
         getFluoConfiguration());
 

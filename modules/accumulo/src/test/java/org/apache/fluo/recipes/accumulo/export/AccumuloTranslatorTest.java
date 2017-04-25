@@ -27,6 +27,7 @@ import org.apache.accumulo.core.data.Mutation;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
 import org.apache.fluo.api.data.RowColumn;
+import org.apache.fluo.recipes.accumulo.export.function.AccumuloTranslator;
 import org.junit.Assert;
 import org.junit.Test;
 

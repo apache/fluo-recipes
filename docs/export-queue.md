@@ -112,7 +112,7 @@ There are three requirements for using this recipe :
 
  * Must configure export queues before initializing a Fluo application.
  * Transactions adding to an export queue must get an instance of the queue using its unique QID.
- * Must create a class or lambda that implements [ExportConsumer][1] in order to process exports.
+ * Must create a class or lambda that implements [Exporter][1] in order to process exports.
 
 ## Example Use
 
@@ -218,12 +218,12 @@ This can cause exports to arrive out of order.   The purpose of the sequence num
 systems receiving out of order and redundant data.
 
 ```java
-public class CountExporter implements ExportConsumer<String, CountUpdate> {
+public class CountExporter implements Exporter<String, CountUpdate> {
   // represents the external query system we want to update from Fluo
   QuerySystem querySystem;
 
   @Override
-  public void accept(Iterator<SequencedExport<String, CountUpdate>> exports) {
+  public void export(Iterator<SequencedExport<String, CountUpdate>> exports) {
     BatchUpdater batchUpdater = querySystem.getBatchUpdater();
 
     while (exports.hasNext()) {
@@ -311,7 +311,7 @@ example of write skew mentioned in the Percolater paper.
  1. TH1 : tx1.set(`rowA`,`fam1:qual2`, val1)
  1. TH2 : tx2.set(`rowB`,`fam1:qual2`, val2)
 
-[1]: ../modules/core/src/main/java/org/apache/fluo/recipes/core/export/ExporterConsumer.java
+[1]: ../modules/core/src/main/java/org/apache/fluo/recipes/core/export/Exporter.java
 [2]: https://en.wikipedia.org/wiki/Serializability
 [3]: accumulo-export-queue.md
 

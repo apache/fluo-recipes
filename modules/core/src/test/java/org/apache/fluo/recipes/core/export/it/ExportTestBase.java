@@ -41,9 +41,9 @@ import org.apache.fluo.api.data.ColumnValue;
 import org.apache.fluo.api.data.Span;
 import org.apache.fluo.api.mini.MiniFluo;
 import org.apache.fluo.api.observer.ObserverProvider;
-import org.apache.fluo.recipes.core.export.ExportConsumer;
 import org.apache.fluo.recipes.core.export.ExportQueue;
 import org.apache.fluo.recipes.core.export.SequencedExport;
+import org.apache.fluo.recipes.core.export.function.Exporter;
 import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
 import org.junit.After;
 import org.junit.Assert;
@@ -97,7 +97,7 @@ public class ExportTestBase {
     }
   }
 
-  public static class RefExporter implements ExportConsumer<String, RefUpdates> {
+  public static class RefExporter implements Exporter<String, RefUpdates> {
 
     public static final String QUEUE_ID = "req";
 
@@ -107,7 +107,7 @@ public class ExportTestBase {
     }
 
     @Override
-    public void accept(Iterator<SequencedExport<String, RefUpdates>> exportIterator) {
+    public void export(Iterator<SequencedExport<String, RefUpdates>> exportIterator) {
       ArrayList<SequencedExport<String, RefUpdates>> exportList = new ArrayList<>();
       Iterators.addAll(exportList, exportIterator);
 

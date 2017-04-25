@@ -13,10 +13,12 @@
  * the License.
  */
 
-package org.apache.fluo.recipes.core.export;
+package org.apache.fluo.recipes.core.export.function;
 
 import java.util.Iterator;
-import java.util.function.Consumer;
+import java.util.Objects;
+
+import org.apache.fluo.recipes.core.export.SequencedExport;
 
 /**
  * Must be able to handle same key being exported multiple times and keys being exported out of
@@ -27,8 +29,8 @@ import java.util.function.Consumer;
  * will be consecutive and in ascending sequence order.
  *
  * <p>
- * If the call to process exports is unexpectedly terminated, it will be called again later with
- * at least the same data. For example suppose an exporter was passed the following entries.
+ * If the call to process exports is unexpectedly terminated, it will be called again later with at
+ * least the same data. For example suppose an exporter was passed the following entries.
  *
  * <ul>
  * <li>key=0 sequence=9 value=abc
@@ -39,8 +41,8 @@ import java.util.function.Consumer;
  * </ul>
  *
  * <p>
- * Assume the exporter exports some of these and then fails before completing all of them. The
- * next time its called it will be passed what it saw before, but it could also be passed more.
+ * Assume the exporter exports some of these and then fails before completing all of them. The next
+ * time its called it will be passed what it saw before, but it could also be passed more.
  *
  * <ul>
  * <li>key=0 sequence=9 value=abc
@@ -54,6 +56,31 @@ import java.util.function.Consumer;
  *
  * @since 1.1.0
  */
-public interface ExportConsumer<K, V> extends Consumer<Iterator<SequencedExport<K, V>>> {
+public interface Exporter<K, V> {
 
+  /**
+   * Performs this export operation.
+   *
+   * @param t the input argument
+   */
+  void export(Iterator<SequencedExport<K, V>> exports);
+
+  /**
+   * Returns a composed {@code Exporter} that exports, in sequence, to this then to {@code after}.
+   * If performing either export throws an exception, it is relayed to the caller of the composed
+   * operation. If performing this export operation throws an exception, the {@code after} export
+   * will not be performed.
+   *
+   * @param after the export operation to perform after this operation
+   * @return a composed {@code Exporter} that performs in sequence this export operation followed by
+   *         the {@code after} export operation
+   * @throws NullPointerException if {@code after} is null
+   */
+  default Exporter<K, V> andThen(Exporter<K, V> after) {
+    Objects.requireNonNull(after);
+    return (Iterator<SequencedExport<K, V>> i) -> {
+      export(i);
+      after.export(i);
+    };
+  }
 }

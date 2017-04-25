@@ -13,7 +13,7 @@
  * the License.
  */
 
-package org.apache.fluo.recipes.accumulo.export;
+package org.apache.fluo.recipes.accumulo.export.function;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -26,9 +26,9 @@ import org.apache.fluo.api.data.RowColumn;
 import org.apache.fluo.recipes.core.export.SequencedExport;
 
 /**
- * This interface is used be {@link AccumuloConsumer} to translated exports into Accumulo mutations.
+ * This interface is used be {@link AccumuloExporter} to translated exports into Accumulo mutations.
  * 
- * @see AccumuloConsumer
+ * @see AccumuloExporter
  * @since 1.1.0
  */
 public interface AccumuloTranslator<K, V> {

@@ -24,8 +24,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import com.google.common.base.Preconditions;
-import com.google.common.hash.Hashing;
 import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.config.SimpleConfiguration;
@@ -38,6 +36,9 @@ import org.apache.fluo.recipes.core.common.TableOptimizations;
 import org.apache.fluo.recipes.core.common.TableOptimizations.TableOptimizationsFactory;
 import org.apache.fluo.recipes.core.common.TransientRegistry;
 import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
+
+import com.google.common.base.Preconditions;
+import com.google.common.hash.Hashing;
 
 /**
  * @since 1.0.0
@@ -170,12 +171,12 @@ public class ExportQueue<K, V> {
   }
 
   /**
-   * TODO deprecate stuff in this class/package
+   * Registers an observer that will export queued data.
    * 
    * @since 1.1.0
    */
   public void registerObserver(ObserverProvider.Registry obsRegistry,
-      ExportConsumer<K, V> exportConsumer) {
+      org.apache.fluo.recipes.core.export.function.Exporter<K, V> exporter) {
     Preconditions
         .checkState(
             opts.exporterType == null,
@@ -183,7 +184,7 @@ public class ExportQueue<K, V> {
                 + "exporters at the same time.", opts.exporterType); // TODO error message
     Observer obs;
     try {
-      obs = new ExportObserverImpl<K, V>(queueId, opts, serializer, exportConsumer);
+      obs = new ExportObserverImpl<K, V>(queueId, opts, serializer, exporter);
     } catch (Exception e) {
       throw new RuntimeException(e);
     }

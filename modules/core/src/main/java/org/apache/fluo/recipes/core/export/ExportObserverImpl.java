@@ -16,14 +16,14 @@
 package org.apache.fluo.recipes.core.export;
 
 import java.util.Iterator;
-import java.util.function.Consumer;
 
-import com.google.common.collect.Iterators;
 import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
 import org.apache.fluo.api.observer.Observer;
 import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
+
+import com.google.common.collect.Iterators;
 
 class ExportObserverImpl<K, V> implements Observer {
 
@@ -31,12 +31,12 @@ class ExportObserverImpl<K, V> implements Observer {
   private Class<K> keyType;
   private Class<V> valType;
   SimpleSerializer serializer;
-  private Consumer<Iterator<SequencedExport<K, V>>> exporter;
+  private org.apache.fluo.recipes.core.export.function.Exporter<K, V> exporter;
   private long memLimit;
 
   @SuppressWarnings("unchecked")
   ExportObserverImpl(String queueId, ExportQueue.Options opts, SimpleSerializer serializer,
-      Consumer<Iterator<SequencedExport<K, V>>> exportConsumer) throws Exception {
+      org.apache.fluo.recipes.core.export.function.Exporter<K, V> exportConsumer) throws Exception {
     this.queueId = queueId;
 
     // TODO move class loading to centralized place... also attempt to check type params
@@ -66,7 +66,7 @@ class ExportObserverImpl<K, V> implements Observer {
 
     exportIterator = Iterators.consumingIterator(exportIterator);
 
-    exporter.accept(exportIterator);
+    exporter.export(exportIterator);
 
     if (input.hasNext() || continueRow != null) {
       // not everything was processed so notify self OR new data may have been inserted above the

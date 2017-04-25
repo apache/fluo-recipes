@@ -15,7 +15,6 @@
 
 package org.apache.fluo.recipes.accumulo.export;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -25,6 +24,7 @@ import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.RowColumn;
 import org.apache.fluo.recipes.core.export.ExportQueue.Options;
+import org.apache.fluo.recipes.accumulo.export.function.AccumuloTranslator;
 import org.apache.fluo.recipes.core.export.Exporter;
 import org.apache.fluo.recipes.core.export.SequencedExport;
 
@@ -33,7 +33,9 @@ import org.apache.fluo.recipes.core.export.SequencedExport;
  * to use this, see the project level documentation for exporting to Accumulo.
  *
  * @since 1.0.0
- * @deprecated since 1.1.0, replaced by {@link AccumuloConsumer} and {@link AccumuloTranslator}
+ * @deprecated since 1.1.0, replaced by
+ *             {@link org.apache.fluo.recipes.accumulo.export.function.AccumuloExporter} and
+ *             {@link AccumuloTranslator}
  */
 @Deprecated
 public abstract class AccumuloExporter<K, V> extends Exporter<K, V> {
@@ -58,28 +60,27 @@ public abstract class AccumuloExporter<K, V> extends Exporter<K, V> {
     }
   }
 
-  private AccumuloWriter accumuloWriter;
+  private org.apache.fluo.recipes.accumulo.export.function.AccumuloExporter<K, V> accumuloWriter;
 
   @Override
   public void init(Exporter.Context context) throws Exception {
-    accumuloWriter = AccumuloWriter.getInstance(context.getExporterConfiguration());
+    SimpleConfiguration sc = context.getExporterConfiguration();
+    String instanceName = sc.getString("instanceName");
+    String zookeepers = sc.getString("zookeepers");
+    String user = sc.getString("user");
+    String password = sc.getString("password");
+    String table = sc.getString("table");
+    org.apache.fluo.recipes.accumulo.export.function.AccumuloExporter.Configuration cfg =
+        new org.apache.fluo.recipes.accumulo.export.function.AccumuloExporter.Configuration(
+            instanceName, zookeepers, user, password, table);
+    accumuloWriter =
+        new org.apache.fluo.recipes.accumulo.export.function.AccumuloExporter<K, V>(cfg,
+            this::translate);
   }
 
   @Override
   protected void processExports(Iterator<SequencedExport<K, V>> exports) {
-
-    ArrayList<Mutation> buffer = new ArrayList<>();
-
-    Consumer<Mutation> consumer = m -> buffer.add(m);
-
-    while (exports.hasNext()) {
-      SequencedExport<K, V> export = exports.next();
-      translate(export, consumer);
-    }
-
-    if (buffer.size() > 0) {
-      accumuloWriter.write(buffer);
-    }
+    accumuloWriter.export(exports);
   }
 
   /**
