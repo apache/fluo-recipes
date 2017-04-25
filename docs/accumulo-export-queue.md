@@ -19,8 +19,8 @@ limitations under the License.
 ## Background
 
 The [Export Queue Recipe][1] provides a generic foundation for building export mechanism to any
-external data store. The [AccumuloConsumer] provides an export consumer for writing to
-Accumulo. [AccumuloConsumer] is located in the `fluo-recipes-accumulo` module and provides the
+external data store. The [AccumuloExporter] provides an export consumer for writing to
+Accumulo. [AccumuloExporter] is located in the `fluo-recipes-accumulo` module and provides the
 following functionality:
 
  * Safely batches writes to Accumulo made by multiple transactions exporting data.
@@ -64,7 +64,7 @@ Exporting to Accumulo is easy. Follow the steps below:
     String exportTable =    // Name of table to export to
 
     // Save configuration for table to export to in fluo app configuration.
-    new AccumuloConsumer.Configuration(instance, zookeepers, user, password, exportTable)
+    new AccumuloExporter.Configuration(instance, zookeepers, user, password, exportTable)
         .save(EXPORT_QID, fluoConfig);
 
     // Create config for export queue.
@@ -78,7 +78,7 @@ Exporting to Accumulo is easy. Follow the steps below:
     ```
 
 3.  In the applications `ObserverProvider`, register an observer that will process exports and write
-    them to Accumulo using [AccumuloConsumer].  Also, register observers that add to the export
+    them to Accumulo using [AccumuloExporter].  Also, register observers that add to the export
     queue.
 
     ```java
@@ -94,7 +94,7 @@ Exporting to Accumulo is easy. Follow the steps below:
         // table configured earlier. SimpleTranslator from step 1 is passed here, could have used a
         // lambda instead.
         expQ.registerObserver(obsRegistry,
-            new AccumuloConsumer<>(EXPORT_QID, appCfg, new SimpleTranslator()));
+            new AccumuloExporter<>(EXPORT_QID, appCfg, new SimpleTranslator()));
     
         // An example observer created using a lambda that adds to the export queue.
         obsRegistry.register(OBS_COL, WEAK, (tx,row,col) -> {
@@ -114,7 +114,7 @@ Exporting to Accumulo is easy. Follow the steps below:
 The `getTranslator()` method in [AccumuloReplicator] creates a specialized [AccumuloTranslator] for replicating a Fluo table to Accumulo.
 
 [1]: export-queue.md
-[AccumuloConsumer]: ../modules/accumulo/src/main/java/org/apache/fluo/recipes/accumulo/export/AccumuloConsumer.java
-[AccumuloTranslator]: ../modules/accumulo/src/main/java/org/apache/fluo/recipes/accumulo/export/AccumuloTranslator.java
+[AccumuloExporter]: ../modules/accumulo/src/main/java/org/apache/fluo/recipes/accumulo/export/function/AccumuloExporter.java
+[AccumuloTranslator]: ../modules/accumulo/src/main/java/org/apache/fluo/recipes/accumulo/export/function/AccumuloTranslator.java
 [AccumuloReplicator]: ../modules/accumulo/src/main/java/org/apache/fluo/recipes/accumulo/export/AccumuloReplicator.java
 
