@@ -73,6 +73,4 @@ public abstract class Exporter<K, V> {
    *
    */
   protected abstract void processExports(Iterator<SequencedExport<K, V>> exports);
-
-  // TODO add close
 }
