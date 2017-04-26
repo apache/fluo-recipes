@@ -26,7 +26,7 @@ import org.apache.fluo.api.data.RowColumn;
 import org.apache.fluo.recipes.core.export.SequencedExport;
 
 /**
- * This interface is used be {@link AccumuloExporter} to translated exports into Accumulo mutations.
+ * This interface is used by {@link AccumuloExporter} to translated exports into Accumulo mutations.
  * 
  * @see AccumuloExporter
  * @since 1.1.0
