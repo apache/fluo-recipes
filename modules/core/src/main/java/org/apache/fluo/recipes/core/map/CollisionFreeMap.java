@@ -62,7 +62,9 @@ public class CollisionFreeMap<K, V> {
 
   private static final String DATA_RANGE_END = ":d:~";
 
-  private String mapId;
+  private Bytes updatePrefix;
+  private Bytes dataPrefix;
+  private Column notifyColumn;
 
   private Class<K> keyType;
   private Class<V> valType;
@@ -78,8 +80,9 @@ public class CollisionFreeMap<K, V> {
 
   @SuppressWarnings("unchecked")
   CollisionFreeMap(Options opts, SimpleSerializer serializer) throws Exception {
-
-    this.mapId = opts.mapId;
+    this.updatePrefix = Bytes.of(opts.mapId + ":u:");
+    this.dataPrefix = Bytes.of(opts.mapId + ":d:");
+    this.notifyColumn = new Column("fluoRecipes", "cfm:" + opts.mapId);
     // TODO defer loading classes
     // TODO centralize class loading
     // TODO try to check type params
@@ -108,6 +111,8 @@ public class CollisionFreeMap<K, V> {
   }
 
   void process(TransactionBase tx, Bytes ntfyRow, Column col) throws Exception {
+
+    Preconditions.checkState(ntfyRow.startsWith(updatePrefix));
 
     Bytes nextKey = tx.get(ntfyRow, NEXT_COL);
 
@@ -173,7 +178,7 @@ public class CollisionFreeMap<K, V> {
         } else {
           // start next time at the next possible key
           Bytes nextPossible =
-              Bytes.builder(lastKey.length() + 1).append(lastKey).append(new byte[] {0}).toBytes();
+              Bytes.builder(lastKey.length() + 1).append(lastKey).append(0).toBytes();
           tx.set(ntfyRow, NEXT_COL, nextPossible);
         }
 
@@ -194,12 +199,11 @@ public class CollisionFreeMap<K, V> {
       tx.setWeakNotification(ntfyRow, col);
     }
 
-    byte[] dataPrefix = ntfyRow.toArray();
-    // TODO this is awful... no sanity check... hard to read
-    dataPrefix[Bytes.of(mapId).length() + 1] = 'd';
+
 
     BytesBuilder rowBuilder = Bytes.builder();
     rowBuilder.append(dataPrefix);
+    rowBuilder.append(ntfyRow.subSequence(updatePrefix.length(), ntfyRow.length()));
     int rowPrefixLen = rowBuilder.getLength();
 
     Set<Bytes> keysToFetch = updates.keySet();
@@ -294,7 +298,7 @@ public class CollisionFreeMap<K, V> {
 
 
     BytesBuilder rowBuilder = Bytes.builder();
-    rowBuilder.append(mapId).append(":u:").append(bucketId).append(":").append(k);
+    rowBuilder.append(updatePrefix).append(bucketId).append(':').append(k);
 
     Iterator<RowColumnValue> iter =
         tx.scanner().over(Span.prefix(rowBuilder.toBytes())).build().iterator();
@@ -307,8 +311,8 @@ public class CollisionFreeMap<K, V> {
       ui = Collections.<V>emptyList().iterator();
     }
 
-    rowBuilder.setLength(mapId.length());
-    rowBuilder.append(":d:").append(bucketId).append(":").append(k);
+    rowBuilder.setLength(0);
+    rowBuilder.append(dataPrefix).append(bucketId).append(':').append(k);
 
     Bytes dataRow = rowBuilder.toBytes();
 
@@ -323,10 +327,6 @@ public class CollisionFreeMap<K, V> {
     }
 
     return combiner.combine(key, concat(ui, cv)).orElse(null);
-  }
-
-  String getId() {
-    return mapId;
   }
 
   /**
@@ -344,7 +344,7 @@ public class CollisionFreeMap<K, V> {
     Set<String> buckets = new HashSet<>();
 
     BytesBuilder rowBuilder = Bytes.builder();
-    rowBuilder.append(mapId).append(":u:");
+    rowBuilder.append(updatePrefix);
     int prefixLength = rowBuilder.getLength();
 
     byte[] startTs = encSeq(tx.getStartTimestamp());
@@ -357,7 +357,7 @@ public class CollisionFreeMap<K, V> {
       // reset to the common row prefix
       rowBuilder.setLength(prefixLength);
 
-      Bytes row = rowBuilder.append(bucketId).append(":").append(k).append(startTs).toBytes();
+      Bytes row = rowBuilder.append(bucketId).append(':').append(k).append(startTs).toBytes();
       Bytes val = Bytes.of(serializer.serialize(entry.getValue()));
 
       // TODO set if not exists would be comforting here.... but
@@ -369,11 +369,11 @@ public class CollisionFreeMap<K, V> {
 
     for (String bucketId : buckets) {
       rowBuilder.setLength(prefixLength);
-      rowBuilder.append(bucketId).append(":");
+      rowBuilder.append(bucketId).append(':');
 
       Bytes row = rowBuilder.toBytes();
 
-      tx.setWeakNotification(row, new Column("fluoRecipes", "cfm:" + mapId));
+      tx.setWeakNotification(row, notifyColumn);
     }
   }
 
@@ -418,14 +418,14 @@ public class CollisionFreeMap<K, V> {
 
     private static final long serialVersionUID = 1L;
 
-    private String mapId;
+    private Bytes dataPrefix;
 
     private SimpleSerializer serializer;
 
     private int numBuckets = -1;
 
     private Initializer(String mapId, int numBuckets, SimpleSerializer serializer) {
-      this.mapId = mapId;
+      this.dataPrefix = Bytes.of(mapId + ":d:");
       this.numBuckets = numBuckets;
       this.serializer = serializer;
     }
@@ -435,8 +435,8 @@ public class CollisionFreeMap<K, V> {
       int hash = Hashing.murmur3_32().hashBytes(k).asInt();
       String bucketId = genBucketId(Math.abs(hash % numBuckets), numBuckets);
 
-      BytesBuilder bb = Bytes.builder();
-      Bytes row = bb.append(mapId).append(":d:").append(bucketId).append(":").append(k).toBytes();
+      BytesBuilder bb = Bytes.builder(dataPrefix.length() + bucketId.length() + 1 + k.length);
+      Bytes row = bb.append(dataPrefix).append(bucketId).append(':').append(k).toBytes();
       byte[] v = serializer.serialize(val);
 
       return new RowColumnValue(row, DATA_COLUMN, Bytes.of(v));
