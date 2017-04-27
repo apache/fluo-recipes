@@ -20,25 +20,20 @@ import java.util.Map;
 
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
-import org.apache.fluo.api.data.Bytes;
+import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.data.Column;
+import org.apache.fluo.api.observer.StringObserver;
 import org.apache.fluo.recipes.core.map.CollisionFreeMap;
-import org.apache.fluo.recipes.core.types.TypedObserver;
-import org.apache.fluo.recipes.core.types.TypedTransactionBase;
 
-public class DocumentObserver extends TypedObserver {
+public class DocumentObserver implements StringObserver {
 
   CollisionFreeMap<String, Long> wcm;
 
-  @Override
-  public void init(Context context) throws Exception {
-    wcm = CollisionFreeMap.getInstance(CollisionFreeMapIT.MAP_ID, context.getAppConfiguration());
+  DocumentObserver(CollisionFreeMap<String, Long> wcm) {
+    this.wcm = wcm;
   }
 
-  @Override
-  public ObservedColumn getObservedColumn() {
-    return new ObservedColumn(new Column("content", "new"), NotificationType.STRONG);
-  }
+  static final Column CURRENT_COL = new Column("content", "current");
 
   static Map<String, Long> getWordCounts(String doc) {
     Map<String, Long> wordCounts = new HashMap<>();
@@ -54,9 +49,9 @@ public class DocumentObserver extends TypedObserver {
   }
 
   @Override
-  public void process(TypedTransactionBase tx, Bytes row, Column col) {
-    String newContent = tx.get().row(row).col(col).toString();
-    String currentContent = tx.get().row(row).fam("content").qual("current").toString("");
+  public void process(TransactionBase tx, String row, Column col) {
+    String newContent = tx.gets(row, col);
+    String currentContent = tx.gets(row, CURRENT_COL, "");
 
     Map<String, Long> newWordCounts = getWordCounts(newContent);
     Map<String, Long> currentWordCounts = getWordCounts(currentContent);
@@ -65,7 +60,7 @@ public class DocumentObserver extends TypedObserver {
 
     wcm.update(tx, changes);
 
-    tx.mutate().row(row).fam("content").qual("current").set(newContent);
+    tx.set(row, CURRENT_COL, newContent);
   }
 
   private static Map<String, Long> calculateChanges(Map<String, Long> newCounts,

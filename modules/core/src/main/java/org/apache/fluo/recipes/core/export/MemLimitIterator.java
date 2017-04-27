@@ -13,14 +13,41 @@
  * the License.
  */
 
-package org.apache.fluo.recipes.core.map;
+package org.apache.fluo.recipes.core.export;
 
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
-import org.apache.fluo.api.client.TransactionBase;
+class MemLimitIterator implements Iterator<ExportEntry> {
 
-@Deprecated
-class NullUpdateObserver<K, V> extends UpdateObserver<K, V> {
+  private long memConsumed = 0;
+  private long memLimit;
+  private int extraPerKey;
+  private Iterator<ExportEntry> source;
+
+  public MemLimitIterator(Iterator<ExportEntry> input, long limit, int extraPerKey) {
+    this.source = input;
+    this.memLimit = limit;
+    this.extraPerKey = extraPerKey;
+  }
+
   @Override
-  public void updatingValues(TransactionBase tx, Iterator<Update<K, V>> updates) {}
+  public boolean hasNext() {
+    return memConsumed < memLimit && source.hasNext();
+  }
+
+  @Override
+  public ExportEntry next() {
+    if (!hasNext()) {
+      throw new NoSuchElementException();
+    }
+    ExportEntry ee = source.next();
+    memConsumed += ee.key.length + extraPerKey + ee.value.length;
+    return ee;
+  }
+
+  @Override
+  public void remove() {
+    source.remove();
+  }
 }

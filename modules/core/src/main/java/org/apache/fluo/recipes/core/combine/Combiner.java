@@ -13,26 +13,34 @@
  * the License.
  */
 
-package org.apache.fluo.recipes.core.map.it;
+package org.apache.fluo.recipes.core.combine;
 
 import java.util.Iterator;
 import java.util.Optional;
+import java.util.stream.Stream;
 
-import org.apache.fluo.recipes.core.map.Combiner;
+/**
+ * This class was created as an alternative to {@link Combiner}. It supports easy and efficient use
+ * of java streams when implementing combiners using lambdas.
+ * 
+ * @since 1.1.0
+ */
+public interface Combiner<K, V> {
 
-public class WordCountCombiner implements Combiner<String, Long> {
-  @Override
-  public Optional<Long> combine(String key, Iterator<Long> updates) {
-    long sum = 0;
+  public static interface Input<KI, VI> extends Iterable<VI> {
+    KI getKey();
 
-    while (updates.hasNext()) {
-      sum += updates.next();
-    }
+    Stream<VI> stream();
 
-    if (sum == 0) {
-      return Optional.empty();
-    } else {
-      return Optional.of(sum);
-    }
+    Iterator<VI> iterator();
   }
+
+  /**
+   * This function is called to combine the current value of a key with updates that were queued for
+   * the key. See the collision free map project level documentation for more information.
+   *
+   * @return Then new value for the key. Returning Optional.empty() will cause the key to be
+   *         deleted.
+   */
+  Optional<V> combine(Input<K, V> input);
 }

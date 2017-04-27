@@ -19,7 +19,10 @@ import java.util.Iterator;
 import java.util.Optional;
 
 /**
+ * @see ICombiner
  * @since 1.0.0
+ * @deprecated since 1.1.0 use {@link ICombiner} and
+ *             {@link CollisionFreeMap#getInstance(String, org.apache.fluo.api.config.SimpleConfiguration, ICombiner)}
  */
 public interface Combiner<K, V> {
 

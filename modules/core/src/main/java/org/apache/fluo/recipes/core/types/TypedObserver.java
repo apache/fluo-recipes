@@ -18,14 +18,14 @@ package org.apache.fluo.recipes.core.types;
 import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
-import org.apache.fluo.api.observer.AbstractObserver;
+import org.apache.fluo.api.observer.Observer;
 
 /**
- * An {@link AbstractObserver} that uses a {@link TypeLayer}
+ * An {@link Observer} that uses a {@link TypeLayer}
  *
  * @since 1.0.0
  */
-public abstract class TypedObserver extends AbstractObserver {
+public abstract class TypedObserver implements Observer {
 
   private final TypeLayer tl;
 

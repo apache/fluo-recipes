@@ -53,7 +53,7 @@
     <accumulo.version>1.6.6</accumulo.version>
     <curator.version>2.7.1</curator.version>
     <findbugs.maxRank>13</findbugs.maxRank>
-    <fluo.version>1.0.0-incubating</fluo.version>
+    <fluo.version>1.1.0-incubating-SNAPSHOT</fluo.version>
     <hadoop.version>2.6.3</hadoop.version>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>

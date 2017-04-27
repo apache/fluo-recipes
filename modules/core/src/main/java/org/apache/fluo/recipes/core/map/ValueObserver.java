@@ -15,24 +15,23 @@
 
 package org.apache.fluo.recipes.core.map;
 
-import java.util.Iterator;
-
 import org.apache.fluo.api.client.TransactionBase;
-import org.apache.fluo.api.observer.Observer.Context;
-import org.apache.fluo.api.observer.ObserverProvider.Registry;
+import org.apache.fluo.recipes.core.export.ExportQueue;
 
 /**
- * A {@link CollisionFreeMap} calls this to allow additional processing to be done when key values
- * are updated. See the project level documentation for more information.
- *
- * @since 1.0.0
- * @deprecated since 1.1.0 use {@link ValueObserver} and
- *             {@link CollisionFreeMap#registerObserver(Registry, ValueObserver)}
+ * {@link CollisionFreeMap} uses this interface to notify of changes to a keys value. It provides
+ * the new and old value for a key. For efficiency, the {@link CollisionFreeMap} processes batches
+ * of key updates at once. It is strongly advised to only use the passed in transaction for writes
+ * that are unlikely to collide. If one write collides, then it will cause the whole batch to fail.
+ * Examples of writes that will not collide are updating an {@link ExportQueue} or another
+ * {@link CollisionFreeMap}.
+ * 
+ * <p>
+ * It was advised to only do writes because reads for each key will slow down processing a batch. If
+ * reading data is necessary then consider doing batch reads.
+ * 
+ * @since 1.1.0
  */
-@Deprecated
-public abstract class UpdateObserver<K, V> {
-
-  public void init(String mapId, Context observerContext) throws Exception {}
-
-  public abstract void updatingValues(TransactionBase tx, Iterator<Update<K, V>> updates);
+public interface ValueObserver<K, V> {
+  void process(TransactionBase tx, Iterable<Update<K, V>> updateBatch);
 }

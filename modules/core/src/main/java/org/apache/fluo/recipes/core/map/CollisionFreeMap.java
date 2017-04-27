@@ -17,6 +17,7 @@ package org.apache.fluo.recipes.core.map;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -24,20 +25,24 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
 import org.apache.fluo.api.client.SnapshotBase;
 import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.config.FluoConfiguration;
-import org.apache.fluo.api.config.ObserverSpecification;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Bytes.BytesBuilder;
@@ -45,10 +50,13 @@ import org.apache.fluo.api.data.Column;
 import org.apache.fluo.api.data.RowColumn;
 import org.apache.fluo.api.data.RowColumnValue;
 import org.apache.fluo.api.data.Span;
+import org.apache.fluo.api.observer.Observer.NotificationType;
+import org.apache.fluo.api.observer.ObserverProvider.Registry;
+import org.apache.fluo.recipes.core.common.RowRange;
 import org.apache.fluo.recipes.core.common.TableOptimizations;
 import org.apache.fluo.recipes.core.common.TableOptimizations.TableOptimizationsFactory;
-import org.apache.fluo.recipes.core.common.RowRange;
 import org.apache.fluo.recipes.core.common.TransientRegistry;
+import org.apache.fluo.recipes.core.map.ICombiner.Input;
 import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
 
 /**
@@ -67,7 +75,8 @@ public class CollisionFreeMap<K, V> {
   private Class<K> keyType;
   private Class<V> valType;
   private SimpleSerializer serializer;
-  private Combiner<K, V> combiner;
+  private ICombiner<K, V> combiner;
+  @SuppressWarnings("deprecation")
   UpdateObserver<K, V> updateObserver;
   private long bufferSize;
 
@@ -76,9 +85,9 @@ public class CollisionFreeMap<K, V> {
 
   private int numBuckets = -1;
 
-  @SuppressWarnings("unchecked")
-  CollisionFreeMap(Options opts, SimpleSerializer serializer) throws Exception {
-
+  @SuppressWarnings({"unchecked", "deprecation"})
+  CollisionFreeMap(Options opts, SimpleSerializer serializer, ICombiner<K, V> combiner)
+      throws Exception {
     this.mapId = opts.mapId;
     // TODO defer loading classes
     // TODO centralize class loading
@@ -86,8 +95,13 @@ public class CollisionFreeMap<K, V> {
     this.numBuckets = opts.numBuckets;
     this.keyType = (Class<K>) getClass().getClassLoader().loadClass(opts.keyType);
     this.valType = (Class<V>) getClass().getClassLoader().loadClass(opts.valueType);
-    this.combiner =
-        (Combiner<K, V>) getClass().getClassLoader().loadClass(opts.combinerType).newInstance();
+    if (combiner == null) {
+      Combiner<K, V> iterCombiner =
+          (Combiner<K, V>) getClass().getClassLoader().loadClass(opts.combinerType).newInstance();
+      this.combiner = input -> iterCombiner.combine(input.getKey(), input.iterator());
+    } else {
+      this.combiner = combiner;
+    }
     this.serializer = serializer;
     if (opts.updateObserverType != null) {
       this.updateObserver =
@@ -99,6 +113,10 @@ public class CollisionFreeMap<K, V> {
     this.bufferSize = opts.getBufferSize();
   }
 
+  CollisionFreeMap(Options opts, SimpleSerializer serializer) throws Exception {
+    this(opts, serializer, null);
+  }
+
   private V deserVal(Bytes val) {
     return serializer.deserialize(val.toArray(), valType);
   }
@@ -107,7 +125,14 @@ public class CollisionFreeMap<K, V> {
     return row.subSequence(prefix.length(), row.length() - 8);
   }
 
+  @SuppressWarnings("deprecation")
   void process(TransactionBase tx, Bytes ntfyRow, Column col) throws Exception {
+    process(tx, ntfyRow, col,
+        (tx2, updates) -> updateObserver.updatingValues(tx2, updates.iterator()));
+  }
+
+  void process(TransactionBase tx, Bytes ntfyRow, Column col, ValueObserver<K, V> updateObserver)
+      throws Exception {
 
     Bytes nextKey = tx.get(ntfyRow, NEXT_COL);
 
@@ -217,18 +242,17 @@ public class CollisionFreeMap<K, V> {
       Bytes currVal =
           currentVals.getOrDefault(currentValueRow, Collections.emptyMap()).get(DATA_COLUMN);
 
-      Iterator<V> ui = Iterators.transform(entry.getValue().iterator(), this::deserVal);
-
       K kd = serializer.deserialize(entry.getKey().toArray(), keyType);
 
       if (partiallyReadKey != null && partiallyReadKey.equals(entry.getKey())) {
         // not all updates were read for this key, so requeue the combined updates as an update
-        Optional<V> nv = combiner.combine(kd, ui);
+        Optional<V> nv = combiner.combine(new InputImpl<>(kd, this::deserVal, entry.getValue()));
         if (nv.isPresent()) {
           update(tx, Collections.singletonMap(kd, nv.get()));
         }
       } else {
-        Optional<V> nv = combiner.combine(kd, concat(ui, currVal));
+        Optional<V> nv =
+            combiner.combine(new InputImpl<>(kd, this::deserVal, currVal, entry.getValue()));
         Bytes newVal = nv.isPresent() ? Bytes.of(serializer.serialize(nv.get())) : null;
         if (newVal != null ^ currVal != null || (currVal != null && !currVal.equals(newVal))) {
           if (newVal == null) {
@@ -248,7 +272,7 @@ public class CollisionFreeMap<K, V> {
     currentVals.clear();
 
     if (updatesToReport.size() > 0) {
-      updateObserver.updatingValues(tx, updatesToReport.iterator());
+      updateObserver.process(tx, updatesToReport);
     }
   }
 
@@ -273,14 +297,6 @@ public class CollisionFreeMap<K, V> {
     }
   }
 
-  private Iterator<V> concat(Iterator<V> updates, Bytes currentVal) {
-    if (currentVal == null) {
-      return updates;
-    }
-
-    return Iterators.concat(updates, Iterators.singletonIterator(deserVal(currentVal)));
-  }
-
   /**
    * This method will retrieve the current value for key and any outstanding updates and combine
    * them using the configured {@link Combiner}. The result from the combiner is returned.
@@ -296,16 +312,9 @@ public class CollisionFreeMap<K, V> {
     BytesBuilder rowBuilder = Bytes.builder();
     rowBuilder.append(mapId).append(":u:").append(bucketId).append(":").append(k);
 
-    Iterator<RowColumnValue> iter =
-        tx.scanner().over(Span.prefix(rowBuilder.toBytes())).build().iterator();
-
-    Iterator<V> ui;
-
-    if (iter.hasNext()) {
-      ui = Iterators.transform(iter, rcv -> deserVal(rcv.getValue()));
-    } else {
-      ui = Collections.<V>emptyList().iterator();
-    }
+    Iterable<Bytes> values =
+        Iterables.transform(tx.scanner().over(Span.prefix(rowBuilder.toBytes())).build(),
+            RowColumnValue::getValue);
 
     rowBuilder.setLength(mapId.length());
     rowBuilder.append(":d:").append(bucketId).append(":").append(k);
@@ -314,19 +323,25 @@ public class CollisionFreeMap<K, V> {
 
     Bytes cv = tx.get(dataRow, DATA_COLUMN);
 
-    if (!ui.hasNext()) {
-      if (cv == null) {
-        return null;
-      } else {
-        return deserVal(cv);
-      }
-    }
-
-    return combiner.combine(key, concat(ui, cv)).orElse(null);
+    return combiner.combine(new InputImpl<>(key, this::deserVal, cv, values)).orElse(null);
   }
 
   String getId() {
     return mapId;
+  }
+
+  /**
+   * Used to register an Observer that processes updates to a CollisionFreeMap. If this is not
+   * called, then updated will never be processed.
+   * 
+   * @since 1.1.0
+   */
+  public void registerObserver(Registry obsRegistry, ValueObserver<K, V> updateObserver) {
+    Objects.requireNonNull(combiner);
+    Objects.requireNonNull(updateObserver);
+    Column obsCol = new Column("fluoRecipes", "cfm:" + mapId);
+    obsRegistry.register(obsCol, NotificationType.WEAK,
+        (tx, row, col) -> process(tx, row, col, updateObserver));
   }
 
   /**
@@ -387,15 +402,101 @@ public class CollisionFreeMap<K, V> {
     return Strings.padStart(Integer.toHexString(bucket), bucketLen, '0');
   }
 
+  /**
+   * @deprecated since 1.1.0 use {@link #getInstance(String, SimpleConfiguration, ICombiner)}
+   */
+  @Deprecated
   public static <K2, V2> CollisionFreeMap<K2, V2> getInstance(String mapId,
       SimpleConfiguration appConf) {
     Options opts = new Options(mapId, appConf);
+    Preconditions.checkArgument(opts.combinerType != null);
     try {
       return new CollisionFreeMap<>(opts, SimpleSerializer.getInstance(appConf));
     } catch (Exception e) {
       // TODO
       throw new RuntimeException(e);
     }
+  }
+
+  /**
+   * @since 1.1.0
+   */
+  public static <K2, V2> CollisionFreeMap<K2, V2> getInstance(String mapId,
+      SimpleConfiguration appConf, ICombiner<K2, V2> combiner) {
+    Options opts = new Options(mapId, appConf);
+    Preconditions.checkArgument(opts.combinerType == null);
+    try {
+      return new CollisionFreeMap<>(opts, SimpleSerializer.getInstance(appConf), combiner);
+    } catch (Exception e) {
+      // TODO
+      throw new RuntimeException(e);
+    }
+  }
+
+  private static class InputImpl<K2, V2> implements Input<K2, V2> {
+
+    private K2 key;
+    private Collection<Bytes> valuesCollection;
+    private Bytes currentValue;
+    private Iterable<Bytes> valuesIterable;
+    private Function<Bytes, V2> valDeser;
+
+    InputImpl(K2 k, Function<Bytes, V2> valDeser, Collection<Bytes> serializedValues) {
+      this.key = k;
+      this.valDeser = valDeser;
+      this.valuesCollection = serializedValues;
+    }
+
+    InputImpl(K2 k, Function<Bytes, V2> valDeser, Bytes currentValue,
+        Collection<Bytes> serializedValues) {
+      this(k, valDeser, serializedValues);
+      this.currentValue = currentValue;
+    }
+
+    InputImpl(K2 k, Function<Bytes, V2> valDeser, Bytes currentValue,
+        Iterable<Bytes> serializedValues) {
+      this.key = k;
+      this.valuesIterable = serializedValues;
+      this.valDeser = valDeser;
+      this.currentValue = currentValue;
+    }
+
+    @Override
+    public K2 getKey() {
+      return key;
+    }
+
+    @Override
+    public Stream<V2> stream() {
+      Stream<Bytes> bytesStream;
+      if (valuesCollection != null) {
+        bytesStream = valuesCollection.stream();
+      } else {
+        bytesStream = StreamSupport.stream(valuesIterable.spliterator(), false);
+      }
+
+      if (currentValue != null) {
+        bytesStream = Stream.concat(Stream.of(currentValue), bytesStream);
+      }
+
+      return bytesStream.map(valDeser);
+    }
+
+    @Override
+    public Iterator<V2> iterator() {
+      Iterator<Bytes> bytesIter;
+      if (valuesCollection != null) {
+        bytesIter = valuesCollection.iterator();
+      } else {
+        bytesIter = valuesIterable.iterator();
+      }
+
+      if (currentValue != null) {
+        bytesIter = Iterators.concat(bytesIter, Iterators.singletonIterator(currentValue));
+      }
+      return Iterators.transform(bytesIter, valDeser::apply);
+    }
+
   }
 
   /**
@@ -468,7 +569,7 @@ public class CollisionFreeMap<K, V> {
       this.mapId = mapId;
 
       this.numBuckets = appConfig.getInt(PREFIX + mapId + ".buckets");
-      this.combinerType = appConfig.getString(PREFIX + mapId + ".combiner");
+      this.combinerType = appConfig.getString(PREFIX + mapId + ".combiner", null);
       this.keyType = appConfig.getString(PREFIX + mapId + ".key");
       this.valueType = appConfig.getString(PREFIX + mapId + ".val");
       this.updateObserverType = appConfig.getString(PREFIX + mapId + ".updateObserver", null);
@@ -477,6 +578,11 @@ public class CollisionFreeMap<K, V> {
           appConfig.getInt(PREFIX + mapId + ".bucketsPerTablet", DEFAULT_BUCKETS_PER_TABLET);
     }
 
+
+    /**
+     * @deprecated since 1.1.0 use {@link #Options(String, String, String, int)}
+     */
+    @Deprecated
     public Options(String mapId, String combinerType, String keyType, String valType, int buckets) {
       Preconditions.checkArgument(buckets > 0);
       Preconditions.checkArgument(!mapId.contains(":"), "Map id cannot contain ':'");
@@ -489,6 +595,10 @@ public class CollisionFreeMap<K, V> {
       this.valueType = valType;
     }
 
+    /**
+     * @deprecated since 1.1.0 use {@link #Options(String, String, String, int)}
+     */
+    @Deprecated
     public Options(String mapId, String combinerType, String updateObserverType, String keyType,
         String valueType, int buckets) {
       Preconditions.checkArgument(buckets > 0);
@@ -500,6 +610,26 @@ public class CollisionFreeMap<K, V> {
       this.updateObserverType = updateObserverType;
       this.keyType = keyType;
       this.valueType = valueType;
+    }
+
+    /**
+     * @since 1.1.0
+     */
+    public Options(String mapId, String keyType, String valueType, int buckets) {
+      Preconditions.checkArgument(buckets > 0);
+      Preconditions.checkArgument(!mapId.contains(":"), "Map id cannot contain ':'");
+
+      this.mapId = mapId;
+      this.numBuckets = buckets;
+      this.keyType = keyType;
+      this.valueType = valueType;
+    }
+
+    /**
+     * @since 1.1.0
+     */
+    public <K, V> Options(String mapId, Class<K> keyType, Class<V> valueType, int buckets) {
+      this(mapId, keyType.getName(), valueType.getName(), buckets);
     }
 
     /**
@@ -548,11 +678,19 @@ public class CollisionFreeMap<K, V> {
       return bucketsPerTablet;
     }
 
+    /**
+     * @deprecated since 1.1.0 use {@link #Options(String, Class, Class, int)}
+     */
+    @Deprecated
     public <K, V> Options(String mapId, Class<? extends Combiner<K, V>> combiner, Class<K> keyType,
         Class<V> valueType, int buckets) {
       this(mapId, combiner.getName(), keyType.getName(), valueType.getName(), buckets);
     }
 
+    /**
+     * @deprecated since 1.1.0 use {@link #Options(String, Class, Class, int)}
+     */
+    @Deprecated
     public <K, V> Options(String mapId, Class<? extends Combiner<K, V>> combiner,
         Class<? extends UpdateObserver<K, V>> updateObserver, Class<K> keyType, Class<V> valueType,
         int buckets) {
@@ -562,7 +700,9 @@ public class CollisionFreeMap<K, V> {
 
     void save(SimpleConfiguration appConfig) {
       appConfig.setProperty(PREFIX + mapId + ".buckets", numBuckets + "");
-      appConfig.setProperty(PREFIX + mapId + ".combiner", combinerType + "");
+      if (combinerType != null) {
+        appConfig.setProperty(PREFIX + mapId + ".combiner", combinerType + "");
+      }
       appConfig.setProperty(PREFIX + mapId + ".key", keyType);
       appConfig.setProperty(PREFIX + mapId + ".val", valueType);
       if (updateObserverType != null) {
@@ -581,10 +721,13 @@ public class CollisionFreeMap<K, V> {
    * This method configures a collision free map for use. It must be called before initializing
    * Fluo.
    */
+  @SuppressWarnings("deprecation")
   public static void configure(FluoConfiguration fluoConfig, Options opts) {
     opts.save(fluoConfig.getAppConfiguration());
-    fluoConfig.addObserver(new ObserverSpecification(CollisionFreeMapObserver.class.getName(),
-        ImmutableMap.of("mapId", opts.mapId)));
+    if (opts.combinerType != null) {
+      fluoConfig.addObserver(new org.apache.fluo.api.config.ObserverSpecification(
+          CollisionFreeMapObserver.class.getName(), ImmutableMap.of("mapId", opts.mapId)));
+    }
 
     Bytes dataRangeEnd = Bytes.of(opts.mapId + DATA_RANGE_END);
     Bytes updateRangeEnd = Bytes.of(opts.mapId + UPDATE_RANGE_END);
