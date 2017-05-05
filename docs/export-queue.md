@@ -152,7 +152,7 @@ public class FluoApp {
           ExportQueue.getInstance(EQ_ID, ctx.getAppConfiguration());
 
       // register observer that will queue data to export
-      obsRegistry.register(UPDATE_COL, STRONG, new MyObserver(expQ));
+      obsRegistry.forColumn(UPDATE_COL, STRONG).useObserver(new MyObserver(expQ));
 
       // register observer that will export queued data
       expQ.registerObserver(obsRegistry, new CountExporter());

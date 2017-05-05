@@ -53,6 +53,7 @@ class CombineQueueImpl<K, V> implements CombineQueue<K, V> {
   private Bytes dataPrefix;
   private Column notifyColumn;
 
+  private final String cqId;
   private final Class<K> keyType;
   private final Class<V> valType;
   private final int numBuckets;
@@ -61,6 +62,7 @@ class CombineQueueImpl<K, V> implements CombineQueue<K, V> {
 
   @SuppressWarnings("unchecked")
   CombineQueueImpl(String cqId, SimpleConfiguration appConfig) throws Exception {
+    this.cqId = cqId;
     this.updatePrefix = Bytes.of(cqId + ":u:");
     this.dataPrefix = Bytes.of(cqId + ":d:");
     this.notifyColumn = new Column("fluoRecipes", "cfm:" + cqId);
@@ -314,7 +316,7 @@ class CombineQueueImpl<K, V> implements CombineQueue<K, V> {
   @Override
   public void registerObserver(Registry obsRegistry, Combiner<K, V> combiner,
       ChangeObserver<K, V> changeObserver) {
-    obsRegistry.register(notifyColumn, NotificationType.WEAK,
-        (tx, row, col) -> process(tx, row, col, combiner, changeObserver));
+    obsRegistry.forColumn(notifyColumn, NotificationType.WEAK).withId("combineq-" + cqId)
+        .useObserver((tx, row, col) -> process(tx, row, col, combiner, changeObserver));
   }
 }

@@ -93,7 +93,7 @@ Exporting to Accumulo is easy. Follow the steps below:
             new AccumuloExporter<>(EXPORT_QID, appCfg, new SimpleTranslator()));
 
         // An example observer created using a lambda that adds to the export queue.
-        obsRegistry.register(OBS_COL, WEAK, (tx,row,col) -> {
+        obsRegistry.forColumn(OBS_COL, WEAK).useObserver((tx,row,col) -> {
           // Read some data and do some work
 
           // Add results to export queue

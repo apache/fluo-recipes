@@ -176,7 +176,7 @@ public class WcObserverProvider implements ObserverProvider {
     CombineQueue<String, Long> wcMap = CombineQueue.getInstance(ID, ctx.getAppConfiguration());
 
     // Register observer that updates the Combine Queue
-    obsRegistry.register(DocumentObserver.NEW_COL, STRONG, new DocumentObserver(wcMap));
+    obsRegistry.forColumn(DocumentObserver.NEW_COL, STRONG).useObserver(new DocumentObserver(wcMap));
 
     // Used to join new and existing values for a key. The lambda sums all values and returns
     // Optional.empty() when the sum is zero. Returning Optional.empty() causes the key/value to be

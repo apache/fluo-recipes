@@ -144,7 +144,8 @@ public class ExportTestBase {
       ExportQueue<String, RefUpdates> refExportQueue =
           ExportQueue.getInstance(RefExporter.QUEUE_ID, ctx.getAppConfiguration());
 
-      or.register(new Column("content", "new"), STRONG, new DocumentObserver(refExportQueue));
+      or.forColumn(new Column("content", "new"), STRONG).useObserver(
+          new DocumentObserver(refExportQueue));
       refExportQueue.registerObserver(or, new RefExporter());
     }
   }

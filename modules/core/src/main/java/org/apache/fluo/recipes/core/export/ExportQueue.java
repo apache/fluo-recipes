@@ -257,7 +257,8 @@ public class ExportQueue<K, V> {
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
-    obsRegistry.register(ExportBucket.newNotificationColumn(queueId), NotificationType.WEAK, obs);
+    obsRegistry.forColumn(ExportBucket.newNotificationColumn(queueId), NotificationType.WEAK)
+        .withId("exportq-" + queueId).useObserver(obs);
   }
 
   /**

@@ -72,14 +72,28 @@ public class CollisionFreeMap<K, V> {
 
     Observer observer;
 
-    @Override
-    public void register(Column observedColumn, NotificationType ntfyType, Observer observer) {
-      this.observer = observer;
+    private class Registry implements ObserverProvider.Registry.ObserverArgument,
+        ObserverProvider.Registry.IdentityOption {
+
+      @Override
+      public ObserverArgument withId(String alias) {
+        return this;
+      }
+
+      @Override
+      public void useObserver(Observer obs) {
+        observer = obs;
+      }
+
+      @Override
+      public void useStrObserver(StringObserver obs) {
+        observer = obs;
+      }
     }
 
     @Override
-    public void registers(Column observedColumn, NotificationType ntfyType, StringObserver observer) {
-      this.observer = observer;
+    public IdentityOption forColumn(Column observedColumn, NotificationType ntfyType) {
+      return new Registry();
     }
   }
 
