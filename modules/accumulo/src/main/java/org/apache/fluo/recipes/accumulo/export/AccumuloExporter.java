@@ -24,8 +24,8 @@ import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.RowColumn;
-import org.apache.fluo.recipes.core.export.ExportQueue.Options;
 import org.apache.fluo.recipes.accumulo.export.function.AccumuloTranslator;
+import org.apache.fluo.recipes.core.export.ExportQueue.Options;
 import org.apache.fluo.recipes.core.export.Exporter;
 import org.apache.fluo.recipes.core.export.SequencedExport;
 
@@ -88,7 +88,7 @@ public abstract class AccumuloExporter<K, V> extends Exporter<K, V> {
   /**
    * Implementations of this method should translate the given SequencedExport to 0 or more
    * Mutations.
-   * 
+   *
    * @param export the input that should be translated to mutations
    * @param consumer output mutations to this consumer
    */
@@ -116,6 +116,7 @@ public abstract class AccumuloExporter<K, V> extends Exporter<K, V> {
    * @deprecated since 1.1.0 use
    *             {@link AccumuloTranslator#generateMutations(long, Map, Map, Consumer)}
    */
+  @Deprecated
   public static void generateMutations(long seq, Map<RowColumn, Bytes> oldData,
       Map<RowColumn, Bytes> newData, Consumer<Mutation> consumer) {
     AccumuloTranslator.generateMutations(seq, oldData, newData, consumer);

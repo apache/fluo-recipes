@@ -19,13 +19,10 @@ import java.util.Iterator;
 
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.observer.Observer;
-import org.apache.fluo.api.observer.ObserverProvider.Registry;
 
 /**
  * @since 1.0.0
- * @deprecated since 1.1.0 replaced by
- *             {@link ExportQueue#registerObserver(Registry, org.apache.fluo.recipes.core.export.function.Exporter)}
- *             and {@link org.apache.fluo.recipes.core.export.function.Exporter}
+ * @deprecated since 1.1.0 replaced by {@link org.apache.fluo.recipes.core.export.function.Exporter}
  */
 @Deprecated
 public abstract class Exporter<K, V> {

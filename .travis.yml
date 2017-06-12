@@ -14,7 +14,7 @@
 language: java
 jdk:
   - oraclejdk8
-script: mvn -U verify
+script: mvn -U verify javadoc:jar
 sudo: false
 cache:
   directories:

@@ -18,6 +18,7 @@ package org.apache.fluo.recipes.core.export.function;
 import java.util.Iterator;
 import java.util.Objects;
 
+import org.apache.fluo.recipes.core.export.ExportQueue;
 import org.apache.fluo.recipes.core.export.SequencedExport;
 
 /**
@@ -55,6 +56,8 @@ import org.apache.fluo.recipes.core.export.SequencedExport;
  * </ul>
  *
  * @since 1.1.0
+ * @see ExportQueue#registerObserver(org.apache.fluo.api.observer.ObserverProvider.Registry,
+ *      Exporter)
  */
 @FunctionalInterface
 public interface Exporter<K, V> {
@@ -62,7 +65,7 @@ public interface Exporter<K, V> {
   /**
    * Performs this export operation.
    *
-   * @param t the input argument
+   * @param exports an iterator over the data to export
    */
   void export(Iterator<SequencedExport<K, V>> exports);
 

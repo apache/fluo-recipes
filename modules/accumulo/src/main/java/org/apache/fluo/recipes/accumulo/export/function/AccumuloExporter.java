@@ -22,16 +22,16 @@ import java.util.function.Consumer;
 import org.apache.accumulo.core.data.Mutation;
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.config.SimpleConfiguration;
+import org.apache.fluo.api.observer.ObserverProvider;
 import org.apache.fluo.recipes.core.export.ExportQueue;
 import org.apache.fluo.recipes.core.export.SequencedExport;
 import org.apache.fluo.recipes.core.export.function.Exporter;
-import org.apache.fluo.api.observer.ObserverProvider.Registry;
 
 /**
  * An Accumulo-specific {@link Exporter} that writes mutations to Accumulo. For an overview of how
  * to use this, see the project level documentation for exporting to Accumulo.
- * 
- * @see ExportQueue#registerObserver(Registry, Exporter)
+ *
+ * @see ExportQueue#registerObserver(ObserverProvider.Registry, Exporter)
  * @since 1.1.0
  */
 public class AccumuloExporter<K, V> implements Exporter<K, V> {
@@ -41,7 +41,7 @@ public class AccumuloExporter<K, V> implements Exporter<K, V> {
 
   /**
    * Part of a fluent configuration API.
-   * 
+   *
    * @since 1.1.0
    */
   public static interface InstanceArgs {
@@ -50,7 +50,7 @@ public class AccumuloExporter<K, V> implements Exporter<K, V> {
 
   /**
    * Part of a fluent configuration API.
-   * 
+   *
    * @since 1.1.0
    */
   public static interface CredentialArgs {
@@ -59,7 +59,7 @@ public class AccumuloExporter<K, V> implements Exporter<K, V> {
 
   /**
    * Part of a fluent configuration API.
-   * 
+   *
    * @since 1.1.0
    */
   public static interface TableArgs {
@@ -68,7 +68,7 @@ public class AccumuloExporter<K, V> implements Exporter<K, V> {
 
   /**
    * Part of a fluent configuration API.
-   * 
+   *
    * @since 1.1.0
    */
   public static interface Options {
