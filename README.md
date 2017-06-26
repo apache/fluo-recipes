@@ -62,7 +62,7 @@ Below is a sample Maven POM containing all possible Fluo Recipes dependencies:
 
 ```xml
   <properties>
-    <fluo-recipes.version>1.0.0-incubating</fluo-recipes.version>
+    <fluo-recipes.version>1.1.0-incubating</fluo-recipes.version>
   </properties>
 
   <dependencies>
