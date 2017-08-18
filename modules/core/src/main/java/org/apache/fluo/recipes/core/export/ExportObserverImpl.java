@@ -17,13 +17,12 @@ package org.apache.fluo.recipes.core.export;
 
 import java.util.Iterator;
 
+import com.google.common.collect.Iterators;
 import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
 import org.apache.fluo.api.observer.Observer;
 import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
-
-import com.google.common.collect.Iterators;
 
 // This class intentionally package private.
 class ExportObserverImpl<K, V> implements Observer {

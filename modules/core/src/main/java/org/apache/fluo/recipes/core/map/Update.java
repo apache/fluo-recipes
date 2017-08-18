@@ -18,9 +18,8 @@ package org.apache.fluo.recipes.core.map;
 import java.util.Iterator;
 import java.util.Optional;
 
-import org.apache.fluo.recipes.core.combine.ChangeObserver.Change;
-
 import com.google.common.collect.Iterators;
+import org.apache.fluo.recipes.core.combine.ChangeObserver.Change;
 
 /**
  * @since 1.0.0

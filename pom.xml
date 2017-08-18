@@ -240,6 +240,18 @@
             </systemPropertyVariables>
           </configuration>
         </plugin>
+        <plugin>
+          <groupId>net.revelc.code</groupId>
+          <artifactId>impsort-maven-plugin</artifactId>
+          <version>1.0.0</version>
+          <configuration>
+            <groups>java.,javax.</groups>
+            <staticAfter>true</staticAfter>
+            <excludes>
+              <exclude>**/thrift/*.java</exclude>
+            </excludes>
+          </configuration>
+        </plugin>
       </plugins>
     </pluginManagement>
     <plugins>
@@ -293,6 +305,18 @@
                 <ignoredDependency>org.apache.hadoop:hadoop-mapreduce-client-core:jar:${hadoop.version}</ignoredDependency>
               </ignoredDependencies>
             </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>net.revelc.code</groupId>
+        <artifactId>impsort-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>sort-imports</id>
+            <goals>
+              <goal>sort</goal>
+            </goals>
           </execution>
         </executions>
       </plugin>

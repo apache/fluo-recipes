@@ -19,6 +19,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
@@ -27,8 +28,6 @@ import org.apache.fluo.recipes.core.combine.CombineQueue.Optimizer;
 import org.apache.fluo.recipes.core.export.ExportQueue;
 import org.junit.Assert;
 import org.junit.Test;
-
-import com.google.common.collect.ImmutableSet;
 
 public class TestGrouping {
   @Test
