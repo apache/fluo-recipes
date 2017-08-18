@@ -40,14 +40,14 @@
     <module>modules/test</module>
   </modules>
   <scm>
-    <connection>scm:git:https://gitbox.apache.org/repos/asf/incubator-fluo-recipes.git</connection>
-    <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/incubator-fluo-recipes.git</developerConnection>
+    <connection>scm:git:https://gitbox.apache.org/repos/asf/fluo-recipes.git</connection>
+    <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/fluo-recipes.git</developerConnection>
     <tag>HEAD</tag>
-    <url>https://gitbox.apache.org/repos/asf/incubator-fluo-recipes.git</url>
+    <url>https://gitbox.apache.org/repos/asf/fluo-recipes.git</url>
   </scm>
   <issueManagement>
     <system>GitHub</system>
-    <url>https://github.com/apache/incubator-fluo-recipes/issues</url>
+    <url>https://github.com/apache/fluo-recipes/issues</url>
   </issueManagement>
   <properties>
     <accumulo.version>1.6.6</accumulo.version>
