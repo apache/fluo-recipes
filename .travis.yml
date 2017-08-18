@@ -15,14 +15,6 @@ language: java
 jdk:
   - oraclejdk8
 script: mvn -U verify javadoc:jar
-sudo: false
 cache:
   directories:
     - $HOME/.m2
-env:
-  global:
-    - secure: "t9PdAFJq97awD69sEqy7fKtcyZhZ070kbVKa8DtgLyJnVWJrNZoaczM09sHpRNeW2ZY5L/rLTLkVvPdgxikGMDipTFg9YE8bbryIPqcRZnjS7oBRI5TwPWwPqk0ElUXp+ffRPCZ2b656G0u1W7/00Cxhv4cKxPjK0lnuefmiB377TAcrq748aMN+iK7WZHLM4lD9oHzoDKgc4zVq84Raa54zBpD3AGo+LF71hVGWL+sDjG7aeXszwm5HRiAHAon7yeMeWskLl9OL5x7SWWUNLLaUICSBhPnNj+Sl6GJsstmvF5ha4Byxr/48vst0h/giP1oupIhLchKyswD/ZW0g8flxDURY31l8pwoPYNE8PMF+RwdsPE3yeE6lLNm+P8dCW0XmsMmLSRuc/VokDGQ4GggJ4aIq3pbdSEWnziJpsJIKuJuGLh4Xp+xPw80PGW9PJG9l5JlxvebtjnMkYoR/ywSU6s/jublg/MwjgT6g7KKK0gaKViY12w6VvSMaziBd85GENkDLcPSDXtlYiz8757PYez4jlJEJQ2tjJbupgIECo2Y1L8T5AJo7P3dQwCU08tXmDY5r9Xe0F7sDzquDQS1EB8oetmHDSZFj1CfM7zwteGkHZrJz1Vne+u6O1FL4RryR5z7S8h87URPjMPVXngf40kxYNrVnvuCJrYkD27U="
-    - secure: "Z6WB3G+nv4Sqjz67DSpKL0kJeX5lZr/LE47ZgUhGowfbDLCFXWrw5FpbUaiu8IwB6gCMbWB/Gi7kjC0FvwHjsYQ2u3DpyksckLnYirK7t87AlyV0l+zXXlNesR/fMugz/mf1oGjPIIz/3BT4a103+Q3BI6iwaKTAkgsEjOBadMTDvwz6aF6RbStwRmdhbE7GwxyTYXabFVZExWJK4qyWL38LsvsnG4iy2K/KuHUSzTple38HMc3BlkwKYlqdrmDrf3WUqlfp6SYpowJ9sCBIDuRqvpZug9bdPkIUN1t+bCvyBo/ajojeWnHXke+4wVzW9s3+cCG8wTMGUbMb4tjgT8mpMwAwuso4xOlmRr2Jlhxl9/yyPH+8k/TFVx7djkFBCEMejgHS0gyzca5vOhf7JKRJul5MlX/qPKkhXbU9iuJw21UVDLRRmTfkqEUOjqll9emF3eeWW8m/jgOvNdy5IIi2swPw8i7OE/IE98/wN//zuQPo4Rpn5g62KUFreszKdNOxwLxyOtDEc1ohTZtWZU0JwAzMmg2F7EWH0d/915f+VopDsViJuHAAwiINg+BTMi8VB2Fr50pNYm4hd4irpu3pvL0cpanlidQle83kso32/VQ/F8zmWCq+V1YfoeKqBU4f7zEPiCcGaERFKfYD7KD3wfDFKQHWI1IyxqBlDzc="
-after_success:
-  - echo "<settings><servers><server><id>sonatype-nexus-snapshots</id><username>\${env.SONATYPE_USER}</username><password>\${env.SONATYPE_PASS}</password></server></servers></settings>" > ~/deploy-settings.xml
-  - if [ "$TRAVIS_PULL_REQUEST" = "false" -a "$TRAVIS_BRANCH" = "master" ]; then mvn deploy -DskipTests -DskipFormat -Dcheckstyle.skip=true -Dfindbugs.skip=true --settings ~/deploy-settings.xml; else echo 'Skipping deploy.'; fi
