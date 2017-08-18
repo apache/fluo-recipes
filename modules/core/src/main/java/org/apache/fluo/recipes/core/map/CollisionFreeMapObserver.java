@@ -18,7 +18,6 @@ package org.apache.fluo.recipes.core.map;
 import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
-import org.apache.fluo.api.observer.AbstractObserver;
 
 /**
  * This class is configured for use by CollisionFreeMap.configure(FluoConfiguration,
@@ -28,7 +27,7 @@ import org.apache.fluo.api.observer.AbstractObserver;
  * @deprecated since 1.1.0
  */
 @Deprecated
-public class CollisionFreeMapObserver extends AbstractObserver {
+public class CollisionFreeMapObserver extends org.apache.fluo.api.observer.AbstractObserver {
 
   @SuppressWarnings("rawtypes")
   private CollisionFreeMap cfm;

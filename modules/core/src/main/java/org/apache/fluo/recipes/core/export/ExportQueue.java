@@ -28,7 +28,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.hash.Hashing;
 import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.config.FluoConfiguration;
-import org.apache.fluo.api.config.ObserverSpecification;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.observer.Observer;
@@ -105,7 +104,7 @@ public class ExportQueue<K, V> {
 
   /**
    * Part of a fluent API for configuring a export queue.
-   * 
+   *
    * @since 1.1.0
    */
   public static interface FluentArg1 {
@@ -116,7 +115,7 @@ public class ExportQueue<K, V> {
 
   /**
    * Part of a fluent API for configuring a export queue.
-   * 
+   *
    * @since 1.1.0
    */
   public static interface FluentArg2 {
@@ -127,7 +126,7 @@ public class ExportQueue<K, V> {
 
   /**
    * Part of a fluent API for configuring a export queue.
-   * 
+   *
    * @since 1.1.0
    */
   public static interface FluentArg3 {
@@ -136,7 +135,7 @@ public class ExportQueue<K, V> {
 
   /**
    * Part of a fluent API for configuring a export queue.
-   * 
+   *
    * @since 1.1.0
    */
   public static interface FluentOptions {
@@ -191,8 +190,9 @@ public class ExportQueue<K, V> {
     SimpleConfiguration appConfig = fluoConfig.getAppConfiguration();
     opts.save(appConfig);
 
-    fluoConfig.addObserver(new ObserverSpecification(ExportObserver.class.getName(), Collections
-        .singletonMap("queueId", opts.fluentCfg.queueId)));
+    fluoConfig
+        .addObserver(new org.apache.fluo.api.config.ObserverSpecification(ExportObserver.class
+            .getName(), Collections.singletonMap("queueId", opts.fluentCfg.queueId)));
   }
 
   /**
@@ -241,7 +241,7 @@ public class ExportQueue<K, V> {
   /**
    * Registers an observer that will export queued data. Use this method in conjunction with
    * {@link ExportQueue#configure(String)}.
-   * 
+   *
    * @since 1.1.0
    */
   public void registerObserver(ObserverProvider.Registry obsRegistry,
@@ -265,6 +265,7 @@ public class ExportQueue<K, V> {
    * @since 1.0.0
    * @deprecated since 1.1.0 use {@link ExportQueue#configure(String)}
    */
+  @Deprecated
   public static class Options {
 
     private static final String PREFIX = FluentConfigurator.PREFIX;

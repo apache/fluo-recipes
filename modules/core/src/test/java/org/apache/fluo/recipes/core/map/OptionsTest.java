@@ -16,7 +16,6 @@
 package org.apache.fluo.recipes.core.map;
 
 import org.apache.fluo.api.config.FluoConfiguration;
-import org.apache.fluo.recipes.core.map.CollisionFreeMap.Options;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -26,20 +25,27 @@ public class OptionsTest {
   public void testExportQueueOptions() {
     FluoConfiguration conf = new FluoConfiguration();
 
-    CollisionFreeMap.configure(conf, new Options("Q1", "CT", "KT", "VT", 100));
-    CollisionFreeMap.configure(conf, new Options("Q2", "CT2", "KT2", "VT2", 200)
-        .setBucketsPerTablet(20).setBufferSize(1000000));
+    CollisionFreeMap.configure(conf, new org.apache.fluo.recipes.core.map.CollisionFreeMap.Options(
+        "Q1", "CT", "KT", "VT", 100));
+    CollisionFreeMap.configure(conf, new org.apache.fluo.recipes.core.map.CollisionFreeMap.Options(
+        "Q2", "CT2", "KT2", "VT2", 200).setBucketsPerTablet(20).setBufferSize(1000000));
 
-    Options opts1 = new Options("Q1", conf.getAppConfiguration());
+    org.apache.fluo.recipes.core.map.CollisionFreeMap.Options opts1 =
+        new org.apache.fluo.recipes.core.map.CollisionFreeMap.Options("Q1",
+            conf.getAppConfiguration());
 
     Assert.assertEquals(opts1.combinerType, "CT");
     Assert.assertEquals(opts1.keyType, "KT");
     Assert.assertEquals(opts1.valueType, "VT");
     Assert.assertEquals(opts1.numBuckets, 100);
-    Assert.assertEquals(opts1.bucketsPerTablet.intValue(), Options.DEFAULT_BUCKETS_PER_TABLET);
-    Assert.assertEquals(opts1.bufferSize.intValue(), Options.DEFAULT_BUFFER_SIZE);
+    Assert.assertEquals(opts1.bucketsPerTablet.intValue(),
+        org.apache.fluo.recipes.core.map.CollisionFreeMap.Options.DEFAULT_BUCKETS_PER_TABLET);
+    Assert.assertEquals(opts1.bufferSize.intValue(),
+        org.apache.fluo.recipes.core.map.CollisionFreeMap.Options.DEFAULT_BUFFER_SIZE);
 
-    Options opts2 = new Options("Q2", conf.getAppConfiguration());
+    org.apache.fluo.recipes.core.map.CollisionFreeMap.Options opts2 =
+        new org.apache.fluo.recipes.core.map.CollisionFreeMap.Options("Q2",
+            conf.getAppConfiguration());
 
     Assert.assertEquals(opts2.combinerType, "CT2");
     Assert.assertEquals(opts2.keyType, "KT2");

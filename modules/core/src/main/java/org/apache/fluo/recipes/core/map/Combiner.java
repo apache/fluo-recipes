@@ -25,6 +25,7 @@ import org.apache.fluo.recipes.core.combine.CombineQueue;
  * @deprecated since 1.1.0 use {@link org.apache.fluo.recipes.core.combine.Combiner} and
  *             {@link CombineQueue}
  */
+@Deprecated
 public interface Combiner<K, V> {
 
   /**

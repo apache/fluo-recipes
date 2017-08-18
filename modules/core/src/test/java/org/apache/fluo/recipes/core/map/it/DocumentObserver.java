@@ -22,7 +22,6 @@ import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
-import org.apache.fluo.recipes.core.map.CollisionFreeMap;
 import org.apache.fluo.recipes.core.types.TypedObserver;
 import org.apache.fluo.recipes.core.types.TypedTransactionBase;
 
@@ -30,11 +29,13 @@ import org.apache.fluo.recipes.core.types.TypedTransactionBase;
 // TODO move to CombineQueue test when removing CFM
 public class DocumentObserver extends TypedObserver {
 
-  CollisionFreeMap<String, Long> wcm;
+  org.apache.fluo.recipes.core.map.CollisionFreeMap<String, Long> wcm;
 
   @Override
   public void init(Context context) throws Exception {
-    wcm = CollisionFreeMap.getInstance(CollisionFreeMapIT.MAP_ID, context.getAppConfiguration());
+    wcm =
+        org.apache.fluo.recipes.core.map.CollisionFreeMap.getInstance(CollisionFreeMapIT.MAP_ID,
+            context.getAppConfiguration());
   }
 
   @Override

@@ -18,7 +18,6 @@ package org.apache.fluo.recipes.core.map;
 import java.util.Iterator;
 
 import org.apache.fluo.api.client.TransactionBase;
-import org.apache.fluo.api.observer.Observer.Context;
 import org.apache.fluo.recipes.core.combine.ChangeObserver;
 import org.apache.fluo.recipes.core.combine.CombineQueue;
 
@@ -32,7 +31,8 @@ import org.apache.fluo.recipes.core.combine.CombineQueue;
 @Deprecated
 public abstract class UpdateObserver<K, V> {
 
-  public void init(String mapId, Context observerContext) throws Exception {}
+  public void init(String mapId, org.apache.fluo.api.observer.Observer.Context observerContext)
+      throws Exception {}
 
   public abstract void updatingValues(TransactionBase tx, Iterator<Update<K, V>> updates);
 }

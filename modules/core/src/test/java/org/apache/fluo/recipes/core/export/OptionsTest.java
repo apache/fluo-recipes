@@ -18,9 +18,7 @@ package org.apache.fluo.recipes.core.export;
 import java.util.List;
 
 import org.apache.fluo.api.config.FluoConfiguration;
-import org.apache.fluo.api.config.ObserverSpecification;
 import org.apache.fluo.api.config.SimpleConfiguration;
-import org.apache.fluo.recipes.core.export.ExportQueue.Options;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -34,11 +32,15 @@ public class OptionsTest {
     ec1.setProperty("ep1", "ev1");
     ec1.setProperty("ep2", 3L);
 
-    ExportQueue.configure(conf, new Options("Q1", "ET", "KT", "VT", 100));
-    ExportQueue.configure(conf, new Options("Q2", "ET2", "KT2", "VT2", 200).setBucketsPerTablet(20)
-        .setBufferSize(1000000).setExporterConfiguration(ec1));
+    ExportQueue.configure(conf, new org.apache.fluo.recipes.core.export.ExportQueue.Options("Q1",
+        "ET", "KT", "VT", 100));
+    ExportQueue.configure(conf, new org.apache.fluo.recipes.core.export.ExportQueue.Options("Q2",
+        "ET2", "KT2", "VT2", 200).setBucketsPerTablet(20).setBufferSize(1000000)
+        .setExporterConfiguration(ec1));
 
-    Options opts1 = new Options("Q1", conf.getAppConfiguration());
+    org.apache.fluo.recipes.core.export.ExportQueue.Options opts1 =
+        new org.apache.fluo.recipes.core.export.ExportQueue.Options("Q1",
+            conf.getAppConfiguration());
 
     Assert.assertEquals(opts1.fluentCfg.exporterType, "ET");
     Assert.assertEquals(opts1.fluentCfg.keyType, "KT");
@@ -49,7 +51,9 @@ public class OptionsTest {
     Assert.assertEquals(opts1.fluentCfg.bufferSize.intValue(),
         FluentConfigurator.DEFAULT_BUFFER_SIZE);
 
-    Options opts2 = new Options("Q2", conf.getAppConfiguration());
+    org.apache.fluo.recipes.core.export.ExportQueue.Options opts2 =
+        new org.apache.fluo.recipes.core.export.ExportQueue.Options("Q2",
+            conf.getAppConfiguration());
 
     Assert.assertEquals(opts2.fluentCfg.exporterType, "ET2");
     Assert.assertEquals(opts2.fluentCfg.keyType, "KT2");
@@ -63,9 +67,10 @@ public class OptionsTest {
     Assert.assertEquals("ev1", ec2.getString("ep1"));
     Assert.assertEquals(3, ec2.getInt("ep2"));
 
-    List<ObserverSpecification> obsSpecs = conf.getObserverSpecifications();
+    List<org.apache.fluo.api.config.ObserverSpecification> obsSpecs =
+        conf.getObserverSpecifications();
     Assert.assertTrue(obsSpecs.size() == 2);
-    for (ObserverSpecification ospec : obsSpecs) {
+    for (org.apache.fluo.api.config.ObserverSpecification ospec : obsSpecs) {
       Assert.assertEquals(ExportObserver.class.getName(), ospec.getClassName());
       String qid = ospec.getConfiguration().getString("queueId");
       Assert.assertTrue(qid.equals("Q1") || qid.equals("Q2"));

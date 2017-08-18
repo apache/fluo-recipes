@@ -21,18 +21,18 @@ import java.util.Optional;
 import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
-import org.apache.fluo.recipes.core.map.Update;
-import org.apache.fluo.recipes.core.map.UpdateObserver;
 
 @Deprecated
 // TODO move to CombineQueue test when removing CFM
-public class WordCountObserver extends UpdateObserver<String, Long> {
+public class WordCountObserver extends
+    org.apache.fluo.recipes.core.map.UpdateObserver<String, Long> {
 
   @Override
-  public void updatingValues(TransactionBase tx, Iterator<Update<String, Long>> updates) {
+  public void updatingValues(TransactionBase tx,
+      Iterator<org.apache.fluo.recipes.core.map.Update<String, Long>> updates) {
 
     while (updates.hasNext()) {
-      Update<String, Long> update = updates.next();
+      org.apache.fluo.recipes.core.map.Update<String, Long> update = updates.next();
 
       Optional<Long> oldVal = update.getOldValue();
       Optional<Long> newVal = update.getNewValue();

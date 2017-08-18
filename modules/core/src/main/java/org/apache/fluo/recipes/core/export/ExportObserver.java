@@ -19,7 +19,6 @@ import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
-import org.apache.fluo.api.observer.AbstractObserver;
 import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
 
 /**
@@ -27,7 +26,7 @@ import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
  * @deprecated since 1.1.0
  */
 @Deprecated
-public class ExportObserver<K, V> extends AbstractObserver {
+public class ExportObserver<K, V> extends org.apache.fluo.api.observer.AbstractObserver {
 
   private ExportObserverImpl<K, V> eoi;
 
@@ -70,7 +69,6 @@ public class ExportObserver<K, V> extends AbstractObserver {
         return context;
       }
     });
-
 
     this.eoi =
         new ExportObserverImpl<K, V>(queueId, opts.fluentCfg, serializer, exporter::processExports);

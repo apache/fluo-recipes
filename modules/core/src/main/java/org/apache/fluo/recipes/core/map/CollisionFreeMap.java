@@ -28,7 +28,6 @@ import com.google.common.hash.Hashing;
 import org.apache.fluo.api.client.SnapshotBase;
 import org.apache.fluo.api.client.TransactionBase;
 import org.apache.fluo.api.config.FluoConfiguration;
-import org.apache.fluo.api.config.ObserverSpecification;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Bytes.BytesBuilder;
@@ -50,6 +49,7 @@ import org.apache.fluo.recipes.core.serialization.SimpleSerializer;
  * @since 1.0.0
  * @deprecated since 1.1.0 use {@link CombineQueue}
  */
+@Deprecated
 public class CollisionFreeMap<K, V> {
 
   private Bytes updatePrefix;
@@ -391,8 +391,8 @@ public class CollisionFreeMap<K, V> {
 
     opts.save(fluoConfig.getAppConfiguration());
 
-    fluoConfig.addObserver(new ObserverSpecification(CollisionFreeMapObserver.class.getName(),
-        ImmutableMap.of("mapId", opts.mapId)));
+    fluoConfig.addObserver(new org.apache.fluo.api.config.ObserverSpecification(
+        CollisionFreeMapObserver.class.getName(), ImmutableMap.of("mapId", opts.mapId)));
   }
 
   /**

@@ -25,8 +25,6 @@ import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.RowColumn;
 import org.apache.fluo.recipes.accumulo.export.function.AccumuloTranslator;
-import org.apache.fluo.recipes.core.export.ExportQueue.Options;
-import org.apache.fluo.recipes.core.export.Exporter;
 import org.apache.fluo.recipes.core.export.SequencedExport;
 
 /**
@@ -39,11 +37,13 @@ import org.apache.fluo.recipes.core.export.SequencedExport;
  *             {@link AccumuloTranslator}
  */
 @Deprecated
-public abstract class AccumuloExporter<K, V> extends Exporter<K, V> {
+public abstract class AccumuloExporter<K, V> extends
+    org.apache.fluo.recipes.core.export.Exporter<K, V> {
 
   /**
    * Use this to configure the Accumulo table where an AccumuloExporter's mutations will be written.
-   * Create and pass to {@link Options#setExporterConfiguration(SimpleConfiguration)}
+   * Create and pass to
+   * {@link org.apache.fluo.recipes.core.export.ExportQueue.Options#setExporterConfiguration(SimpleConfiguration)}
    *
    * @since 1.0.0
    */
@@ -64,7 +64,7 @@ public abstract class AccumuloExporter<K, V> extends Exporter<K, V> {
   private org.apache.fluo.recipes.accumulo.export.function.AccumuloExporter<K, V> accumuloWriter;
 
   @Override
-  public void init(Exporter.Context context) throws Exception {
+  public void init(org.apache.fluo.recipes.core.export.Exporter.Context context) throws Exception {
     SimpleConfiguration sc = context.getExporterConfiguration();
     String instanceName = sc.getString("instanceName");
     String zookeepers = sc.getString("zookeepers");
