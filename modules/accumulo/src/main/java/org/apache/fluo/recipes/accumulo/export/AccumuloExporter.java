@@ -28,8 +28,9 @@ import org.apache.fluo.recipes.accumulo.export.function.AccumuloTranslator;
 import org.apache.fluo.recipes.core.export.SequencedExport;
 
 /**
- * An Accumulo-specific {@link Exporter} that writes mutations to Accumulo. For an overview of how
- * to use this, see the project level documentation for exporting to Accumulo.
+ * An Accumulo-specific {@link org.apache.fluo.recipes.core.export.Exporter} that writes mutations
+ * to Accumulo. For an overview of how to use this, see the project level documentation for
+ * exporting to Accumulo.
  *
  * @since 1.0.0
  * @deprecated since 1.1.0, replaced by
