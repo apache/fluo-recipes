@@ -22,8 +22,8 @@ limitations under the License.
 If you have [Git], [Maven], and [Java][java] (version 8+) installed, run these commands to build
 Fluo:
 
-    git clone https://github.com/apache/fluo.git
-    cd fluo
+    git clone https://github.com/apache/fluo-recipes.git
+    cd fluo-recipes
     mvn package
 
 ## Testing Fluo Recipes
@@ -37,7 +37,7 @@ Fluo has a test suite that consists of the following:
 ## Pull Request
 
 Before making a pull request please attempt to run `mvn verify`.  If it fails and you are not sure 
-why, it's OK to go ahead make the pull request.
+why, it's OK to go ahead and make the pull request.
 
 ## See Also
 
