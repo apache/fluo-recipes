@@ -46,9 +46,8 @@ public class ExportObserver<K, V> extends org.apache.fluo.api.observer.AbstractO
     // TODO defer loading classes... so that not done during fluo init
     // TODO move class loading to centralized place... also attempt to check type params
     @SuppressWarnings("rawtypes")
-    Exporter exporter =
-        getClass().getClassLoader().loadClass(opts.fluentCfg.exporterType)
-            .asSubclass(Exporter.class).newInstance();
+    Exporter exporter = getClass().getClassLoader().loadClass(opts.fluentCfg.exporterType)
+        .asSubclass(Exporter.class).newInstance();
 
     SimpleSerializer serializer = SimpleSerializer.getInstance(context.getAppConfiguration());
 

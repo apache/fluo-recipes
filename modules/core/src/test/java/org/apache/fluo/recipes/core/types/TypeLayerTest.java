@@ -38,9 +38,8 @@ public class TypeLayerTest {
 
     TypedTransactionBase ttx = tl.wrap(tt);
 
-    Map<Column, Value> results =
-        ttx.get().row("r2")
-            .columns(ImmutableSet.of(new Column("cf2", "6"), new Column("cf2", "7")));
+    Map<Column, Value> results = ttx.get().row("r2")
+        .columns(ImmutableSet.of(new Column("cf2", "6"), new Column("cf2", "7")));
 
     Assert.assertNull(results.get(new Column("cf2", "6")).toInteger());
     Assert.assertEquals(0, results.get(new Column("cf2", "6")).toInteger(0));
@@ -49,12 +48,8 @@ public class TypeLayerTest {
 
     Assert.assertEquals(1, results.size());
 
-    results =
-        ttx.get()
-            .row("r2")
-            .columns(
-                ImmutableSet.of(new Column("cf2", "6"), new Column("cf2", "7"), new Column("cf2",
-                    "8")));
+    results = ttx.get().row("r2").columns(
+        ImmutableSet.of(new Column("cf2", "6"), new Column("cf2", "7"), new Column("cf2", "8")));
 
     Assert.assertNull(results.get(new Column("cf2", "6")).toInteger());
     Assert.assertEquals(0, results.get(new Column("cf2", "6")).toInteger(0));
@@ -66,9 +61,8 @@ public class TypeLayerTest {
     Assert.assertEquals(2, results.size());
 
     // test var args
-    Map<Column, Value> results2 =
-        ttx.get().row("r2")
-            .columns(new Column("cf2", "6"), new Column("cf2", "7"), new Column("cf2", "8"));
+    Map<Column, Value> results2 = ttx.get().row("r2").columns(new Column("cf2", "6"),
+        new Column("cf2", "7"), new Column("cf2", "8"));
     Assert.assertEquals(results, results2);
   }
 
@@ -82,31 +76,28 @@ public class TypeLayerTest {
 
     Assert.assertNull(ttx.get().row("r1").fam("cf1").qual("cq1").toString());
     Assert.assertEquals("v1", ttx.get().row("r1").fam("cf1").qual("cq1").vis("A").toString());
-    Assert.assertEquals("v1", ttx.get().row("r1").fam("cf1").qual("cq1").vis("A".getBytes())
-        .toString());
-    Assert.assertEquals("v1", ttx.get().row("r1").fam("cf1").qual("cq1").vis(Bytes.of("A"))
-        .toString());
+    Assert.assertEquals("v1",
+        ttx.get().row("r1").fam("cf1").qual("cq1").vis("A".getBytes()).toString());
+    Assert.assertEquals("v1",
+        ttx.get().row("r1").fam("cf1").qual("cq1").vis(Bytes.of("A")).toString());
     Assert.assertEquals("v1",
         ttx.get().row("r1").fam("cf1").qual("cq1").vis(ByteBuffer.wrap("A".getBytes())).toString());
 
     Assert.assertNull("v1", ttx.get().row("r1").fam("cf1").qual("cq1").vis("A&B").toString());
-    Assert.assertNull("v1", ttx.get().row("r1").fam("cf1").qual("cq1").vis("A&B".getBytes())
-        .toString());
-    Assert.assertNull("v1", ttx.get().row("r1").fam("cf1").qual("cq1").vis(Bytes.of("A&B"))
-        .toString());
     Assert.assertNull("v1",
-        ttx.get().row("r1").fam("cf1").qual("cq1").vis(ByteBuffer.wrap("A&B".getBytes()))
-            .toString());
+        ttx.get().row("r1").fam("cf1").qual("cq1").vis("A&B".getBytes()).toString());
+    Assert.assertNull("v1",
+        ttx.get().row("r1").fam("cf1").qual("cq1").vis(Bytes.of("A&B")).toString());
+    Assert.assertNull("v1", ttx.get().row("r1").fam("cf1").qual("cq1")
+        .vis(ByteBuffer.wrap("A&B".getBytes())).toString());
 
     Assert.assertEquals("v3", ttx.get().row("r1").fam("cf1").qual("cq1").vis("A&B").toString("v3"));
-    Assert.assertEquals("v3", ttx.get().row("r1").fam("cf1").qual("cq1").vis("A&B".getBytes())
-        .toString("v3"));
-    Assert.assertEquals("v3", ttx.get().row("r1").fam("cf1").qual("cq1").vis(Bytes.of("A&B"))
-        .toString("v3"));
-    Assert.assertEquals(
-        "v3",
-        ttx.get().row("r1").fam("cf1").qual("cq1").vis(ByteBuffer.wrap("A&B".getBytes()))
-            .toString("v3"));
+    Assert.assertEquals("v3",
+        ttx.get().row("r1").fam("cf1").qual("cq1").vis("A&B".getBytes()).toString("v3"));
+    Assert.assertEquals("v3",
+        ttx.get().row("r1").fam("cf1").qual("cq1").vis(Bytes.of("A&B")).toString("v3"));
+    Assert.assertEquals("v3", ttx.get().row("r1").fam("cf1").qual("cq1")
+        .vis(ByteBuffer.wrap("A&B".getBytes())).toString("v3"));
 
     ttx.mutate().row("r1").fam("cf1").qual("cq1").vis("A&B").set(3);
     ttx.mutate().row("r1").fam("cf1").qual("cq1").vis("A&C".getBytes()).set(4);
@@ -134,8 +125,8 @@ public class TypeLayerTest {
   public void testBuildColumn() {
     TypeLayer tl = new TypeLayer(new StringEncoder());
 
-    Assert.assertEquals(new Column("f0", "q0"), tl.bc().fam("f0".getBytes()).qual("q0".getBytes())
-        .vis());
+    Assert.assertEquals(new Column("f0", "q0"),
+        tl.bc().fam("f0".getBytes()).qual("q0".getBytes()).vis());
     Assert.assertEquals(new Column("f0", "q0"), tl.bc().fam("f0").qual("q0").vis());
     Assert.assertEquals(new Column("5", "7"), tl.bc().fam(5).qual(7).vis());
     Assert.assertEquals(new Column("5", "7"), tl.bc().fam(5l).qual(7l).vis());
@@ -156,10 +147,9 @@ public class TypeLayerTest {
   public void testRead() throws Exception {
     TypeLayer tl = new TypeLayer(new StringEncoder());
 
-    MockSnapshot ms =
-        new MockSnapshot("r1,cf1:cq1,v1", "r1,cf1:cq2,v2", "r1,cf1:cq3,9", "r2,cf2:7,12",
-            "r2,cf2:8,13", "13,9:17,20", "13,9:18,20", "13,9:19,20", "13,9:20,20",
-            "r3,cf3:cq3,28.195", "r4,cf4:cq4,true");
+    MockSnapshot ms = new MockSnapshot("r1,cf1:cq1,v1", "r1,cf1:cq2,v2", "r1,cf1:cq3,9",
+        "r2,cf2:7,12", "r2,cf2:8,13", "13,9:17,20", "13,9:18,20", "13,9:19,20", "13,9:20,20",
+        "r3,cf3:cq3,28.195", "r4,cf4:cq4,true");
 
     TypedSnapshot tts = tl.wrap(ms);
 
@@ -182,17 +172,14 @@ public class TypeLayerTest {
     Assert.assertEquals("13", new String(tts.get().row("r2").fam("cf2").qual(8).toBytes()));
     Assert.assertEquals("13",
         new String(tts.get().row("r2").fam("cf2").qual(8).toBytes("14".getBytes())));
-    Assert
-        .assertEquals("13", new String(tts.get().row("r2").col(new Column("cf2", "8")).toBytes()));
+    Assert.assertEquals("13",
+        new String(tts.get().row("r2").col(new Column("cf2", "8")).toBytes()));
     Assert.assertEquals("13",
         new String(tts.get().row("r2").col(new Column("cf2", "8")).toBytes("14".getBytes())));
     Assert.assertEquals("13",
         Bytes.of(tts.get().row("r2").col(new Column("cf2", "8")).toByteBuffer()).toString());
-    Assert.assertEquals(
-        "13",
-        Bytes.of(
-            tts.get().row("r2").col(new Column("cf2", "8"))
-                .toByteBuffer(ByteBuffer.wrap("14".getBytes()))).toString());
+    Assert.assertEquals("13", Bytes.of(tts.get().row("r2").col(new Column("cf2", "8"))
+        .toByteBuffer(ByteBuffer.wrap("14".getBytes()))).toString());
 
     // test non-existent
     Assert.assertNull(tts.get().row("r2").fam("cf3").qual(8).toInteger());
@@ -208,11 +195,8 @@ public class TypeLayerTest {
     Assert.assertEquals("14",
         new String(tts.get().row("r2").col(new Column("cf3", "8")).toBytes("14".getBytes())));
     Assert.assertNull(tts.get().row("r2").col(new Column("cf3", "8")).toByteBuffer());
-    Assert.assertEquals(
-        "14",
-        Bytes.of(
-            tts.get().row("r2").col(new Column("cf3", "8"))
-                .toByteBuffer(ByteBuffer.wrap("14".getBytes()))).toString());
+    Assert.assertEquals("14", Bytes.of(tts.get().row("r2").col(new Column("cf3", "8"))
+        .toByteBuffer(ByteBuffer.wrap("14".getBytes()))).toString());
 
     // test float & double
     Assert.assertEquals((Float) 28.195f, tts.get().row("r3").fam("cf3").qual("cq3").toFloat());
@@ -231,24 +215,24 @@ public class TypeLayerTest {
     Assert.assertEquals("20", tts.get().row(13l).fam("9").qual("17").toString());
     Assert.assertEquals("20", tts.get().row("13").fam("9").qual("17").toString());
     Assert.assertEquals("20", tts.get().row("13".getBytes()).fam("9").qual("17").toString());
-    Assert.assertEquals("20", tts.get().row(ByteBuffer.wrap("13".getBytes())).fam("9").qual("17")
-        .toString());
+    Assert.assertEquals("20",
+        tts.get().row(ByteBuffer.wrap("13".getBytes())).fam("9").qual("17").toString());
 
     // try different types for cf
     Assert.assertEquals("20", tts.get().row("13").fam(9).qual("17").toString());
     Assert.assertEquals("20", tts.get().row("13").fam(9l).qual("17").toString());
     Assert.assertEquals("20", tts.get().row("13").fam("9").qual("17").toString());
     Assert.assertEquals("20", tts.get().row("13").fam("9".getBytes()).qual("17").toString());
-    Assert.assertEquals("20", tts.get().row("13").fam(ByteBuffer.wrap("9".getBytes())).qual("17")
-        .toString());
+    Assert.assertEquals("20",
+        tts.get().row("13").fam(ByteBuffer.wrap("9".getBytes())).qual("17").toString());
 
     // try different types for cq
     Assert.assertEquals("20", tts.get().row("13").fam("9").qual("17").toString());
     Assert.assertEquals("20", tts.get().row("13").fam("9").qual(17l).toString());
     Assert.assertEquals("20", tts.get().row("13").fam("9").qual(17).toString());
     Assert.assertEquals("20", tts.get().row("13").fam("9").qual("17".getBytes()).toString());
-    Assert.assertEquals("20", tts.get().row("13").fam("9").qual(ByteBuffer.wrap("17".getBytes()))
-        .toString());
+    Assert.assertEquals("20",
+        tts.get().row("13").fam("9").qual(ByteBuffer.wrap("17".getBytes())).toString());
 
     ms.close();
     tts.close();
@@ -275,8 +259,8 @@ public class TypeLayerTest {
     // increment non existent
     Assert.assertEquals(0, ttx.mutate().row("13").col(new Column("9", "22")).increment(6));
     // increment non existent
-    Assert.assertEquals(0, ttx.mutate().row("13").fam("9").qual(ByteBuffer.wrap("23".getBytes()))
-        .increment(7));
+    Assert.assertEquals(0,
+        ttx.mutate().row("13").fam("9").qual(ByteBuffer.wrap("23".getBytes())).increment(7));
 
     Assert.assertEquals(MockTransactionBase.toRCVM("13,9:17,21", "13,9:18,32", "13,9:19,43",
         "13,9:20,54", "13,9:21,5", "13,9:22,6", "13,9:23,7"), tt.setData);
@@ -292,8 +276,8 @@ public class TypeLayerTest {
     // increment non existent
     Assert.assertEquals(0l, ttx.mutate().row("13").col(new Column("9", "22")).increment(6l));
     // increment non existent
-    Assert.assertEquals(0l, ttx.mutate().row("13").fam("9").qual(ByteBuffer.wrap("23".getBytes()))
-        .increment(7l));
+    Assert.assertEquals(0l,
+        ttx.mutate().row("13").fam("9").qual(ByteBuffer.wrap("23".getBytes())).increment(7l));
 
     Assert.assertEquals(MockTransactionBase.toRCVM("13,9:17,21", "13,9:18,32", "13,9:19,43",
         "13,9:20,54", "13,9:21,5", "13,9:22,6", "13,9:23,7"), tt.setData);
@@ -312,9 +296,10 @@ public class TypeLayerTest {
     ttx.mutate().row("13").fam("9").qual("24").set(-6.135d);
     ttx.mutate().row("13").fam("9").qual("25").set(false);
 
-    Assert.assertEquals(MockTransactionBase.toRCVM("13,9:16,", "13,9:17,3", "13,9:18,4",
-        "13,9:19,5", "13,9:20,6", "13,9:21,7", "13,9:22,8", "13,9:23,2.54", "13,9:24,-6.135",
-        "13,9:25,false"), tt.setData);
+    Assert.assertEquals(
+        MockTransactionBase.toRCVM("13,9:16,", "13,9:17,3", "13,9:18,4", "13,9:19,5", "13,9:20,6",
+            "13,9:21,7", "13,9:22,8", "13,9:23,2.54", "13,9:24,-6.135", "13,9:25,false"),
+        tt.setData);
     tt.setData.clear();
 
     // test deleting data
@@ -325,9 +310,9 @@ public class TypeLayerTest {
     ttx.mutate().row("13").col(new Column("9", "21")).delete();
     ttx.mutate().row("13").fam("9").qual(ByteBuffer.wrap("22".getBytes())).delete();
 
-    Assert
-        .assertEquals(MockTransactionBase.toRCM("13,9:17", "13,9:18", "13,9:19", "13,9:20",
-            "13,9:21", "13,9:22"), tt.deletes);
+    Assert.assertEquals(
+        MockTransactionBase.toRCM("13,9:17", "13,9:18", "13,9:19", "13,9:20", "13,9:21", "13,9:22"),
+        tt.deletes);
     tt.deletes.clear();
     Assert.assertEquals(0, tt.setData.size());
     Assert.assertEquals(0, tt.weakNotifications.size());
@@ -340,9 +325,9 @@ public class TypeLayerTest {
     ttx.mutate().row("13").col(new Column("9", "21")).weaklyNotify();
     ttx.mutate().row("13").fam("9").qual(ByteBuffer.wrap("22".getBytes())).weaklyNotify();
 
-    Assert
-        .assertEquals(MockTransactionBase.toRCM("13,9:17", "13,9:18", "13,9:19", "13,9:20",
-            "13,9:21", "13,9:22"), tt.weakNotifications);
+    Assert.assertEquals(
+        MockTransactionBase.toRCM("13,9:17", "13,9:18", "13,9:19", "13,9:20", "13,9:21", "13,9:22"),
+        tt.weakNotifications);
     tt.weakNotifications.clear();
     Assert.assertEquals(0, tt.setData.size());
     Assert.assertEquals(0, tt.deletes.size());
@@ -352,9 +337,8 @@ public class TypeLayerTest {
   public void testMultiRow() throws Exception {
     TypeLayer tl = new TypeLayer(new StringEncoder());
 
-    MockTransactionBase tt =
-        new MockTransactionBase("11,cf1:cq1,1", "11,cf1:cq2,2", "12,cf1:cq1,3", "12,cf1:cq2,4",
-            "13,cf1:cq1,5", "13,cf1:cq2,6");
+    MockTransactionBase tt = new MockTransactionBase("11,cf1:cq1,1", "11,cf1:cq2,2", "12,cf1:cq1,3",
+        "12,cf1:cq2,4", "13,cf1:cq1,5", "13,cf1:cq2,6");
 
     TypedTransactionBase ttx = tl.wrap(tt);
 
@@ -422,12 +406,11 @@ public class TypeLayerTest {
     Assert.assertEquals((Long) (1l), map4.get(11).get(c1).toLong());
     Assert.assertEquals(5l, map4.get(13).get(c1).toLong(6));
 
-    Map<Integer, Map<Column, Value>> map5 =
-        ttx.get().rowsBytes(Arrays.asList("11".getBytes(), "13".getBytes())).columns(c1)
-            .toIntegerMap();
+    Map<Integer, Map<Column, Value>> map5 = ttx.get()
+        .rowsBytes(Arrays.asList("11".getBytes(), "13".getBytes())).columns(c1).toIntegerMap();
 
-    Assert.assertEquals(map5, ttx.get().rowsBytes("11".getBytes(), "13".getBytes()).columns(c1)
-        .toIntegerMap());
+    Assert.assertEquals(map5,
+        ttx.get().rowsBytes("11".getBytes(), "13".getBytes()).columns(c1).toIntegerMap());
 
     Assert.assertEquals(2, map5.size());
     Assert.assertEquals(1, map5.get(11).size());
@@ -435,14 +418,12 @@ public class TypeLayerTest {
     Assert.assertEquals((Long) (1l), map5.get(11).get(c1).toLong());
     Assert.assertEquals(5l, map5.get(13).get(c1).toLong(6));
 
-    Map<Integer, Map<Column, Value>> map6 =
-        ttx.get()
-            .rowsByteBuffers(
-                Arrays.asList(ByteBuffer.wrap("11".getBytes()), ByteBuffer.wrap("13".getBytes())))
-            .columns(c1).toIntegerMap();
+    Map<Integer, Map<Column, Value>> map6 = ttx.get()
+        .rowsByteBuffers(
+            Arrays.asList(ByteBuffer.wrap("11".getBytes()), ByteBuffer.wrap("13".getBytes())))
+        .columns(c1).toIntegerMap();
 
-    Assert.assertEquals(
-        map6,
+    Assert.assertEquals(map6,
         ttx.get()
             .rowsByteBuffers(ByteBuffer.wrap("11".getBytes()), ByteBuffer.wrap("13".getBytes()))
             .columns(c1).toIntegerMap());
@@ -481,9 +462,8 @@ public class TypeLayerTest {
     Assert.assertEquals(MockTransactionBase.toRCVM("r6,cf2:7,3"), tt.setData);
     tt.setData.clear();
 
-    Map<Bytes, Map<Column, Bytes>> map2 =
-        ttx.get(ImmutableSet.of(Bytes.of("r1"), Bytes.of("r2")),
-            ImmutableSet.of(new Column("cf1", "cq1"), new Column("cf2", "8")));
+    Map<Bytes, Map<Column, Bytes>> map2 = ttx.get(ImmutableSet.of(Bytes.of("r1"), Bytes.of("r2")),
+        ImmutableSet.of(new Column("cf1", "cq1"), new Column("cf2", "8")));
     Assert.assertEquals(MockTransactionBase.toRCVM("r1,cf1:cq1,v1", "r2,cf2:8,13"), map2);
 
     ttx.delete(Bytes.of("r6"), new Column("cf2", "7"));

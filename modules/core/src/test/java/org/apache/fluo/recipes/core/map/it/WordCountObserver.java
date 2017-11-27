@@ -24,8 +24,8 @@ import org.apache.fluo.api.data.Column;
 
 @Deprecated
 // TODO move to CombineQueue test when removing CFM
-public class WordCountObserver extends
-    org.apache.fluo.recipes.core.map.UpdateObserver<String, Long> {
+public class WordCountObserver
+    extends org.apache.fluo.recipes.core.map.UpdateObserver<String, Long> {
 
   @Override
   public void updatingValues(TransactionBase tx,

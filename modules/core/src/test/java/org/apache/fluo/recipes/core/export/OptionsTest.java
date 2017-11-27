@@ -32,11 +32,11 @@ public class OptionsTest {
     ec1.setProperty("ep1", "ev1");
     ec1.setProperty("ep2", 3L);
 
-    ExportQueue.configure(conf, new org.apache.fluo.recipes.core.export.ExportQueue.Options("Q1",
-        "ET", "KT", "VT", 100));
-    ExportQueue.configure(conf, new org.apache.fluo.recipes.core.export.ExportQueue.Options("Q2",
-        "ET2", "KT2", "VT2", 200).setBucketsPerTablet(20).setBufferSize(1000000)
-        .setExporterConfiguration(ec1));
+    ExportQueue.configure(conf,
+        new org.apache.fluo.recipes.core.export.ExportQueue.Options("Q1", "ET", "KT", "VT", 100));
+    ExportQueue.configure(conf,
+        new org.apache.fluo.recipes.core.export.ExportQueue.Options("Q2", "ET2", "KT2", "VT2", 200)
+            .setBucketsPerTablet(20).setBufferSize(1000000).setExporterConfiguration(ec1));
 
     org.apache.fluo.recipes.core.export.ExportQueue.Options opts1 =
         new org.apache.fluo.recipes.core.export.ExportQueue.Options("Q1",

@@ -59,9 +59,8 @@ class AccumuloWriter {
 
     ExportTask(String instanceName, String zookeepers, String user, String password, String table)
         throws TableNotFoundException, AccumuloException, AccumuloSecurityException {
-      ZooKeeperInstance zki =
-          new ZooKeeperInstance(new ClientConfiguration().withInstance(instanceName).withZkHosts(
-              zookeepers));
+      ZooKeeperInstance zki = new ZooKeeperInstance(
+          new ClientConfiguration().withInstance(instanceName).withZkHosts(zookeepers));
 
       // TODO need to close batch writer
       Connector conn = zki.getConnector(user, new PasswordToken(password));

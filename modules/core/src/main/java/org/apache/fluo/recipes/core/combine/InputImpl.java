@@ -36,7 +36,8 @@ class InputImpl<K, V> implements Combiner.Input<K, V> {
     this.valuesCollection = serializedValues;
   }
 
-  InputImpl(K k, Function<Bytes, V> valDeser, Bytes currentValue, Collection<Bytes> serializedValues) {
+  InputImpl(K k, Function<Bytes, V> valDeser, Bytes currentValue,
+      Collection<Bytes> serializedValues) {
     this(k, valDeser, serializedValues);
     this.currentValue = currentValue;
   }

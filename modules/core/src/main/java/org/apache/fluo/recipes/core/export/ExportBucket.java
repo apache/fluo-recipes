@@ -111,9 +111,8 @@ class ExportBucket {
   }
 
   public void add(long seq, byte[] key, byte[] value) {
-    BytesBuilder builder =
-        Bytes.builder(bucketRow.length() + 1 + key.length + 8).append(bucketRow).append(':')
-            .append(key);
+    BytesBuilder builder = Bytes.builder(bucketRow.length() + 1 + key.length + 8).append(bucketRow)
+        .append(':').append(key);
     encSeq(builder, seq);
     ttx.set(builder.toBytes(), EXPORT_COL, Bytes.of(value));
   }
@@ -133,9 +132,8 @@ class ExportBucket {
     Span span;
     if (continueRow != null) {
       Span tmpSpan = Span.prefix(bucketRow);
-      Span nextSpan =
-          new Span(new RowColumn(continueRow, EXPORT_COL), true, tmpSpan.getEnd(),
-              tmpSpan.isEndInclusive());
+      Span nextSpan = new Span(new RowColumn(continueRow, EXPORT_COL), true, tmpSpan.getEnd(),
+          tmpSpan.isEndInclusive());
       span = nextSpan;
     } else {
       span = Span.prefix(bucketRow);
@@ -191,9 +189,8 @@ class ExportBucket {
   }
 
   public void setContinueRow(ExportEntry ee) {
-    BytesBuilder builder =
-        Bytes.builder(bucketRow.length() + 1 + ee.key.length + 8).append(bucketRow).append(':')
-            .append(ee.key);
+    BytesBuilder builder = Bytes.builder(bucketRow.length() + 1 + ee.key.length + 8)
+        .append(bucketRow).append(':').append(ee.key);
     encSeq(builder, ee.seq);
     Bytes nextRow = builder.toBytes();
     ttx.set(getMinimalRow(), NEXT_COL, nextRow);

@@ -58,8 +58,8 @@ class FluentConfigurator implements FluentArg1, FluentArg2, FluentArg3, FluentOp
 
   @Override
   public FluentOptions bucketsPerTablet(int bucketsPerTablet) {
-    Preconditions.checkArgument(bucketsPerTablet > 0, "bucketsPerTablet is <= 0 : "
-        + bucketsPerTablet);
+    Preconditions.checkArgument(bucketsPerTablet > 0,
+        "bucketsPerTablet is <= 0 : " + bucketsPerTablet);
     this.bucketsPerTablet = bucketsPerTablet;
     return this;
   }
@@ -84,8 +84,8 @@ class FluentConfigurator implements FluentArg1, FluentArg2, FluentArg3, FluentOp
     Bytes exportRangeStart = Bytes.of(queueId + ExportQueue.RANGE_BEGIN);
     Bytes exportRangeStop = Bytes.of(queueId + ExportQueue.RANGE_END);
 
-    new TransientRegistry(appConfig).addTransientRange("exportQueue." + queueId, new RowRange(
-        exportRangeStart, exportRangeStop));
+    new TransientRegistry(appConfig).addTransientRange("exportQueue." + queueId,
+        new RowRange(exportRangeStart, exportRangeStop));
 
     TableOptimizations.registerOptimization(appConfig, queueId, Optimizer.class);
   }

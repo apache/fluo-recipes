@@ -70,9 +70,8 @@ public class TransientRegistry {
       String key = keys.next();
       String val = appConfig.getString(key);
       String[] sa = val.split(":");
-      RowRange rowRange =
-          new RowRange(Bytes.of(DatatypeConverter.parseHexBinary(sa[0])),
-              Bytes.of(DatatypeConverter.parseHexBinary(sa[1])));
+      RowRange rowRange = new RowRange(Bytes.of(DatatypeConverter.parseHexBinary(sa[0])),
+          Bytes.of(DatatypeConverter.parseHexBinary(sa[1])));
       ranges.add(rowRange);
     }
     return ranges;

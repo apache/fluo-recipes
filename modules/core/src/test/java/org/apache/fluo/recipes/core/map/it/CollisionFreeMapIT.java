@@ -58,8 +58,8 @@ public class CollisionFreeMapIT {
     props.setWorkerThreads(20);
     props.setMiniDataDir("target/mini");
 
-    props.addObserver(new org.apache.fluo.api.config.ObserverSpecification(DocumentObserver.class
-        .getName()));
+    props.addObserver(
+        new org.apache.fluo.api.config.ObserverSpecification(DocumentObserver.class.getName()));
 
     SimpleSerializer.setSerializer(props, TestSerializer.class);
 
@@ -69,9 +69,8 @@ public class CollisionFreeMapIT {
 
     miniFluo = FluoFactory.newMiniFluo(props);
 
-    wcMap =
-        org.apache.fluo.recipes.core.map.CollisionFreeMap.getInstance(MAP_ID,
-            props.getAppConfiguration());
+    wcMap = org.apache.fluo.recipes.core.map.CollisionFreeMap.getInstance(MAP_ID,
+        props.getAppConfiguration());
   }
 
   @After

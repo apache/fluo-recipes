@@ -191,9 +191,8 @@ public class CombineQueueTreeIT {
     Map<String, Long> ret = new HashMap<>();
     m.forEach((k, v) -> {
       String[] fields = k.split(":");
-      String nk =
-          (useX ? fields[0] : "") + (useY ? ((useX ? ":" : "") + fields[1]) : "")
-              + (useTime ? ((useX || useY ? ":" : "") + fields[2]) : "");
+      String nk = (useX ? fields[0] : "") + (useY ? ((useX ? ":" : "") + fields[1]) : "")
+          + (useTime ? ((useX || useY ? ":" : "") + fields[2]) : "");
 
       ret.merge(nk, v, Long::sum);
     });
@@ -204,7 +203,8 @@ public class CombineQueueTreeIT {
     Map<String, Long> ret = new HashMap<>();
 
     String prefix = "inv:" + rollupFields + ":";
-    for (RowColumnValue rcv : snap.scanner().over(Span.prefix("inv:" + rollupFields + ":")).build()) {
+    for (RowColumnValue rcv : snap.scanner().over(Span.prefix("inv:" + rollupFields + ":"))
+        .build()) {
       String row = rcv.getsRow();
       long count = Long.valueOf(row.substring(prefix.length(), row.length()));
       Assert.assertNull(ret.put(rcv.getColumn().getsQualifier(), count));

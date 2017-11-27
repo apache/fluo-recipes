@@ -109,9 +109,8 @@ public class CollisionFreeMap<K, V> {
         (Combiner<K, V>) getClass().getClassLoader().loadClass(opts.combinerType).newInstance();
     this.serializer = serializer;
     if (opts.updateObserverType != null) {
-      this.updateObserver =
-          getClass().getClassLoader().loadClass(opts.updateObserverType)
-              .asSubclass(UpdateObserver.class).newInstance();
+      this.updateObserver = getClass().getClassLoader().loadClass(opts.updateObserverType)
+          .asSubclass(UpdateObserver.class).newInstance();
     } else {
       this.updateObserver = new NullUpdateObserver<>();
     }
@@ -122,8 +121,8 @@ public class CollisionFreeMap<K, V> {
     // code is a round about way of using that copied code, with having to make anything in
     // CombineQueue public.
     CfmRegistry obsRegistry = new CfmRegistry();
-    combineQ.registerObserver(obsRegistry, i -> this.combiner.combine(i.getKey(), i.iterator()), (
-        tx, changes) -> this.updateObserver.updatingValues(tx, Update.transform(changes)));
+    combineQ.registerObserver(obsRegistry, i -> this.combiner.combine(i.getKey(), i.iterator()),
+        (tx, changes) -> this.updateObserver.updatingValues(tx, Update.transform(changes)));
     combineQueueObserver = obsRegistry.observer;
   }
 
@@ -347,8 +346,8 @@ public class CollisionFreeMap<K, V> {
      * generated when optimizing the Accumulo table.
      */
     public Options setBucketsPerTablet(int bucketsPerTablet) {
-      Preconditions.checkArgument(bucketsPerTablet > 0, "bucketsPerTablet is <= 0 : "
-          + bucketsPerTablet);
+      Preconditions.checkArgument(bucketsPerTablet > 0,
+          "bucketsPerTablet is <= 0 : " + bucketsPerTablet);
       this.bucketsPerTablet = bucketsPerTablet;
       return this;
     }
@@ -361,8 +360,8 @@ public class CollisionFreeMap<K, V> {
     public <K, V> Options(String mapId, Class<? extends Combiner<K, V>> combiner,
         Class<? extends UpdateObserver<K, V>> updateObserver, Class<K> keyType, Class<V> valueType,
         int buckets) {
-      this(mapId, combiner.getName(), updateObserver.getName(), keyType.getName(), valueType
-          .getName(), buckets);
+      this(mapId, combiner.getName(), updateObserver.getName(), keyType.getName(),
+          valueType.getName(), buckets);
     }
 
     void save(SimpleConfiguration appConfig) {

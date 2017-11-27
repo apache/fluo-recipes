@@ -56,8 +56,8 @@ public class KryoSimplerSerializer implements SimpleSerializer, Serializable {
   private KryoPool getPool() {
     Preconditions.checkState(factory != null || factoryType != null, "KryFactory not initialized");
     if (factory == null) {
-      return pools.computeIfAbsent(factoryType, ft -> new KryoPool.Builder(getFactory(ft))
-          .softReferences().build());
+      return pools.computeIfAbsent(factoryType,
+          ft -> new KryoPool.Builder(getFactory(ft)).softReferences().build());
     } else {
       return pools.computeIfAbsent(factory.getClass().getName(),
           ft -> new KryoPool.Builder(factory).softReferences().build());

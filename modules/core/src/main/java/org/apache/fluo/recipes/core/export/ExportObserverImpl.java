@@ -58,11 +58,9 @@ class ExportObserverImpl<K, V> implements Observer {
     Iterator<ExportEntry> input = bucket.getExportIterator(continueRow);
     MemLimitIterator memLimitIter = new MemLimitIterator(input, memLimit, 8 + queueId.length());
 
-    Iterator<SequencedExport<K, V>> exportIterator =
-        Iterators.transform(
-            memLimitIter,
-            ee -> new SequencedExport<>(serializer.deserialize(ee.key, keyType), serializer
-                .deserialize(ee.value, valType), ee.seq));
+    Iterator<SequencedExport<K, V>> exportIterator = Iterators.transform(memLimitIter,
+        ee -> new SequencedExport<>(serializer.deserialize(ee.key, keyType),
+            serializer.deserialize(ee.value, valType), ee.seq));
 
     exportIterator = Iterators.consumingIterator(exportIterator);
 

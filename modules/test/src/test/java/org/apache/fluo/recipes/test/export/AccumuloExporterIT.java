@@ -53,12 +53,12 @@ public class AccumuloExporterIT extends AccumuloExportITBase {
 
       ExportQueue<String, String> teq = ExportQueue.getInstance(QUEUE_ID, appCfg);
 
-      teq.registerObserver(obsRegistry, new AccumuloExporter<>(QUEUE_ID, appCfg, (export,
-          mutConsumer) -> {
-        Mutation m = new Mutation(export.getKey());
-        m.put("cf", "cq", export.getSequence(), export.getValue());
-        mutConsumer.accept(m);
-      }));
+      teq.registerObserver(obsRegistry,
+          new AccumuloExporter<>(QUEUE_ID, appCfg, (export, mutConsumer) -> {
+            Mutation m = new Mutation(export.getKey());
+            m.put("cf", "cq", export.getSequence(), export.getValue());
+            mutConsumer.accept(m);
+          }));
     }
 
   }
@@ -145,15 +145,15 @@ public class AccumuloExporterIT extends AccumuloExportITBase {
     }
   }
 
-  private void export(ExportQueue<String, String> teq, Transaction tx,
-      Map<String, String> expected, String k, String v) {
+  private void export(ExportQueue<String, String> teq, Transaction tx, Map<String, String> expected,
+      String k, String v) {
     teq.add(tx, k, v);
     expected.put(k, v);
   }
 
   private Collection<Text> getFluoSplits() throws Exception {
-    return getAccumuloConnector().tableOperations().listSplits(
-        getFluoConfiguration().getAccumuloTable());
+    return getAccumuloConnector().tableOperations()
+        .listSplits(getFluoConfiguration().getAccumuloTable());
   }
 
   private Map<String, String> getExports() throws Exception {

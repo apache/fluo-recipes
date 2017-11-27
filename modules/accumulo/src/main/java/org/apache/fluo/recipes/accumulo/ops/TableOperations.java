@@ -52,13 +52,12 @@ public class TableOperations {
 
   private static Connector getConnector(FluoConfiguration fluoConfig) throws Exception {
 
-    ZooKeeperInstance zki =
-        new ZooKeeperInstance(new ClientConfiguration().withInstance(
-            fluoConfig.getAccumuloInstance()).withZkHosts(fluoConfig.getAccumuloZookeepers()));
+    ZooKeeperInstance zki = new ZooKeeperInstance(
+        new ClientConfiguration().withInstance(fluoConfig.getAccumuloInstance())
+            .withZkHosts(fluoConfig.getAccumuloZookeepers()));
 
-    Connector conn =
-        zki.getConnector(fluoConfig.getAccumuloUser(),
-            new PasswordToken(fluoConfig.getAccumuloPassword()));
+    Connector conn = zki.getConnector(fluoConfig.getAccumuloUser(),
+        new PasswordToken(fluoConfig.getAccumuloPassword()));
     return conn;
   }
 
@@ -94,9 +93,8 @@ public class TableOperations {
         conn.tableOperations().setProperty(table, RGB_DEFAULT_PROP, "none");
         conn.tableOperations().setProperty(table, TABLE_BALANCER_PROP, RGB_CLASS);
       } catch (AccumuloException e) {
-        logger
-            .warn("Unable to setup regex balancer (this is expected to fail in Accumulo 1.6.X) : "
-                + e.getMessage());
+        logger.warn("Unable to setup regex balancer (this is expected to fail in Accumulo 1.6.X) : "
+            + e.getMessage());
         logger.debug("Unable to setup regex balancer (this is expected to fail in Accumulo 1.6.X)",
             e);
       }

@@ -43,13 +43,11 @@ public interface SimpleSerializer {
   }
 
   static SimpleSerializer getInstance(SimpleConfiguration appConfig) {
-    String serType =
-        appConfig.getString("recipes.serializer",
-            "org.apache.fluo.recipes.kryo.KryoSimplerSerializer");
+    String serType = appConfig.getString("recipes.serializer",
+        "org.apache.fluo.recipes.kryo.KryoSimplerSerializer");
     try {
-      SimpleSerializer simplerSer =
-          SimpleSerializer.class.getClassLoader().loadClass(serType)
-              .asSubclass(SimpleSerializer.class).newInstance();
+      SimpleSerializer simplerSer = SimpleSerializer.class.getClassLoader().loadClass(serType)
+          .asSubclass(SimpleSerializer.class).newInstance();
       simplerSer.init(appConfig);
       return simplerSer;
     } catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {

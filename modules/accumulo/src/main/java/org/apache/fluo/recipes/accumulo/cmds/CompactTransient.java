@@ -85,8 +85,8 @@ public class CompactTransient {
   public static void main(String[] args) throws Exception {
 
     if ((args.length == 1 && args[0].startsWith("-h")) || (args.length > 2)) {
-      System.out.println("Usage : " + CompactTransient.class.getName()
-          + " [<interval> [<multiplier>]]");
+      System.out
+          .println("Usage : " + CompactTransient.class.getName() + " [<interval> [<multiplier>]]");
 
       System.exit(-1);
     }

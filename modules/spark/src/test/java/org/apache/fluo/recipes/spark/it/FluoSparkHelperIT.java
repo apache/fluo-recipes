@@ -60,10 +60,10 @@ public class FluoSparkHelperIT extends AccumuloExportITBase {
     List<RowColumnValue> expected = getData();
     final String accumuloTable = "table1";
     getAccumuloConnector().tableOperations().create(accumuloTable);
-    fsh.bulkImportRcvToAccumulo(FluoSparkHelper.toPairRDD(ctx.parallelize(expected)),
-        accumuloTable, new FluoSparkHelper.BulkImportOptions());
-    Assert.assertTrue(FluoITHelper.verifyAccumuloTable(getAccumuloConnector(), accumuloTable,
-        expected));
+    fsh.bulkImportRcvToAccumulo(FluoSparkHelper.toPairRDD(ctx.parallelize(expected)), accumuloTable,
+        new FluoSparkHelper.BulkImportOptions());
+    Assert.assertTrue(
+        FluoITHelper.verifyAccumuloTable(getAccumuloConnector(), accumuloTable, expected));
   }
 
   @Test

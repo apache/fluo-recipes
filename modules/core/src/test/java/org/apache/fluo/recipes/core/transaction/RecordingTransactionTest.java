@@ -67,17 +67,17 @@ public class RecordingTransactionTest {
     List<LogEntry> entries = rtx.getTxLog().getLogEntries();
     Assert.assertEquals(4, entries.size());
     Assert.assertEquals("LogEntry{op=SET, row=r1, col=cf1  , value=v1}", entries.get(0).toString());
-    Assert.assertEquals("LogEntry{op=SET, row=r2, col=cf2 cq2 , value=v2}", entries.get(1)
-        .toString());
-    Assert
-        .assertEquals("LogEntry{op=DELETE, row=r3, col=cf3  , value=}", entries.get(2).toString());
+    Assert.assertEquals("LogEntry{op=SET, row=r2, col=cf2 cq2 , value=v2}",
+        entries.get(1).toString());
+    Assert.assertEquals("LogEntry{op=DELETE, row=r3, col=cf3  , value=}",
+        entries.get(2).toString());
     Assert.assertEquals("LogEntry{op=GET, row=r4, col=cf4  , value=v4}", entries.get(3).toString());
-    Assert.assertEquals("{r4 cf4  =v4}", rtx.getTxLog().getOperationMap(LogEntry.Operation.GET)
-        .toString());
-    Assert.assertEquals("{r1 cf1  =v1, r2 cf2 cq2 =v2}", new TreeMap<>(rtx.getTxLog()
-        .getOperationMap(LogEntry.Operation.SET)).toString());
-    Assert.assertEquals("{r3 cf3  =}", rtx.getTxLog().getOperationMap(LogEntry.Operation.DELETE)
-        .toString());
+    Assert.assertEquals("{r4 cf4  =v4}",
+        rtx.getTxLog().getOperationMap(LogEntry.Operation.GET).toString());
+    Assert.assertEquals("{r1 cf1  =v1, r2 cf2 cq2 =v2}",
+        new TreeMap<>(rtx.getTxLog().getOperationMap(LogEntry.Operation.SET)).toString());
+    Assert.assertEquals("{r3 cf3  =}",
+        rtx.getTxLog().getOperationMap(LogEntry.Operation.DELETE).toString());
   }
 
   @Test
@@ -87,10 +87,10 @@ public class RecordingTransactionTest {
     ttx.mutate().row("r6").fam("cf6").qual("cq6").set("1");
     List<LogEntry> entries = rtx.getTxLog().getLogEntries();
     Assert.assertEquals(2, entries.size());
-    Assert.assertEquals("LogEntry{op=SET, row=r5, col=cf5 cq5 , value=1}", entries.get(0)
-        .toString());
-    Assert.assertEquals("LogEntry{op=SET, row=r6, col=cf6 cq6 , value=1}", entries.get(1)
-        .toString());
+    Assert.assertEquals("LogEntry{op=SET, row=r5, col=cf5 cq5 , value=1}",
+        entries.get(0).toString());
+    Assert.assertEquals("LogEntry{op=SET, row=r6, col=cf6 cq6 , value=1}",
+        entries.get(1).toString());
   }
 
   @Test
@@ -102,10 +102,10 @@ public class RecordingTransactionTest {
     ttx.mutate().row("r3").fam("cfa").qual("cq3").set("3");
     List<LogEntry> entries = rtx.getTxLog().getLogEntries();
     Assert.assertEquals(2, entries.size());
-    Assert.assertEquals("LogEntry{op=SET, row=r1, col=cfa cq1 , value=1}", entries.get(0)
-        .toString());
-    Assert.assertEquals("LogEntry{op=SET, row=r3, col=cfa cq3 , value=3}", entries.get(1)
-        .toString());
+    Assert.assertEquals("LogEntry{op=SET, row=r1, col=cfa cq1 , value=1}",
+        entries.get(0).toString());
+    Assert.assertEquals("LogEntry{op=SET, row=r3, col=cfa cq3 , value=3}",
+        entries.get(1).toString());
   }
 
   @Test
@@ -150,8 +150,8 @@ public class RecordingTransactionTest {
 
   @Test
   public void testGetRows() {
-    expect(tx.get(Collections.emptyList(), Collections.emptySet())).andReturn(
-        Collections.emptyMap());
+    expect(tx.get(Collections.emptyList(), Collections.emptySet()))
+        .andReturn(Collections.emptyMap());
     replay(tx);
     Assert.assertEquals(Collections.emptyMap(),
         rtx.get(Collections.emptyList(), Collections.emptySet()));
@@ -180,8 +180,8 @@ public class RecordingTransactionTest {
     Assert.assertFalse(rtx.getTxLog().isEmpty());
     List<LogEntry> entries = rtx.getTxLog().getLogEntries();
     Assert.assertEquals(1, entries.size());
-    Assert.assertEquals("LogEntry{op=GET, row=r7, col=cf7 cq7 , value=v7}", entries.get(0)
-        .toString());
+    Assert.assertEquals("LogEntry{op=GET, row=r7, col=cf7 cq7 , value=v7}",
+        entries.get(0).toString());
 
     verify(tx, sb);
   }
@@ -194,8 +194,8 @@ public class RecordingTransactionTest {
     ScannerBuilder sb = mock(ScannerBuilder.class);
 
     expect(cs.getRow()).andReturn(Bytes.of("r7")).times(2);
-    expect(cs.iterator()).andReturn(
-        Iterators.singletonIterator(new ColumnValue(new Column("cf7", "cq7"), "v7")));
+    expect(cs.iterator())
+        .andReturn(Iterators.singletonIterator(new ColumnValue(new Column("cf7", "cq7"), "v7")));
     expect(rs.iterator()).andReturn(Iterators.singletonIterator(cs));
     expect(rsb.build()).andReturn(rs);
     expect(sb.byRow()).andReturn(rsb);
@@ -213,8 +213,8 @@ public class RecordingTransactionTest {
     Assert.assertEquals(new ColumnValue(new Column("cf7", "cq7"), "v7"), citer.next());
     List<LogEntry> entries = rtx.getTxLog().getLogEntries();
     Assert.assertEquals(1, entries.size());
-    Assert.assertEquals("LogEntry{op=GET, row=r7, col=cf7 cq7 , value=v7}", entries.get(0)
-        .toString());
+    Assert.assertEquals("LogEntry{op=GET, row=r7, col=cf7 cq7 , value=v7}",
+        entries.get(0).toString());
 
     verify(tx, sb, rsb, rs, cs);
   }

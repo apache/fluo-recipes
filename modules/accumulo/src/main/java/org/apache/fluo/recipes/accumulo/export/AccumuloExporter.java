@@ -38,8 +38,8 @@ import org.apache.fluo.recipes.core.export.SequencedExport;
  *             {@link AccumuloTranslator}
  */
 @Deprecated
-public abstract class AccumuloExporter<K, V> extends
-    org.apache.fluo.recipes.core.export.Exporter<K, V> {
+public abstract class AccumuloExporter<K, V>
+    extends org.apache.fluo.recipes.core.export.Exporter<K, V> {
 
   /**
    * Use this to configure the Accumulo table where an AccumuloExporter's mutations will be written.
@@ -76,9 +76,8 @@ public abstract class AccumuloExporter<K, V> extends
     FluoConfiguration tmpFc = new FluoConfiguration();
     org.apache.fluo.recipes.accumulo.export.function.AccumuloExporter.configure("aecfgid")
         .instance(instanceName, zookeepers).credentials(user, password).table(table).save(tmpFc);
-    accumuloWriter =
-        new org.apache.fluo.recipes.accumulo.export.function.AccumuloExporter<K, V>("aecfgid",
-            tmpFc.getAppConfiguration(), this::translate);
+    accumuloWriter = new org.apache.fluo.recipes.accumulo.export.function.AccumuloExporter<K, V>(
+        "aecfgid", tmpFc.getAppConfiguration(), this::translate);
   }
 
   @Override

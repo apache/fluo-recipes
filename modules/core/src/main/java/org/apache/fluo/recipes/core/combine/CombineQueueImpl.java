@@ -66,12 +66,10 @@ class CombineQueueImpl<K, V> implements CombineQueue<K, V> {
     this.updatePrefix = Bytes.of(cqId + ":u:");
     this.dataPrefix = Bytes.of(cqId + ":d:");
     this.notifyColumn = new Column("fluoRecipes", "cfm:" + cqId);
-    this.keyType =
-        (Class<K>) getClass().getClassLoader()
-            .loadClass(CqConfigurator.getKeyType(cqId, appConfig));
-    this.valType =
-        (Class<V>) getClass().getClassLoader().loadClass(
-            CqConfigurator.getValueType(cqId, appConfig));
+    this.keyType = (Class<K>) getClass().getClassLoader()
+        .loadClass(CqConfigurator.getKeyType(cqId, appConfig));
+    this.valType = (Class<V>) getClass().getClassLoader()
+        .loadClass(CqConfigurator.getValueType(cqId, appConfig));
     this.numBuckets = CqConfigurator.getNumBucket(cqId, appConfig);
     this.bufferSize = CqConfigurator.getBufferSize(cqId, appConfig);
     this.serializer = SimpleSerializer.getInstance(appConfig);
@@ -177,13 +175,11 @@ class CombineQueueImpl<K, V> implements CombineQueue<K, V> {
     Span span;
 
     if (nextKey != null) {
-      Bytes startRow =
-          Bytes.builder(ntfyRow.length() + nextKey.length()).append(ntfyRow).append(nextKey)
-              .toBytes();
+      Bytes startRow = Bytes.builder(ntfyRow.length() + nextKey.length()).append(ntfyRow)
+          .append(nextKey).toBytes();
       Span tmpSpan = Span.prefix(ntfyRow);
-      Span nextSpan =
-          new Span(new RowColumn(startRow, UPDATE_COL), false, tmpSpan.getEnd(),
-              tmpSpan.isEndInclusive());
+      Span nextSpan = new Span(new RowColumn(startRow, UPDATE_COL), false, tmpSpan.getEnd(),
+          tmpSpan.isEndInclusive());
       span = nextSpan;
     } else {
       span = Span.prefix(ntfyRow);

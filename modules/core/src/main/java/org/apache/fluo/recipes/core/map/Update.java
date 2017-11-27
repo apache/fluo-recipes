@@ -51,7 +51,7 @@ public class Update<K, V> {
   }
 
   static <K2, V2> Iterator<Update<K2, V2>> transform(Iterable<Change<K2, V2>> changes) {
-    return Iterators.transform(changes.iterator(), change -> new Update<K2, V2>(change.getKey(),
-        change.getOldValue(), change.getNewValue()));
+    return Iterators.transform(changes.iterator(),
+        change -> new Update<K2, V2>(change.getKey(), change.getOldValue(), change.getNewValue()));
   }
 }

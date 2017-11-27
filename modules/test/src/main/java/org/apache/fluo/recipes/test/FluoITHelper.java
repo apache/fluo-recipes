@@ -123,8 +123,8 @@ public class FluoITHelper {
         retval |= diff("fluo val", rcv.getValue(), actualRcv.getValue());
 
         if (retval) {
-          log.error("Difference found - row {} cf {} cq {} val {}", rcv.getsRow(), rcv.getColumn()
-              .getsFamily(), rcv.getColumn().getsQualifier(), rcv.getsValue());
+          log.error("Difference found - row {} cf {} cq {} val {}", rcv.getsRow(),
+              rcv.getColumn().getsFamily(), rcv.getColumn().getsQualifier(), rcv.getsValue());
           return false;
         }
 
@@ -214,12 +214,12 @@ public class FluoITHelper {
       retval |= diff("val", rcv.getValue().toString(), kvEntry.getValue().toString());
 
       if (retval) {
-        log.error("Difference found - row {} cf {} cq {} val {}", rcv.getRow().toString(), col
-            .getFamily().toString(), col.getQualifier().toString(), rcv.getValue().toString());
+        log.error("Difference found - row {} cf {} cq {} val {}", rcv.getRow().toString(),
+            col.getFamily().toString(), col.getQualifier().toString(), rcv.getValue().toString());
         return false;
       }
-      log.debug("Verified row {} cf {} cq {} val {}", rcv.getRow().toString(), col.getFamily()
-          .toString(), col.getQualifier().toString(), rcv.getValue().toString());
+      log.debug("Verified row {} cf {} cq {} val {}", rcv.getRow().toString(),
+          col.getFamily().toString(), col.getQualifier().toString(), rcv.getValue().toString());
     }
 
     if (scanIter.hasNext() || rcvIter.hasNext()) {
@@ -302,9 +302,8 @@ public class FluoITHelper {
       }
 
       Iterator<String> iter = cols.iterator();
-      RowColumnValue rcv =
-          new RowColumnValue(Bytes.of(iter.next()), new Column(iter.next(), iter.next()),
-              Bytes.of(iter.next()));
+      RowColumnValue rcv = new RowColumnValue(Bytes.of(iter.next()),
+          new Column(iter.next(), iter.next()), Bytes.of(iter.next()));
 
       ret.add(rcv);
     }

@@ -190,9 +190,9 @@ public class ExportQueue<K, V> {
     SimpleConfiguration appConfig = fluoConfig.getAppConfiguration();
     opts.save(appConfig);
 
-    fluoConfig
-        .addObserver(new org.apache.fluo.api.config.ObserverSpecification(ExportObserver.class
-            .getName(), Collections.singletonMap("queueId", opts.fluentCfg.queueId)));
+    fluoConfig.addObserver(
+        new org.apache.fluo.api.config.ObserverSpecification(ExportObserver.class.getName(),
+            Collections.singletonMap("queueId", opts.fluentCfg.queueId)));
   }
 
   /**
@@ -246,11 +246,10 @@ public class ExportQueue<K, V> {
    */
   public void registerObserver(ObserverProvider.Registry obsRegistry,
       org.apache.fluo.recipes.core.export.function.Exporter<K, V> exporter) {
-    Preconditions
-        .checkState(
-            opts.exporterType == null,
-            "Expected exporter type not be set, it was set to %s.  Cannot not use the old and new way of configuring "
-                + "exporters at the same time.", opts.exporterType);
+    Preconditions.checkState(opts.exporterType == null,
+        "Expected exporter type not be set, it was set to %s.  Cannot not use the old and new way of configuring "
+            + "exporters at the same time.",
+        opts.exporterType);
     Observer obs;
     try {
       obs = new ExportObserverImpl<K, V>(queueId, opts, serializer, exporter);
@@ -292,9 +291,8 @@ public class ExportQueue<K, V> {
     // intentionally package private
     Options(String queueId, String keyType, String valueType, int buckets) {
       Preconditions.checkArgument(buckets > 0);
-      this.fluentCfg =
-          (FluentConfigurator) new FluentConfigurator(queueId).keyType(keyType)
-              .valueType(valueType).buckets(buckets);
+      this.fluentCfg = (FluentConfigurator) new FluentConfigurator(queueId).keyType(keyType)
+          .valueType(valueType).buckets(buckets);
     }
 
     /**

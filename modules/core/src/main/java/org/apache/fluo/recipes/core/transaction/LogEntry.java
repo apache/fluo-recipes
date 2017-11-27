@@ -73,8 +73,8 @@ public class LogEntry {
   public boolean equals(Object o) {
     if (o instanceof LogEntry) {
       LogEntry other = (LogEntry) o;
-      return ((op == other.op) && row.equals(other.row) && col.equals(other.col) && value
-          .equals(other.value));
+      return ((op == other.op) && row.equals(other.row) && col.equals(other.col)
+          && value.equals(other.value));
     }
     return false;
   }

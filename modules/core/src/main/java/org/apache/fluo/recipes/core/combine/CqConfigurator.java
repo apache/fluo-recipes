@@ -98,8 +98,8 @@ class CqConfigurator implements FluentArg1, FluentArg2, FluentArg3, FluentOption
 
   @Override
   public FluentOptions bucketsPerTablet(int bucketsPerTablet) {
-    Preconditions.checkArgument(bucketsPerTablet > 0, "bucketsPerTablet is <= 0 : "
-        + bucketsPerTablet);
+    Preconditions.checkArgument(bucketsPerTablet > 0,
+        "bucketsPerTablet is <= 0 : " + bucketsPerTablet);
     this.bucketsPerTablet = bucketsPerTablet;
     return this;
   }

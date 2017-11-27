@@ -28,7 +28,8 @@ import org.apache.fluo.recipes.core.common.TableOptimizations;
 // This class intentionally package private.
 class CqOptimizer {
 
-  public static TableOptimizations getTableOptimizations(String cqId, SimpleConfiguration appConfig) {
+  public static TableOptimizations getTableOptimizations(String cqId,
+      SimpleConfiguration appConfig) {
     int numBuckets = CqConfigurator.getNumBucket(cqId, appConfig);
     int bpt = CqConfigurator.getBucketsPerTablet(cqId, appConfig);
 

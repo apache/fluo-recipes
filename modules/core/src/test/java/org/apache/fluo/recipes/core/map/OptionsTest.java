@@ -25,10 +25,11 @@ public class OptionsTest {
   public void testExportQueueOptions() {
     FluoConfiguration conf = new FluoConfiguration();
 
-    CollisionFreeMap.configure(conf, new org.apache.fluo.recipes.core.map.CollisionFreeMap.Options(
-        "Q1", "CT", "KT", "VT", 100));
-    CollisionFreeMap.configure(conf, new org.apache.fluo.recipes.core.map.CollisionFreeMap.Options(
-        "Q2", "CT2", "KT2", "VT2", 200).setBucketsPerTablet(20).setBufferSize(1000000));
+    CollisionFreeMap.configure(conf,
+        new org.apache.fluo.recipes.core.map.CollisionFreeMap.Options("Q1", "CT", "KT", "VT", 100));
+    CollisionFreeMap.configure(conf,
+        new org.apache.fluo.recipes.core.map.CollisionFreeMap.Options("Q2", "CT2", "KT2", "VT2",
+            200).setBucketsPerTablet(20).setBufferSize(1000000));
 
     org.apache.fluo.recipes.core.map.CollisionFreeMap.Options opts1 =
         new org.apache.fluo.recipes.core.map.CollisionFreeMap.Options("Q1",

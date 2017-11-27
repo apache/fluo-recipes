@@ -33,9 +33,8 @@ public class DocumentObserver extends TypedObserver {
 
   @Override
   public void init(Context context) throws Exception {
-    wcm =
-        org.apache.fluo.recipes.core.map.CollisionFreeMap.getInstance(CollisionFreeMapIT.MAP_ID,
-            context.getAppConfiguration());
+    wcm = org.apache.fluo.recipes.core.map.CollisionFreeMap.getInstance(CollisionFreeMapIT.MAP_ID,
+        context.getAppConfiguration());
   }
 
   @Override
@@ -79,8 +78,8 @@ public class DocumentObserver extends TypedObserver {
     MapDifference<String, Long> diffs = Maps.difference(currCounts, newCounts);
 
     // compute the diffs for words that changed
-    changes.putAll(Maps.transformValues(diffs.entriesDiffering(), vDiff -> vDiff.rightValue()
-        - vDiff.leftValue()));
+    changes.putAll(Maps.transformValues(diffs.entriesDiffering(),
+        vDiff -> vDiff.rightValue() - vDiff.leftValue()));
 
     // add all new words
     changes.putAll(diffs.entriesOnlyOnRight());

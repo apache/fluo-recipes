@@ -62,8 +62,8 @@ public class BigUpdateIT {
 
   static final String MAP_ID = "bu";
 
-  public static class LongCombiner implements
-      org.apache.fluo.recipes.core.map.Combiner<String, Long> {
+  public static class LongCombiner
+      implements org.apache.fluo.recipes.core.map.Combiner<String, Long> {
 
     @Override
     public Optional<Long> combine(String key, Iterator<Long> updates) {
@@ -77,8 +77,8 @@ public class BigUpdateIT {
 
   private static AtomicInteger globalUpdates = new AtomicInteger(0);
 
-  public static class MyObserver extends
-      org.apache.fluo.recipes.core.map.UpdateObserver<String, Long> {
+  public static class MyObserver
+      extends org.apache.fluo.recipes.core.map.UpdateObserver<String, Long> {
 
     @Override
     public void updatingValues(TransactionBase tx,
@@ -98,10 +98,9 @@ public class BigUpdateIT {
       }
 
       // get last values set to verify same as passed in old value
-      Map<String, Long> actualOld =
-          Maps.transformValues(
-              ttx.get().rowsString(expectedOld.keySet()).columns(ImmutableSet.of(DSCOL))
-                  .toStringMap(), m -> m.get(DSCOL).toLong());
+      Map<String, Long> actualOld = Maps.transformValues(
+          ttx.get().rowsString(expectedOld.keySet()).columns(ImmutableSet.of(DSCOL)).toStringMap(),
+          m -> m.get(DSCOL).toLong());
 
       MapDifference<String, Long> diff = Maps.difference(expectedOld, actualOld);
 
@@ -122,15 +121,16 @@ public class BigUpdateIT {
 
     SimpleSerializer.setSerializer(props, TestSerializer.class);
 
-    org.apache.fluo.recipes.core.map.CollisionFreeMap.configure(props,
-        new org.apache.fluo.recipes.core.map.CollisionFreeMap.Options(MAP_ID, LongCombiner.class,
-            MyObserver.class, String.class, Long.class, 2).setBufferSize(1 << 10));
+    org.apache.fluo.recipes.core.map.CollisionFreeMap
+        .configure(props,
+            new org.apache.fluo.recipes.core.map.CollisionFreeMap.Options(MAP_ID,
+                LongCombiner.class, MyObserver.class, String.class, Long.class, 2)
+                    .setBufferSize(1 << 10));
 
     miniFluo = FluoFactory.newMiniFluo(props);
 
-    wcMap =
-        org.apache.fluo.recipes.core.map.CollisionFreeMap.getInstance(MAP_ID,
-            props.getAppConfiguration());
+    wcMap = org.apache.fluo.recipes.core.map.CollisionFreeMap.getInstance(MAP_ID,
+        props.getAppConfiguration());
 
     globalUpdates.set(0);
   }
@@ -193,8 +193,8 @@ public class BigUpdateIT {
 
       for (ColumnValue columnValue : columns) {
         Assert.assertEquals(new Column("debug", "sum"), columnValue.getColumn());
-        Assert
-            .assertEquals("row : " + columns.getsRow(), "" + expectedVal, columnValue.getsValue());
+        Assert.assertEquals("row : " + columns.getsRow(), "" + expectedVal,
+            columnValue.getsValue());
       }
     }
 

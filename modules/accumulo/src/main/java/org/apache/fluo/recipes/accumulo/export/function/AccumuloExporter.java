@@ -82,9 +82,8 @@ public class AccumuloExporter<K, V> implements Exporter<K, V> {
   public AccumuloExporter(String configId, SimpleConfiguration appConfig,
       AccumuloTranslator<K, V> translator) {
     AeFluentConfigurator cfg = AeFluentConfigurator.load(configId, appConfig);
-    this.writer =
-        AccumuloWriter.getInstance(cfg.getInstance(), cfg.getZookeepers(), cfg.getUser(),
-            cfg.getPassword(), cfg.getTable());
+    this.writer = AccumuloWriter.getInstance(cfg.getInstance(), cfg.getZookeepers(), cfg.getUser(),
+        cfg.getPassword(), cfg.getTable());
     this.translator = translator;
   }
 

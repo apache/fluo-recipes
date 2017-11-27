@@ -103,10 +103,9 @@ public class FluoSparkHelper {
   }
 
   private static Instance getInstance(FluoConfiguration config) {
-    ClientConfiguration clientConfig =
-        new ClientConfiguration().withInstance(config.getAccumuloInstance())
-            .withZkHosts(config.getAccumuloZookeepers())
-            .withZkTimeout(config.getZookeeperTimeout() / 1000);
+    ClientConfiguration clientConfig = new ClientConfiguration()
+        .withInstance(config.getAccumuloInstance()).withZkHosts(config.getAccumuloZookeepers())
+        .withZkTimeout(config.getZookeeperTimeout() / 1000);
     return new ZooKeeperInstance(clientConfig);
   }
 
@@ -325,9 +324,8 @@ public class FluoSparkHelper {
     // partition and sort data so that one file is created per an accumulo tablet
     Partitioner accumuloPartitioner;
     try {
-      accumuloPartitioner =
-          new AccumuloRangePartitioner(chooseConnector(opts).tableOperations().listSplits(
-              accumuloTable));
+      accumuloPartitioner = new AccumuloRangePartitioner(
+          chooseConnector(opts).tableOperations().listSplits(accumuloTable));
     } catch (TableNotFoundException | AccumuloSecurityException | AccumuloException e) {
       throw new IllegalStateException(e);
     }

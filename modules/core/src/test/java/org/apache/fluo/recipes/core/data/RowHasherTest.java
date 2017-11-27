@@ -27,9 +27,8 @@ public class RowHasherTest {
 
   @Test
   public void testBadPrefixes() {
-    String[] badPrefixes =
-        {"q:she6:test1", "q:she6:test1", "p:Mhe6:test1", "p;she6:test1", "p:she6;test1",
-            "p;she6;test1", "p:+he6:test1", "p:s?e6:test1", "p:sh{6:test1", "p:sh6:"};
+    String[] badPrefixes = {"q:she6:test1", "q:she6:test1", "p:Mhe6:test1", "p;she6:test1",
+        "p:she6;test1", "p;she6;test1", "p:+he6:test1", "p:s?e6:test1", "p:sh{6:test1", "p:sh6:"};
 
     RowHasher rh = new RowHasher("p");
     for (String badPrefix : badPrefixes) {

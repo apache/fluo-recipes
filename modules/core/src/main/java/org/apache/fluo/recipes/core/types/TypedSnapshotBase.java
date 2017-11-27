@@ -326,8 +326,8 @@ public class TypedSnapshotBase extends AbstractSnapshotBase implements SnapshotB
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     private Map wrap2(Map m) {
-      return Collections.unmodifiableMap(DefaultedMap.decorate(m, new DefaultedMap(new Value(
-          (Bytes) null))));
+      return Collections
+          .unmodifiableMap(DefaultedMap.decorate(m, new DefaultedMap(new Value((Bytes) null))));
     }
 
     @SuppressWarnings("unchecked")
