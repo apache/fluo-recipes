@@ -15,10 +15,10 @@ language: java
 jdk:
   - oraclejdk8
 env:
-  - EXTRA_OPTS=
-  - EXTRA_OPTS=-Daccumulo.version=1.8.1
+  - ACCUMULO_VERSION_OPT=
+  - ACCUMULO_VERSION_OPT=-Daccumulo.version=1.8.1
 script:
-  - mvn -U clean verify javadoc:jar $EXTRA_OPTS
+  - mvn -U clean verify javadoc:jar $ACCUMULO_VERSION_OPT
 cache:
   directories:
     - $HOME/.m2
