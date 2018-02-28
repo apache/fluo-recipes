@@ -50,22 +50,15 @@
     <url>https://github.com/apache/fluo-recipes/issues</url>
   </issueManagement>
   <properties>
-    <accumulo.version>1.6.6</accumulo.version>
+    <accumulo.version>1.7.3</accumulo.version>
     <curator.version>2.7.1</curator.version>
     <findbugs.maxRank>13</findbugs.maxRank>
-    <fluo.version>1.1.0-incubating</fluo.version>
+    <fluo.version>1.2.0</fluo.version>
     <hadoop.version>2.6.3</hadoop.version>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
     <releaseProfiles>fluo-recipes-release</releaseProfiles>
     <spark.version>1.5.2</spark.version>
-    <!--
-      If attempting to build against Accumulo 1.8.X, then set the thrift version to 0.9.3.
-      Otherwise MiniAccumulo may hang. This may happen because Fluo 1.0.0 depends on thrift 0.9.1,
-      Accumulo 1.8.0 depends on Thrift 0.9.3, and Thrift made breaking changes in libthrift between
-      0.9.1 and 0.9.3.
-     -->
-    <thrift.version>0.9.1</thrift.version>
     <zookeeper.version>3.4.8</zookeeper.version>
   </properties>
   <dependencyManagement>
@@ -199,11 +192,6 @@
         <groupId>org.apache.spark</groupId>
         <artifactId>spark-core_2.10</artifactId>
         <version>${spark.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.thrift</groupId>
-        <artifactId>libthrift</artifactId>
-        <version>${thrift.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.zookeeper</groupId>
