@@ -17,6 +17,8 @@ jdk:
 env:
   - ACCUMULO_VERSION_OPT=
   - ACCUMULO_VERSION_OPT=-Daccumulo.version=1.8.1
+before_script:
+  - _JAVA_OPTIONS=
 script:
   - mvn -U clean verify javadoc:jar $ACCUMULO_VERSION_OPT
 cache:
