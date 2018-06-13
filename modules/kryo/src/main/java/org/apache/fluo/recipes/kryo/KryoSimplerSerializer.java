@@ -77,27 +77,21 @@ public class KryoSimplerSerializer implements SimpleSerializer, Serializable {
 
   @Override
   public <T> byte[] serialize(T obj) {
-    return getPool().run(new KryoCallback<byte[]>() {
-      @Override
-      public byte[] execute(Kryo kryo) {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        Output output = new Output(baos);
-        kryo.writeClassAndObject(output, obj);
-        output.close();
-        return baos.toByteArray();
-      }
+    return getPool().run(kryo -> {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      Output output = new Output(baos);
+      kryo.writeClassAndObject(output, obj);
+      output.close();
+      return baos.toByteArray();
     });
   }
 
   @Override
   public <T> T deserialize(byte[] serObj, Class<T> clazz) {
-    return getPool().run(new KryoCallback<T>() {
-      @Override
-      public T execute(Kryo kryo) {
-        ByteArrayInputStream bais = new ByteArrayInputStream(serObj);
-        Input input = new Input(bais);
-        return clazz.cast(kryo.readClassAndObject(input));
-      }
+    return getPool().run(kryo -> {
+      ByteArrayInputStream bais = new ByteArrayInputStream(serObj);
+      Input input = new Input(bais);
+      return clazz.cast(kryo.readClassAndObject(input));
     });
   }
 

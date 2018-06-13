@@ -161,13 +161,8 @@ public class RecordingTransactionTest {
   @Test
   public void testGetScanIter() {
     ScannerBuilder sb = mock(ScannerBuilder.class);
-    expect(sb.build()).andReturn(new CellScanner() {
-      @Override
-      public Iterator<RowColumnValue> iterator() {
-        return Iterators
-            .singletonIterator(new RowColumnValue("r7", new Column("cf7", "cq7"), "v7"));
-      }
-    });
+    expect(sb.build()).andReturn(() -> Iterators
+        .singletonIterator(new RowColumnValue("r7", new Column("cf7", "cq7"), "v7")));
 
     expect(tx.scanner()).andReturn(sb);
 
