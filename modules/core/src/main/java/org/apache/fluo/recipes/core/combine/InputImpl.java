@@ -23,7 +23,7 @@ import java.util.stream.Stream;
 import com.google.common.collect.Iterators;
 import org.apache.fluo.api.data.Bytes;
 
-// intentionally package priave
+// intentionally package private
 class InputImpl<K, V> implements Combiner.Input<K, V> {
   private K key;
   private Collection<Bytes> valuesCollection;

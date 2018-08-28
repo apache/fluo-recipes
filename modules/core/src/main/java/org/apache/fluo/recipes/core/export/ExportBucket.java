@@ -118,7 +118,7 @@ class ExportBucket {
   }
 
   /**
-   * Computes the minimial row for a bucket
+   * Computes the minimal row for a bucket
    */
   private Bytes getMinimalRow() {
     return Bytes.builder(bucketRow.length() + 1).append(bucketRow).append(':').toBytes();

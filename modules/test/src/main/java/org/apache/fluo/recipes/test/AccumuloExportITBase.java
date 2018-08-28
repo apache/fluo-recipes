@@ -39,7 +39,8 @@ import org.junit.BeforeClass;
 /**
  * This class is intended to be extended by classes testing exporting from Fluo to Accumulo. Using
  * MiniFluo by itself is easy. However, using MiniAccumulo and MiniFluo together involves writing a
- * lot of boiler plate code. Thats why this class exists, its a place to put that boiler plate code.
+ * lot of boiler plate code. That's why this class exists, its a place to put that boiler plate
+ * code.
  *
  * <p>
  * Below is some example code showing how to use this class to write a test.

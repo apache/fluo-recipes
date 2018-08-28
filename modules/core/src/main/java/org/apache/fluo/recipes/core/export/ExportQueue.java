@@ -89,7 +89,7 @@ public class ExportQueue<K, V> {
     }
   }
 
-  // TODO maybe add for stream and interable
+  // TODO maybe add for stream and iterable
 
   public static <K2, V2> ExportQueue<K2, V2> getInstance(String exportQueueId,
       SimpleConfiguration appConfig) {

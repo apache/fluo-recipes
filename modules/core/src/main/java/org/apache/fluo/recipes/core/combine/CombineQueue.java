@@ -156,7 +156,7 @@ public interface CombineQueue<K, V> {
   /**
    * A {@link CombineQueue} stores data in its own data format in the Fluo table. When initializing
    * a Fluo table with something like Map Reduce or Spark, data will need to be written in this
-   * format. Thats the purpose of this method, it provides a simple class that can do this
+   * format. That's the purpose of this method, it provides a simple class that can do this
    * conversion.
    */
   public static <K2, V2> Initializer<K2, V2> getInitializer(String cqId, int numBuckets,
