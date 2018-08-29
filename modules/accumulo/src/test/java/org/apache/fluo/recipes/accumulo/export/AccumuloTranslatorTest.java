@@ -74,7 +74,7 @@ public class AccumuloTranslatorTest {
   @Test
   public void testDifferenceExport() {
     final Collection<Mutation> mutations = new ArrayList<>();
-    Consumer<Mutation> consumer = m -> mutations.add(m);
+    Consumer<Mutation> consumer = mutations::add;
 
     genMutations("k1", 1, Optional.empty(), Optional.of("a"), consumer);
     Assert.assertEquals(1, mutations.size());

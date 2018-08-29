@@ -524,7 +524,7 @@ public class TypedSnapshotBase extends AbstractSnapshotBase implements SnapshotB
 
   @SuppressWarnings({"unchecked"})
   private Map<Column, Value> wrap(Map<Column, Bytes> map) {
-    Map<Column, Value> ret = Maps.transformValues(map, input -> new Value(input));
+    Map<Column, Value> ret = Maps.transformValues(map, Value::new);
     return Collections.unmodifiableMap(DefaultedMap.decorate(ret, new Value((Bytes) null)));
   }
 

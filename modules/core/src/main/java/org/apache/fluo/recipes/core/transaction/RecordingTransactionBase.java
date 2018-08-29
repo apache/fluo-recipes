@@ -220,7 +220,7 @@ public class RecordingTransactionBase extends AbstractTransactionBase implements
 
     @Override
     public Iterator<ColumnScanner> iterator() {
-      return Iterators.transform(scanner.iterator(), cs -> new RtxColumnScanner(cs));
+      return Iterators.transform(scanner.iterator(), RtxColumnScanner::new);
     }
 
   }

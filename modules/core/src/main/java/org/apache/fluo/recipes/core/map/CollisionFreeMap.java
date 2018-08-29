@@ -224,7 +224,7 @@ public class CollisionFreeMap<K, V> {
   /**
    * A {@link CollisionFreeMap} stores data in its own data format in the Fluo table. When
    * initializing a Fluo table with something like Map Reduce or Spark, data will need to be written
-   * in this format. Thats the purpose of this method, it provide a simple class that can do this
+   * in this format. That's the purpose of this method, it provide a simple class that can do this
    * conversion.
    */
   public static <K2, V2> Initializer<K2, V2> getInitializer(String mapId, int numBuckets,
@@ -401,7 +401,7 @@ public class CollisionFreeMap<K, V> {
   public static class Optimizer implements TableOptimizationsFactory {
 
     /**
-     * Return suggested Fluo table optimizations for the specified collisiong free map.
+     * Return suggested Fluo table optimizations for the specified collision free map.
      *
      * @param appConfig Must pass in the application configuration obtained from
      *        {@code FluoClient.getAppConfiguration()} or

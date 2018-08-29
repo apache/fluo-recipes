@@ -90,7 +90,7 @@ public class AccumuloExporter<K, V> implements Exporter<K, V> {
   @Override
   public void export(Iterator<SequencedExport<K, V>> t) {
     ArrayList<Mutation> buffer = new ArrayList<>();
-    Consumer<Mutation> consumer = m -> buffer.add(m);
+    Consumer<Mutation> consumer = buffer::add;
 
     while (t.hasNext()) {
       translator.translate(t.next(), consumer);
