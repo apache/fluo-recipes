@@ -50,7 +50,7 @@
     <url>https://github.com/apache/fluo-recipes/issues</url>
   </issueManagement>
   <properties>
-    <accumulo.version>1.7.3</accumulo.version>
+    <accumulo.version>2.0.0</accumulo.version>
     <curator.version>2.7.1</curator.version>
     <findbugs.maxRank>13</findbugs.maxRank>
     <fluo.version>1.2.0</fluo.version>

@@ -4,9 +4,9 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
  * or implied. See the License for the specific language governing permissions and limitations under
@@ -21,15 +21,13 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.accumulo.core.client.Accumulo;
+import org.apache.accumulo.core.client.AccumuloClient;
 import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
-import org.apache.accumulo.core.client.ClientConfiguration;
 import org.apache.accumulo.core.client.Connector;
-import org.apache.accumulo.core.client.Instance;
 import org.apache.accumulo.core.client.TableNotFoundException;
-import org.apache.accumulo.core.client.ZooKeeperInstance;
 import org.apache.accumulo.core.client.mapreduce.AccumuloFileOutputFormat;
-import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
 import org.apache.fluo.api.config.FluoConfiguration;
@@ -65,7 +63,6 @@ public class FluoSparkHelper {
   private Configuration hadoopConfig;
   private Path tempBaseDir;
   private FileSystem hdfs;
-  private Connector defaultConn;
 
   // @formatter:off
   public FluoSparkHelper(FluoConfiguration fluoConfig, Configuration hadoopConfig,
@@ -74,7 +71,7 @@ public class FluoSparkHelper {
     this.fluoConfig = fluoConfig;
     this.hadoopConfig = hadoopConfig;
     this.tempBaseDir = tempBaseDir;
-    defaultConn = getAccumuloConnector(fluoConfig);
+    this.fluoConfig = fluoConfig;
     try {
       hdfs = FileSystem.get(hadoopConfig);
     } catch (IOException e) {
@@ -102,20 +99,9 @@ public class FluoSparkHelper {
     return pairRDD.map(t -> new RowColumnValue(t._1().getRow(), t._1().getColumn(), t._2()));
   }
 
-  private static Instance getInstance(FluoConfiguration config) {
-    ClientConfiguration clientConfig = new ClientConfiguration()
-        .withInstance(config.getAccumuloInstance()).withZkHosts(config.getAccumuloZookeepers())
-        .withZkTimeout(config.getZookeeperTimeout() / 1000);
-    return new ZooKeeperInstance(clientConfig);
-  }
-
-  private static Connector getAccumuloConnector(FluoConfiguration config) {
-    try {
-      return getInstance(config).getConnector(config.getAccumuloUser(),
-          new PasswordToken(config.getAccumuloPassword()));
-    } catch (AccumuloException | AccumuloSecurityException e) {
-      throw new IllegalStateException(e);
-    }
+  private static AccumuloClient getAccumuloClient(FluoConfiguration config) {
+    return Accumulo.newClient().to(config.getAccumuloInstance(), config.getAccumuloZookeepers())
+        .as(config.getAccumuloUser(), config.getAccumuloPassword()).build();
   }
 
   /**
@@ -214,9 +200,9 @@ public class FluoSparkHelper {
       BulkImportOptions opts) {
 
     Path tempDir = getTempDir(opts);
-    Connector conn = chooseConnector(opts);
 
-    try {
+
+    try (AccumuloClient client = getAccumuloClient(fluoConfig)) {
       if (hdfs.exists(tempDir)) {
         throw new IllegalArgumentException("HDFS temp dir already exists: " + tempDir.toString());
       }
@@ -234,6 +220,7 @@ public class FluoSparkHelper {
 
       // bulk import data to Accumulo
       log.info("Wrote data for bulk import to HDFS temp directory: {}", dataDir);
+      Connector conn = chooseConnector(client, opts);
       conn.tableOperations().importDirectory(accumuloTable, dataDir.toString(), failDir.toString(),
           false);
 
@@ -274,10 +261,12 @@ public class FluoSparkHelper {
      * If this methods is not called, then a Connector will be created using properties in the
      * FluoConfiguration supplied to
      * {@link FluoSparkHelper#FluoSparkHelper(FluoConfiguration, Configuration, Path)}
-     * 
+     *
      * @param conn Use this connector to bulk import files into Accumulo.
      * @return this
+     * @deprecated use {@link #setAccumuloClient(AccumuloClient)}
      */
+    @Deprecated(since = "1.2.0", forRemoval = true)
     public BulkImportOptions setAccumuloConnector(Connector conn) {
       Objects.requireNonNull(conn);
       this.conn = conn;
@@ -285,9 +274,29 @@ public class FluoSparkHelper {
     }
 
     /**
+     * If this methods is not called, then a Client will be created using properties in the
+     * FluoConfiguration supplied to
+     * {@link FluoSparkHelper#FluoSparkHelper(FluoConfiguration, Configuration, Path)}
+     *
+     * @param conn Use this connector to bulk import files into Accumulo.
+     * @return this
+     *
+     * @since 1.3.0
+     */
+    public BulkImportOptions setAccumuloClient(AccumuloClient client) {
+      Objects.requireNonNull(client);
+      try {
+        this.conn = Connector.from(client);
+      } catch (AccumuloSecurityException | AccumuloException e) {
+        throw new RuntimeException(e);
+      }
+      return this;
+    }
+
+    /**
      * If this method is not called, then a temp dir will be created based on the path passed
      * supplied to {@link FluoSparkHelper#FluoSparkHelper(FluoConfiguration, Configuration, Path)}
-     * 
+     *
      * @param tempDir Use this directory to store RFiles generated for bulk import.
      * @return this
      */
@@ -323,16 +332,20 @@ public class FluoSparkHelper {
       String accumuloTable, BulkImportOptions opts) {
     // partition and sort data so that one file is created per an accumulo tablet
     Partitioner accumuloPartitioner;
-    try {
+    try (AccumuloClient client = getAccumuloClient(fluoConfig)) {
       accumuloPartitioner = new AccumuloRangePartitioner(
-          chooseConnector(opts).tableOperations().listSplits(accumuloTable));
+          chooseConnector(client, opts).tableOperations().listSplits(accumuloTable));
     } catch (TableNotFoundException | AccumuloSecurityException | AccumuloException e) {
       throw new IllegalStateException(e);
     }
     return data.repartitionAndSortWithinPartitions(accumuloPartitioner);
   }
 
-  private Connector chooseConnector(BulkImportOptions opts) {
-    return opts.conn == null ? defaultConn : opts.conn;
+  private Connector chooseConnector(AccumuloClient client, BulkImportOptions opts) {
+    try {
+      return opts.conn == null ? Connector.from(client) : opts.conn;
+    } catch (AccumuloSecurityException | AccumuloException e) {
+      throw new RuntimeException(e);
+    }
   }
 }
