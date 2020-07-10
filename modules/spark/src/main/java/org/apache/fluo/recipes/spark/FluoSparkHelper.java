@@ -144,7 +144,7 @@ public class FluoSparkHelper {
       for (FluoKeyValue kv : fkvg.getKeyValues()) {
         output.add(new Tuple2<>(kv.getKey(), kv.getValue()));
       }
-      return output;
+      return output.iterator();
     });
 
     bulkImportKvToAccumulo(kvData, fluoConfig.getAccumuloTable(), opts);
