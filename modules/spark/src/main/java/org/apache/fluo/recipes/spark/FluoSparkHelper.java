@@ -48,6 +48,7 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import scala.Tuple2;
 
 /**
@@ -266,7 +267,7 @@ public class FluoSparkHelper {
      * @return this
      * @deprecated use {@link #setAccumuloClient(AccumuloClient)}
      */
-    @Deprecated(since = "1.2.0", forRemoval = true)
+    @Deprecated(since = "1.3.0", forRemoval = true)
     public BulkImportOptions setAccumuloConnector(Connector conn) {
       Objects.requireNonNull(conn);
       this.conn = conn;
