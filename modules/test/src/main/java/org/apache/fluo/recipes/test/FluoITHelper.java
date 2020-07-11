@@ -4,9 +4,9 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
  * or implied. See the License for the specific language governing permissions and limitations under
@@ -24,6 +24,9 @@ import java.util.Map;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
+import org.apache.accumulo.core.client.AccumuloClient;
+import org.apache.accumulo.core.client.AccumuloException;
+import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.Connector;
 import org.apache.accumulo.core.client.Scanner;
 import org.apache.accumulo.core.client.TableNotFoundException;
@@ -145,7 +148,9 @@ public class FluoITHelper {
    *
    * @param conn Accumulo connector of to instance with table to print
    * @param accumuloTable Accumulo table to print
+   * @deprecated since 1.3.0 use {@link #printAccumuloTable(AccumuloClient, String)}
    */
+  @Deprecated(since = "1.3.0", forRemoval = true)
   public static void printAccumuloTable(Connector conn, String accumuloTable) {
     Scanner scanner = null;
     try {
@@ -161,6 +166,23 @@ public class FluoITHelper {
       System.out.println(entry.getKey() + " " + entry.getValue());
     }
     System.out.println("== accumulo end ==");
+  }
+
+  /**
+   * Prints specified Accumulo table
+   *
+   * @param client Accumulo clientto instance with table to print
+   * @param accumuloTable Accumulo table to print
+   *
+   * @since 1.3.0
+   */
+  @SuppressWarnings("deprecation")
+  public static void printAccumuloTable(AccumuloClient client, String accumuloTable) {
+    try {
+      printAccumuloTable(Connector.from(client), accumuloTable);
+    } catch (AccumuloSecurityException | AccumuloException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private static boolean diff(String dataType, String expected, String actual) {
@@ -187,7 +209,9 @@ public class FluoITHelper {
    * @param accumuloTable Accumulo table with actual data
    * @param expected RowColumnValue list containing expected data
    * @return True if actual data matches expected data
+   * @deprecated since 1.3.0 use {@link #verifyAccumuloTable(AccumuloClient, String, Collection)}
    */
+  @Deprecated(since = "1.3.0", forRemoval = true)
   public static boolean verifyAccumuloTable(Connector conn, String accumuloTable,
       Collection<RowColumnValue> expected) {
 
@@ -229,6 +253,26 @@ public class FluoITHelper {
 
     log.debug("Actual data matched expected data");
     return true;
+  }
+
+  /**
+   * Verifies that actual data in Accumulo table matches expected data
+   *
+   * @param client Client from Accumulo instance with actual data
+   * @param accumuloTable Accumulo table with actual data
+   * @param expected RowColumnValue list containing expected data
+   * @return True if actual data matches expected data
+   *
+   * @since 1.3.0
+   */
+  @SuppressWarnings("deprecation")
+  public static boolean verifyAccumuloTable(AccumuloClient client, String accumuloTable,
+      Collection<RowColumnValue> expected) {
+    try {
+      return verifyAccumuloTable(Connector.from(client), accumuloTable, expected);
+    } catch (AccumuloSecurityException | AccumuloException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**
