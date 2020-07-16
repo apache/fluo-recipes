@@ -4,9 +4,9 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
  * or implied. See the License for the specific language governing permissions and limitations under
@@ -23,17 +23,15 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.apache.accumulo.core.client.Accumulo;
+import org.apache.accumulo.core.client.AccumuloClient;
 import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.BatchWriter;
 import org.apache.accumulo.core.client.BatchWriterConfig;
-import org.apache.accumulo.core.client.ClientConfiguration;
-import org.apache.accumulo.core.client.Connector;
 import org.apache.accumulo.core.client.MutationsRejectedException;
 import org.apache.accumulo.core.client.TableExistsException;
 import org.apache.accumulo.core.client.TableNotFoundException;
-import org.apache.accumulo.core.client.ZooKeeperInstance;
-import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.data.Mutation;
 
 /**
@@ -59,21 +57,20 @@ class AccumuloWriter {
 
     ExportTask(String instanceName, String zookeepers, String user, String password, String table)
         throws TableNotFoundException, AccumuloException, AccumuloSecurityException {
-      ZooKeeperInstance zki = new ZooKeeperInstance(
-          new ClientConfiguration().withInstance(instanceName).withZkHosts(zookeepers));
+      AccumuloClient client =
+          Accumulo.newClient().to(instanceName, zookeepers).as(user, password).build();
 
       // TODO need to close batch writer
-      Connector conn = zki.getConnector(user, new PasswordToken(password));
       try {
-        bw = conn.createBatchWriter(table, new BatchWriterConfig());
+        bw = client.createBatchWriter(table, new BatchWriterConfig());
       } catch (TableNotFoundException tnfe) {
         try {
-          conn.tableOperations().create(table);
+          client.tableOperations().create(table);
         } catch (TableExistsException e) {
           // nothing to do
         }
 
-        bw = conn.createBatchWriter(table, new BatchWriterConfig());
+        bw = client.createBatchWriter(table, new BatchWriterConfig());
       }
     }
 

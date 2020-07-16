@@ -4,9 +4,9 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
  * or implied. See the License for the specific language governing permissions and limitations under
@@ -18,11 +18,9 @@ package org.apache.fluo.recipes.accumulo.ops;
 import java.util.List;
 import java.util.TreeSet;
 
+import org.apache.accumulo.core.client.Accumulo;
+import org.apache.accumulo.core.client.AccumuloClient;
 import org.apache.accumulo.core.client.AccumuloException;
-import org.apache.accumulo.core.client.ClientConfiguration;
-import org.apache.accumulo.core.client.Connector;
-import org.apache.accumulo.core.client.ZooKeeperInstance;
-import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.fluo.api.client.FluoClient;
 import org.apache.fluo.api.client.FluoFactory;
 import org.apache.fluo.api.config.FluoConfiguration;
@@ -50,53 +48,51 @@ public class TableOperations {
 
   private static final Logger logger = LoggerFactory.getLogger(TableOperations.class);
 
-  private static Connector getConnector(FluoConfiguration fluoConfig) throws Exception {
-
-    ZooKeeperInstance zki = new ZooKeeperInstance(
-        new ClientConfiguration().withInstance(fluoConfig.getAccumuloInstance())
-            .withZkHosts(fluoConfig.getAccumuloZookeepers()));
-
-    Connector conn = zki.getConnector(fluoConfig.getAccumuloUser(),
-        new PasswordToken(fluoConfig.getAccumuloPassword()));
-    return conn;
+  private static AccumuloClient getClient(FluoConfiguration fluoConfig) throws Exception {
+    return Accumulo.newClient()
+        .to(fluoConfig.getAccumuloInstance(), fluoConfig.getAccumuloZookeepers())
+        .as(fluoConfig.getAccumuloUser(), fluoConfig.getAccumuloPassword()).build();
   }
 
   /**
    * Make the requested table optimizations.
-   * 
+   *
    * @param fluoConfig should contain information need to connect to Accumulo and name of Fluo table
    * @param tableOptim Will perform these optimizations on Fluo table in Accumulo.
    */
   public static void optimizeTable(FluoConfiguration fluoConfig, TableOptimizations tableOptim)
       throws Exception {
-    Connector conn = getConnector(fluoConfig);
 
-    TreeSet<Text> splits = new TreeSet<>();
+    try (AccumuloClient client = getClient(fluoConfig)) {
 
-    for (Bytes split : tableOptim.getSplits()) {
-      splits.add(new Text(split.toArray()));
-    }
+      TreeSet<Text> splits = new TreeSet<>();
 
-    String table = fluoConfig.getAccumuloTable();
-    conn.tableOperations().addSplits(table, splits);
+      for (Bytes split : tableOptim.getSplits()) {
+        splits.add(new Text(split.toArray()));
+      }
 
-    if (tableOptim.getTabletGroupingRegex() != null
-        && !tableOptim.getTabletGroupingRegex().isEmpty()) {
-      // was going to call :
-      // conn.instanceOperations().testClassLoad(RGB_CLASS, TABLET_BALANCER_CLASS)
-      // but that failed. See ACCUMULO-4068
+      String table = fluoConfig.getAccumuloTable();
+      client.tableOperations().addSplits(table, splits);
 
-      try {
-        // setting this prop first intentionally because it should fail in 1.6
-        conn.tableOperations().setProperty(table, RGB_PATTERN_PROP,
-            tableOptim.getTabletGroupingRegex());
-        conn.tableOperations().setProperty(table, RGB_DEFAULT_PROP, "none");
-        conn.tableOperations().setProperty(table, TABLE_BALANCER_PROP, RGB_CLASS);
-      } catch (AccumuloException e) {
-        logger.warn("Unable to setup regex balancer (this is expected to fail in Accumulo 1.6.X) : "
-            + e.getMessage());
-        logger.debug("Unable to setup regex balancer (this is expected to fail in Accumulo 1.6.X)",
-            e);
+      if (tableOptim.getTabletGroupingRegex() != null
+          && !tableOptim.getTabletGroupingRegex().isEmpty()) {
+        // was going to call :
+        // conn.instanceOperations().testClassLoad(RGB_CLASS, TABLET_BALANCER_CLASS)
+        // but that failed. See ACCUMULO-4068
+
+        try {
+          // setting this prop first intentionally because it should fail in 1.6
+          client.tableOperations().setProperty(table, RGB_PATTERN_PROP,
+              tableOptim.getTabletGroupingRegex());
+          client.tableOperations().setProperty(table, RGB_DEFAULT_PROP, "none");
+          client.tableOperations().setProperty(table, TABLE_BALANCER_PROP, RGB_CLASS);
+        } catch (AccumuloException e) {
+          logger
+              .warn("Unable to setup regex balancer (this is expected to fail in Accumulo 1.6.X) : "
+                  + e.getMessage());
+          logger.debug(
+              "Unable to setup regex balancer (this is expected to fail in Accumulo 1.6.X)", e);
+        }
       }
     }
   }
@@ -115,17 +111,16 @@ public class TableOperations {
    * Compact all transient regions that were registered using {@link TransientRegistry}
    */
   public static void compactTransient(FluoConfiguration fluoConfig) throws Exception {
-    Connector conn = getConnector(fluoConfig);
-
-    try (FluoClient client = FluoFactory.newClient(fluoConfig)) {
-      SimpleConfiguration appConfig = client.getAppConfiguration();
+    try (AccumuloClient aclient = getClient(fluoConfig);
+        FluoClient fclient = FluoFactory.newClient(fluoConfig)) {
+      SimpleConfiguration appConfig = fclient.getAppConfiguration();
 
       TransientRegistry transientRegistry = new TransientRegistry(appConfig);
       List<RowRange> ranges = transientRegistry.getTransientRanges();
 
       for (RowRange r : ranges) {
         long t1 = System.currentTimeMillis();
-        conn.tableOperations().compact(fluoConfig.getAccumuloTable(),
+        aclient.tableOperations().compact(fluoConfig.getAccumuloTable(),
             new Text(r.getStart().toArray()), new Text(r.getEnd().toArray()), true, true);
         long t2 = System.currentTimeMillis();
         logger.info("Compacted {} in {}ms", r, (t2 - t1));
@@ -135,8 +130,9 @@ public class TableOperations {
 
   public static void compactTransient(FluoConfiguration fluoConfig, RowRange tRange)
       throws Exception {
-    Connector conn = getConnector(fluoConfig);
-    conn.tableOperations().compact(fluoConfig.getAccumuloTable(),
-        new Text(tRange.getStart().toArray()), new Text(tRange.getEnd().toArray()), true, true);
+    try (AccumuloClient client = getClient(fluoConfig)) {
+      client.tableOperations().compact(fluoConfig.getAccumuloTable(),
+          new Text(tRange.getStart().toArray()), new Text(tRange.getEnd().toArray()), true, true);
+    }
   }
 }
