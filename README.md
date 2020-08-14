@@ -35,7 +35,7 @@ like Spark and Kryo.
 [fluo]: https://fluo.apache.org/
 [fluo-api]: https://fluo.apache.org/api/
 [fluo-docs]: https://fluo.apache.org/docs/
-[ti]: https://travis-ci.org/apache/fluo-recipes.svg?branch=master
+[ti]: https://travis-ci.org/apache/fluo-recipes.svg?branch=main
 [tl]: https://travis-ci.org/apache/fluo-recipes
 [li]: http://img.shields.io/badge/license-ASL-blue.svg
-[ll]: https://github.com/apache/fluo-recipes/blob/master/LICENSE
+[ll]: https://github.com/apache/fluo-recipes/blob/main/LICENSE
