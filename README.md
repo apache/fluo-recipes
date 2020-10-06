@@ -14,6 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+
 # Apache Fluo Recipes
 
 [![Build Status][ti]][tl] [![Apache License][li]][ll]
@@ -35,7 +36,8 @@ like Spark and Kryo.
 [fluo]: https://fluo.apache.org/
 [fluo-api]: https://fluo.apache.org/api/
 [fluo-docs]: https://fluo.apache.org/docs/
-[ti]: https://travis-ci.org/apache/fluo-recipes.svg?branch=main
-[tl]: https://travis-ci.org/apache/fluo-recipes
+[ti]: https://github.com/apache/fluo-recipes/workflows/CI/badge.svg
+[tl]: https://github.com/apache/fluo-recipes/actions
 [li]: http://img.shields.io/badge/license-ASL-blue.svg
 [ll]: https://github.com/apache/fluo-recipes/blob/main/LICENSE
+
