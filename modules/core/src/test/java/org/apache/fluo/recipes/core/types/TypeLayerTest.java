@@ -18,8 +18,8 @@ package org.apache.fluo.recipes.core.types;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Set;
 
-import com.google.common.collect.ImmutableSet;
 import org.apache.fluo.api.data.Bytes;
 import org.apache.fluo.api.data.Column;
 import org.apache.fluo.recipes.core.types.TypedSnapshotBase.Value;
@@ -38,8 +38,8 @@ public class TypeLayerTest {
 
     TypedTransactionBase ttx = tl.wrap(tt);
 
-    Map<Column, Value> results = ttx.get().row("r2")
-        .columns(ImmutableSet.of(new Column("cf2", "6"), new Column("cf2", "7")));
+    Map<Column, Value> results =
+        ttx.get().row("r2").columns(Set.of(new Column("cf2", "6"), new Column("cf2", "7")));
 
     Assert.assertNull(results.get(new Column("cf2", "6")).toInteger());
     Assert.assertEquals(0, results.get(new Column("cf2", "6")).toInteger(0));
@@ -48,8 +48,8 @@ public class TypeLayerTest {
 
     Assert.assertEquals(1, results.size());
 
-    results = ttx.get().row("r2").columns(
-        ImmutableSet.of(new Column("cf2", "6"), new Column("cf2", "7"), new Column("cf2", "8")));
+    results = ttx.get().row("r2")
+        .columns(Set.of(new Column("cf2", "6"), new Column("cf2", "7"), new Column("cf2", "8")));
 
     Assert.assertNull(results.get(new Column("cf2", "6")).toInteger());
     Assert.assertEquals(0, results.get(new Column("cf2", "6")).toInteger(0));
@@ -450,20 +450,20 @@ public class TypeLayerTest {
     Assert.assertNull(ttx.get(Bytes.of("r2"), new Column("cf2", "9")));
 
     Map<Column, Bytes> map =
-        ttx.get(Bytes.of("r2"), ImmutableSet.of(new Column("cf2", "7"), new Column("cf2", "8")));
+        ttx.get(Bytes.of("r2"), Set.of(new Column("cf2", "7"), new Column("cf2", "8")));
     Assert.assertEquals(2, map.size());
     Assert.assertEquals("12", map.get(new Column("cf2", "7")).toString());
     Assert.assertEquals("13", map.get(new Column("cf2", "8")).toString());
 
-    map = ttx.get(Bytes.of("r6"), ImmutableSet.of(new Column("cf2", "7"), new Column("cf2", "8")));
+    map = ttx.get(Bytes.of("r6"), Set.of(new Column("cf2", "7"), new Column("cf2", "8")));
     Assert.assertEquals(0, map.size());
 
     ttx.set(Bytes.of("r6"), new Column("cf2", "7"), Bytes.of("3"));
     Assert.assertEquals(MockTransactionBase.toRCVM("r6,cf2:7,3"), tt.setData);
     tt.setData.clear();
 
-    Map<Bytes, Map<Column, Bytes>> map2 = ttx.get(ImmutableSet.of(Bytes.of("r1"), Bytes.of("r2")),
-        ImmutableSet.of(new Column("cf1", "cq1"), new Column("cf2", "8")));
+    Map<Bytes, Map<Column, Bytes>> map2 = ttx.get(Set.of(Bytes.of("r1"), Bytes.of("r2")),
+        Set.of(new Column("cf1", "cq1"), new Column("cf2", "8")));
     Assert.assertEquals(MockTransactionBase.toRCVM("r1,cf1:cq1,v1", "r2,cf2:8,13"), map2);
 
     ttx.delete(Bytes.of("r6"), new Column("cf2", "7"));

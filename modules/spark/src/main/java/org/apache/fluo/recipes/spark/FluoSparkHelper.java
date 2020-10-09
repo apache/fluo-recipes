@@ -278,7 +278,7 @@ public class FluoSparkHelper {
      * FluoConfiguration supplied to
      * {@link FluoSparkHelper#FluoSparkHelper(FluoConfiguration, Configuration, Path)}
      *
-     * @param conn Use this connector to bulk import files into Accumulo.
+     * @param client Use this client to bulk import files into Accumulo.
      * @return this
      *
      * @since 1.3.0

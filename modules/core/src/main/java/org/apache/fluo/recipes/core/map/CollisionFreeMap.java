@@ -22,7 +22,6 @@ import java.util.Map;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.hash.Hashing;
 import org.apache.fluo.api.client.SnapshotBase;
@@ -391,7 +390,7 @@ public class CollisionFreeMap<K, V> {
     opts.save(fluoConfig.getAppConfiguration());
 
     fluoConfig.addObserver(new org.apache.fluo.api.config.ObserverSpecification(
-        CollisionFreeMapObserver.class.getName(), ImmutableMap.of("mapId", opts.mapId)));
+        CollisionFreeMapObserver.class.getName(), Map.of("mapId", opts.mapId)));
   }
 
   /**

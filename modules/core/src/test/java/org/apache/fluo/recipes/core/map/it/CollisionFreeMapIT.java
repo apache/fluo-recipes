@@ -20,7 +20,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.commons.io.FileUtils;
 import org.apache.fluo.api.client.FluoClient;
 import org.apache.fluo.api.client.FluoFactory;
@@ -128,17 +127,17 @@ public class CollisionFreeMapIT {
   public void testGet() {
     try (FluoClient fc = FluoFactory.newClient(miniFluo.getClientConfiguration())) {
       try (Transaction tx = fc.newTransaction()) {
-        wcMap.update(tx, ImmutableMap.of("cat", 2L, "dog", 5L));
+        wcMap.update(tx, Map.of("cat", 2L, "dog", 5L));
         tx.commit();
       }
 
       try (Transaction tx = fc.newTransaction()) {
-        wcMap.update(tx, ImmutableMap.of("cat", 1L, "dog", 1L));
+        wcMap.update(tx, Map.of("cat", 1L, "dog", 1L));
         tx.commit();
       }
 
       try (Transaction tx = fc.newTransaction()) {
-        wcMap.update(tx, ImmutableMap.of("cat", 1L, "dog", 1L, "fish", 2L));
+        wcMap.update(tx, Map.of("cat", 1L, "dog", 1L, "fish", 2L));
         tx.commit();
       }
 
@@ -167,7 +166,7 @@ public class CollisionFreeMapIT {
       Assert.assertEquals(expectedCounts, getComputedWordCounts(fc));
 
       try (Transaction tx = fc.newTransaction()) {
-        wcMap.update(tx, ImmutableMap.of("cat", 1L, "dog", -7L));
+        wcMap.update(tx, Map.of("cat", 1L, "dog", -7L));
         tx.commit();
       }
 
