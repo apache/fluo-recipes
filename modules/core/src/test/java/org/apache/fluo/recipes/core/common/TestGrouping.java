@@ -19,7 +19,6 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.google.common.collect.ImmutableSet;
 import org.apache.fluo.api.config.FluoConfiguration;
 import org.apache.fluo.api.config.SimpleConfiguration;
 import org.apache.fluo.api.data.Bytes;
@@ -69,8 +68,7 @@ public class TestGrouping {
     Assert.assertTrue(tableOptim.getSplits().contains(Bytes.of("m2:u:~")));
     Assert.assertTrue(tableOptim.getSplits().contains(Bytes.of("m2:d:~")));
 
-    Set<String> expectedGroups =
-        ImmutableSet.of("m1:u:", "m1:d:", "m2:u:", "m2:d:", "eq1:", "eq2:");
+    Set<String> expectedGroups = Set.of("m1:u:", "m1:d:", "m2:u:", "m2:d:", "eq1:", "eq2:");
 
     // ensure all splits group as expected
     for (Bytes split : tableOptim.getSplits()) {

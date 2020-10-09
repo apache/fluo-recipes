@@ -20,9 +20,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 import org.apache.commons.io.FileUtils;
@@ -99,7 +99,7 @@ public class BigUpdateIT {
 
       // get last values set to verify same as passed in old value
       Map<String, Long> actualOld = Maps.transformValues(
-          ttx.get().rowsString(expectedOld.keySet()).columns(ImmutableSet.of(DSCOL)).toStringMap(),
+          ttx.get().rowsString(expectedOld.keySet()).columns(Set.of(DSCOL)).toStringMap(),
           m -> m.get(DSCOL).toLong());
 
       MapDifference<String, Long> diff = Maps.difference(expectedOld, actualOld);
