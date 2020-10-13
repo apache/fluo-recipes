@@ -52,12 +52,14 @@ jobs:
       env:
         MAVEN_OPTS: -Djansi.force=true
     - name: Upload unit test results
+      if: ${{ failure() }}
       uses: actions/upload-artifact@v2
       with:
         name: surefire-reports
         path: ./**/target/surefire-reports/
         if-no-files-found: ignore
     - name: Upload integration test results
+      if: ${{ failure() }}
       uses: actions/upload-artifact@v2
       with:
         name: failsafe-reports
