@@ -50,7 +50,7 @@
     <url>https://github.com/apache/fluo-recipes/issues</url>
   </issueManagement>
   <properties>
-    <accumulo.version>2.0.0</accumulo.version>
+    <accumulo.version>2.0.1</accumulo.version>
     <curator.version>4.0.1</curator.version>
     <!-- Prevent findbugs from runnning because it does not work with Java 11 and is configured to run by parent pom.  Spotbugs is configured in place of findbugs. -->
     <findbugs.skip>true</findbugs.skip>
